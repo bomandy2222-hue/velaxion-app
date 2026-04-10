@@ -70,8 +70,10 @@ export default function App() {
       setMessage("");
       await signInWithPopup(auth, provider);
     } catch (error) {
-      console.error(error);
-      setMessage("로그인에 실패했어.");
+      console.error("LOGIN ERROR:", error);
+      setMessage(
+        `로그인 실패: ${error.code || "unknown"} / ${error.message || "no-message"}`
+      );
     }
   };
 
@@ -82,8 +84,10 @@ export default function App() {
       setForm(initialForm);
       setChecks(initialChecks);
     } catch (error) {
-      console.error(error);
-      setMessage("로그아웃에 실패했어.");
+      console.error("LOGOUT ERROR:", error);
+      setMessage(
+        `로그아웃 실패: ${error.code || "unknown"} / ${error.message || "no-message"}`
+      );
     }
   };
 
@@ -117,7 +121,7 @@ export default function App() {
       setMessage("저장 완료!");
     } catch (error) {
       console.error(error);
-      setMessage("저장에 실패했어.");
+      setMessage(`저장 실패: ${error.code || "unknown"} / ${error.message || "no-message"}`);
     } finally {
       setSaving(false);
     }
