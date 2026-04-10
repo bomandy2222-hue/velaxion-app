@@ -7,7 +7,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { doc, getDoc, getFirestore, setDoc } from "firebase/firestore";
-import app from "./firebase";
+import app from "../firebase.js";
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -37,7 +37,6 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      setMessage("");
 
       if (!currentUser) {
         setLoading(false);
@@ -56,8 +55,8 @@ export default function App() {
           }
         }
       } catch (error) {
-        setMessage("불러오기에 실패했어.");
         console.error(error);
+        setMessage("데이터를 불러오지 못했어.");
       } finally {
         setLoading(false);
       }
@@ -71,8 +70,8 @@ export default function App() {
       setMessage("");
       await signInWithPopup(auth, provider);
     } catch (error) {
-      setMessage("로그인에 실패했어.");
       console.error(error);
+      setMessage("로그인에 실패했어.");
     }
   };
 
@@ -83,21 +82,15 @@ export default function App() {
       setForm(initialForm);
       setChecks(initialChecks);
     } catch (error) {
-      setMessage("로그아웃에 실패했어.");
       console.error(error);
+      setMessage("로그아웃에 실패했어.");
     }
   };
 
-  const handleChange = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
-
   const toggleCheck = (index) => {
-    setChecks((prev) => {
-      const next = [...prev];
-      next[index] = !next[index];
-      return next;
-    });
+    const updated = [...checks];
+    updated[index] = !updated[index];
+    setChecks(updated);
   };
 
   const handleSave = async () => {
@@ -121,10 +114,10 @@ export default function App() {
         { merge: true }
       );
 
-      setMessage("저장 완료.");
+      setMessage("저장 완료!");
     } catch (error) {
-      setMessage("저장에 실패했어.");
       console.error(error);
+      setMessage("저장에 실패했어.");
     } finally {
       setSaving(false);
     }
@@ -132,234 +125,76 @@ export default function App() {
 
   if (loading) {
     return (
-      <div style={styles.page}>
-        <div style={styles.card}>
-          <h1 style={styles.title}>VELAXION</h1>
-          <p style={styles.text}>불러오는 중...</p>
-        </div>
+      <div style={{ padding: 20, fontFamily: "Arial, sans-serif" }}>
+        <h1>로딩 중...</h1>
       </div>
     );
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <div style={styles.badge}>VELAXION</div>
-          <h1 style={styles.title}>AI 성장 실행 앱 🚀</h1>
-          <p style={styles.subtitle}>
-            로그인, 저장, 실행 체크까지 되는 첫 버전
-          </p>
+    <div style={{ padding: 20, fontFamily: "Arial, sans-serif" }}>
+      <h1>Velaxion 🚀</h1>
 
-          <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>계정</h2>
+      {user ? (
+        <>
+          <p>{user.email}</p>
+          <button onClick={handleLogout}>로그아웃</button>
+        </>
+      ) : (
+        <button onClick={handleLogin}>Google 로그인</button>
+      )}
 
-            {user ? (
-              <>
-                <div style={styles.infoBox}>
-                  <div>
-                    <strong>로그인됨</strong>
-                  </div>
-                  <div>{user.email}</div>
-                </div>
-                <button style={styles.secondaryButton} onClick={handleLogout}>
-                  로그아웃
-                </button>
-              </>
-            ) : (
-              <button style={styles.primaryButton} onClick={handleLogin}>
-                Google 로그인
-              </button>
-            )}
-          </div>
+      <hr />
 
-          <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>진단 입력</h2>
+      <input
+        placeholder="이름"
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+      />
+      <br />
+      <br />
 
+      <textarea
+        placeholder="고민"
+        value={form.concern}
+        onChange={(e) => setForm({ ...form, concern: e.target.value })}
+        rows={4}
+        cols={40}
+      />
+      <br />
+      <br />
+
+      <textarea
+        placeholder="목표"
+        value={form.goal}
+        onChange={(e) => setForm({ ...form, goal: e.target.value })}
+        rows={4}
+        cols={40}
+      />
+
+      <hr />
+
+      <h3>7일 체크 ({progress}%)</h3>
+      {checks.map((checked, index) => (
+        <div key={index}>
+          <label>
             <input
-              style={styles.input}
-              placeholder="이름"
-              value={form.name}
-              onChange={(e) => handleChange("name", e.target.value)}
+              type="checkbox"
+              checked={checked}
+              onChange={() => toggleCheck(index)}
             />
-
-            <textarea
-              style={styles.textarea}
-              placeholder="현재 가장 큰 고민"
-              value={form.concern}
-              onChange={(e) => handleChange("concern", e.target.value)}
-            />
-
-            <textarea
-              style={styles.textarea}
-              placeholder="3개월 뒤 목표"
-              value={form.goal}
-              onChange={(e) => handleChange("goal", e.target.value)}
-            />
-          </div>
-
-          <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>7일 실행 체크</h2>
-
-            <div style={styles.progressRow}>
-              <span>진행률</span>
-              <strong>{progress}%</strong>
-            </div>
-
-            <div style={styles.progressBar}>
-              <div style={{ ...styles.progressFill, width: `${progress}%` }} />
-            </div>
-
-            {checks.map((checked, index) => (
-              <label key={index} style={styles.checkRow}>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleCheck(index)}
-                />
-                <span>Day {index + 1} 실행 완료</span>
-              </label>
-            ))}
-          </div>
-
-          <div style={styles.section}>
-            <button
-              style={styles.primaryButton}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "저장 중..." : "Firebase에 저장"}
-            </button>
-          </div>
-
-          {message ? <p style={styles.message}>{message}</p> : null}
+            {" "}Day {index + 1}
+          </label>
         </div>
-      </div>
+      ))}
+
+      <br />
+
+      <button onClick={handleSave} disabled={saving}>
+        {saving ? "저장 중..." : "저장"}
+      </button>
+
+      {message && <p>{message}</p>}
     </div>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "linear-gradient(180deg, #111111 0%, #1b140d 100%)",
-    color: "#ffffff",
-    fontFamily: "Arial, sans-serif",
-    padding: "32px 16px",
-  },
-  container: {
-    maxWidth: "760px",
-    margin: "0 auto",
-  },
-  card: {
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: "24px",
-    padding: "28px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
-  },
-  badge: {
-    display: "inline-block",
-    background: "#f4c34d",
-    color: "#111",
-    fontWeight: 700,
-    borderRadius: "999px",
-    padding: "8px 12px",
-    marginBottom: "14px",
-  },
-  title: {
-    margin: 0,
-    fontSize: "36px",
-  },
-  subtitle: {
-    color: "#d5d5d5",
-    lineHeight: 1.6,
-  },
-  text: {
-    color: "#e5e5e5",
-  },
-  section: {
-    marginTop: "28px",
-  },
-  sectionTitle: {
-    fontSize: "20px",
-    marginBottom: "12px",
-  },
-  infoBox: {
-    background: "#171717",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: "14px",
-    padding: "14px",
-    lineHeight: 1.6,
-  },
-  input: {
-    width: "100%",
-    boxSizing: "border-box",
-    marginBottom: "12px",
-    padding: "14px",
-    borderRadius: "14px",
-    border: "1px solid rgba(255,255,255,0.15)",
-    background: "#171717",
-    color: "#fff",
-  },
-  textarea: {
-    width: "100%",
-    boxSizing: "border-box",
-    minHeight: "110px",
-    marginBottom: "12px",
-    padding: "14px",
-    borderRadius: "14px",
-    border: "1px solid rgba(255,255,255,0.15)",
-    background: "#171717",
-    color: "#fff",
-    resize: "vertical",
-  },
-  primaryButton: {
-    width: "100%",
-    border: "none",
-    borderRadius: "14px",
-    padding: "14px 18px",
-    background: "#f4c34d",
-    color: "#111",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-  secondaryButton: {
-    width: "100%",
-    marginTop: "12px",
-    borderRadius: "14px",
-    padding: "14px 18px",
-    background: "#1b1b1b",
-    color: "#fff",
-    border: "1px solid rgba(255,255,255,0.15)",
-    cursor: "pointer",
-  },
-  progressRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: "10px",
-  },
-  progressBar: {
-    width: "100%",
-    height: "12px",
-    background: "#222",
-    borderRadius: "999px",
-    overflow: "hidden",
-    marginBottom: "16px",
-  },
-  progressFill: {
-    height: "100%",
-    background: "#f4c34d",
-  },
-  checkRow: {
-    display: "flex",
-    gap: "10px",
-    alignItems: "center",
-    padding: "12px 0",
-    borderBottom: "1px solid rgba(255,255,255,0.08)",
-  },
-  message: {
-    marginTop: "16px",
-    color: "#f4c34d",
-  },
-};
