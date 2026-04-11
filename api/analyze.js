@@ -30,7 +30,8 @@ export default async function handler(req, res) {
 1. 문제 분석
 2. 해결 방향
 3. 7일 행동 계획
-을 알려줘.
+
+을 자세하게 알려줘.
             `,
           },
         ],
@@ -39,10 +40,11 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    const result = data.choices?.[0]?.message?.content || "분석 실패";
-
-    res.status(200).json({ result });
+    res.status(200).json({
+      result: data.choices?.[0]?.message?.content || "응답 없음",
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error(error);
+    res.status(500).json({ error: "AI 요청 실패" });
   }
 }
