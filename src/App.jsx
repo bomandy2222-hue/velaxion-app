@@ -405,8 +405,8 @@ export default function App() {
                 ...(messageType === "success"
                   ? styles.messageSuccess
                   : messageType === "error"
-                  ? styles.messageError
-                  : styles.messageInfo),
+                    ? styles.messageError
+                    : styles.messageInfo),
               }}
             >
               {message}
