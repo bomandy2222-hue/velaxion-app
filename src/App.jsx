@@ -21,6 +21,47 @@ const initialForm = {
 
 const initialChecks = [false, false, false, false, false, false, false];
 
+function parseAnalysisSections(text) {
+  if (!text || typeof text !== "string") {
+    return {
+      current: "",
+      core: "",
+      plan: [],
+      cheer: "",
+      raw: "",
+    };
+  }
+
+  const normalized = text.replace(/\r/g, "").trim();
+
+  const currentMatch = normalized.match(
+    /1\.\s*\*\*현재 상태 분석\*\*([\s\S]*?)(?=2\.\s*\*\*가장 중요한 핵심 문제\*\*|$)/
+  );
+  const coreMatch = normalized.match(
+    /2\.\s*\*\*가장 중요한 핵심 문제\*\*([\s\S]*?)(?=3\.\s*\*\*바로 실천할 수 있는 7일 행동 계획\*\*|$)/
+  );
+  const planMatch = normalized.match(
+    /3\.\s*\*\*바로 실천할 수 있는 7일 행동 계획\*\*([\s\S]*?)(?=4\.\s*\*\*짧은 응원 한마디\*\*|$)/
+  );
+  const cheerMatch = normalized.match(
+    /4\.\s*\*\*짧은 응원 한마디\*\*([\s\S]*?)$/
+  );
+
+  const planLines = (planMatch?.[1] || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^-+\s*/, "").trim());
+
+  return {
+    current: (currentMatch?.[1] || "").trim(),
+    core: (coreMatch?.[1] || "").trim(),
+    plan: planLines,
+    cheer: (cheerMatch?.[1] || "").trim().replace(/^"+|"+$/g, ""),
+    raw: normalized,
+  };
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(initialForm);
@@ -39,6 +80,8 @@ export default function App() {
     const done = checks.filter(Boolean).length;
     return Math.round((done / checks.length) * 100);
   }, [checks]);
+
+  const parsedAnalysis = useMemo(() => parseAnalysisSections(analysis), [analysis]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -256,6 +299,12 @@ export default function App() {
     );
   }
 
+  const hasStructuredAnalysis =
+    parsedAnalysis.current ||
+    parsedAnalysis.core ||
+    parsedAnalysis.plan.length > 0 ||
+    parsedAnalysis.cheer;
+
   return (
     <div style={styles.page}>
       <div style={styles.container}>
@@ -392,11 +441,65 @@ export default function App() {
             </button>
           </div>
 
-          <div style={styles.analysisBox}>
-            {analysis
-              ? analysis
-              : "아직 분석 결과가 없어. 내용을 적고 'AI 분석하기'를 눌러봐."}
-          </div>
+          {!analysis ? (
+            <div style={styles.analysisEmptyBox}>
+              아직 분석 결과가 없어. 내용을 적고 "AI 분석하기"를 눌러봐.
+            </div>
+          ) : hasStructuredAnalysis ? (
+            <div style={styles.analysisCards}>
+              <div style={styles.resultCard}>
+                <div style={styles.resultCardHeader}>
+                  <span style={styles.resultBadge}>01</span>
+                  <h3 style={styles.resultTitle}>현재 상태 분석</h3>
+                </div>
+                <p style={styles.resultText}>
+                  {parsedAnalysis.current || "분석 내용이 아직 없어."}
+                </p>
+              </div>
+
+              <div style={styles.resultCard}>
+                <div style={styles.resultCardHeader}>
+                  <span style={styles.resultBadge}>02</span>
+                  <h3 style={styles.resultTitle}>가장 중요한 핵심 문제</h3>
+                </div>
+                <p style={styles.resultText}>
+                  {parsedAnalysis.core || "핵심 문제 내용이 아직 없어."}
+                </p>
+              </div>
+
+              <div style={styles.resultCard}>
+                <div style={styles.resultCardHeader}>
+                  <span style={styles.resultBadge}>03</span>
+                  <h3 style={styles.resultTitle}>7일 행동 계획</h3>
+                </div>
+
+                {parsedAnalysis.plan.length > 0 ? (
+                  <div style={styles.planList}>
+                    {parsedAnalysis.plan.map((item, index) => (
+                      <div key={index} style={styles.planItem}>
+                        <div style={styles.planDayBadge}>Day {index + 1}</div>
+                        <div style={styles.planText}>{item}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={styles.resultText}>행동 계획이 아직 없어.</p>
+                )}
+              </div>
+
+              <div style={styles.resultCard}>
+                <div style={styles.resultCardHeader}>
+                  <span style={styles.resultBadge}>04</span>
+                  <h3 style={styles.resultTitle}>짧은 응원 한마디</h3>
+                </div>
+                <p style={styles.cheerText}>
+                  {parsedAnalysis.cheer || "응원 메시지가 아직 없어."}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div style={styles.analysisBox}>{analysis}</div>
+          )}
 
           {message ? (
             <p
@@ -559,16 +662,6 @@ const styles = {
     padding: "10px 12px",
     fontSize: "14px",
   },
-  analysisBox: {
-    marginTop: "14px",
-    background: "#f9fafb",
-    border: "1px solid #e5e7eb",
-    borderRadius: "12px",
-    padding: "14px",
-    lineHeight: 1.7,
-    color: "#374151",
-    whiteSpace: "pre-wrap",
-  },
   actionRow: {
     display: "flex",
     gap: "12px",
@@ -593,6 +686,111 @@ const styles = {
     fontSize: "14px",
     fontWeight: 600,
     cursor: "pointer",
+  },
+  analysisBox: {
+    marginTop: "14px",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "14px",
+    lineHeight: 1.7,
+    color: "#374151",
+    whiteSpace: "pre-wrap",
+  },
+  analysisEmptyBox: {
+    marginTop: "14px",
+    background: "#f9fafb",
+    border: "1px dashed #d1d5db",
+    borderRadius: "12px",
+    padding: "18px",
+    lineHeight: 1.7,
+    color: "#6b7280",
+  },
+  analysisCards: {
+    marginTop: "16px",
+    display: "grid",
+    gap: "14px",
+  },
+  resultCard: {
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: "16px",
+    padding: "16px",
+  },
+  resultCardHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "12px",
+  },
+  resultBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "32px",
+    height: "32px",
+    borderRadius: "999px",
+    background: "#111827",
+    color: "#ffffff",
+    fontSize: "13px",
+    fontWeight: 700,
+    flexShrink: 0,
+  },
+  resultTitle: {
+    margin: 0,
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#111827",
+  },
+  resultText: {
+    margin: 0,
+    fontSize: "15px",
+    lineHeight: 1.8,
+    color: "#374151",
+    whiteSpace: "pre-wrap",
+  },
+  planList: {
+    display: "grid",
+    gap: "10px",
+  },
+  planItem: {
+    display: "grid",
+    gridTemplateColumns: "88px 1fr",
+    gap: "10px",
+    alignItems: "start",
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "12px",
+  },
+  planDayBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "36px",
+    padding: "0 10px",
+    borderRadius: "10px",
+    background: "#eff6ff",
+    color: "#1d4ed8",
+    fontSize: "13px",
+    fontWeight: 700,
+  },
+  planText: {
+    fontSize: "14px",
+    lineHeight: 1.7,
+    color: "#374151",
+    whiteSpace: "pre-wrap",
+  },
+  cheerText: {
+    margin: 0,
+    fontSize: "15px",
+    lineHeight: 1.8,
+    color: "#047857",
+    background: "#ecfdf5",
+    border: "1px solid #a7f3d0",
+    borderRadius: "12px",
+    padding: "14px",
+    whiteSpace: "pre-wrap",
   },
   message: {
     marginTop: "14px",
