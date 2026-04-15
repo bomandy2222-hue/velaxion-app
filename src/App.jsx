@@ -503,30 +503,25 @@ export default function App() {
           </div>
 
           <div style={styles.dayPlanGrid}>
-            {checks.map((checked, index) => {
-              const isCompleted = checked;
-              const isCurrentDay = index === currentDayIndex;
-              const isAllDone = currentDayIndex === -1;
-              const blockedByToday = !checked && isSameDay(lastCheckedDate);
-              const isEnabled = !isAllDone && isCurrentDay && !blockedByToday;
-
-              return (
-                <label key={index} style={styles.dayPlanCard}>
-                  <div style={styles.dayPlanTop}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={!isEnabled}
-                      onChange={() => toggleCheck(index)}
-                    />
-                    <span style={styles.dayLabel}>Day {index + 1}</span>
-                  </div>
-                  <div style={styles.dayTaskText}>
-                    {dailyPlan[index] || "AI 분석 후 이 날의 계획이 표시돼."}
-                  </div>
-                </label>
-              );
-            })}
+            {checks.map((checked, index) => (
+              <label key={index} style={styles.dayPlanCard}>
+                <div style={styles.dayPlanTop}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={
+                      index !== getCurrentDayIndex(checks) ||
+                      (!checked && isSameDay(lastCheckedDate))
+                    }
+                    onChange={() => toggleCheck(index)}
+                  />
+                  <span style={styles.dayLabel}>Day {index + 1}</span>
+                </div>
+                <div style={styles.dayTaskText}>
+                  {dailyPlan[index] || "AI 분석 후 이 날의 계획이 표시돼."}
+                </div>
+              </label>
+            ))}
           </div>
         </div>
 
