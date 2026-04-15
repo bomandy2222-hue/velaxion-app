@@ -21,6 +21,7 @@ const initialForm = {
 
 const initialChecks = [false, false, false, false, false, false, false];
 const initialPlan = ["", "", "", "", "", "", ""];
+const initialDayImages = [null, null, null, null, null, null, null];
 
 function parseAnalysisSections(text) {
   if (!text || typeof text !== "string") {
@@ -139,6 +140,7 @@ export default function App() {
   const [analysis, setAnalysis] = useState("");
   const [dailyPlan, setDailyPlan] = useState(initialPlan);
   const [lastCheckedAt, setLastCheckedAt] = useState(null);
+  const [dayImages, setDayImages] = useState(initialDayImages);
 
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -148,6 +150,8 @@ export default function App() {
   const [messageType, setMessageType] = useState("info");
 
   const skipAutoSaveRef = useRef(true);
+  const galleryInputRefs = useRef([]);
+  const cameraInputRefs = useRef([]);
 
   const progress = useMemo(() => {
     const done = checks.filter(Boolean).length;
@@ -289,6 +293,7 @@ export default function App() {
       setAnalysis("");
       setDailyPlan(initialPlan);
       setLastCheckedAt(null);
+      setDayImages(initialDayImages);
       setMessage("로그아웃 완료.");
       setMessageType("info");
     } catch (error) {
@@ -307,6 +312,73 @@ export default function App() {
     }));
   };
 
+  const handleImageChange = (index, event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setMessage("이미지 파일만 올릴 수 있어.");
+      setMessageType("error");
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+
+      setDayImages((prev) => {
+        const updated = [...prev];
+        updated[index] = {
+          name: file.name,
+          preview: result,
+        };
+        return updated;
+      });
+
+      setMessage(`Day ${index + 1} 인증 이미지가 등록됐어.`);
+      setMessageType("success");
+    };
+
+    reader.onerror = () => {
+      setMessage("이미지를 불러오지 못했어.");
+      setMessageType("error");
+    };
+
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const openGalleryPicker = (index, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    galleryInputRefs.current[index]?.click();
+  };
+
+  const openCameraPicker = (index, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    cameraInputRefs.current[index]?.click();
+  };
+
+  const clearDayImage = (index, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setDayImages((prev) => {
+      const updated = [...prev];
+      updated[index] = null;
+      return updated;
+    });
+
+    setMessage(`Day ${index + 1} 인증 이미지를 제거했어.`);
+    setMessageType("info");
+  };
+
   const toggleCheck = async (index) => {
     if (!user) {
       setMessage("먼저 로그인해줘.");
@@ -323,6 +395,12 @@ export default function App() {
     }
 
     if (index !== currentIndex) {
+      return;
+    }
+
+    if (!dayImages[index]) {
+      setMessage("체크하려면 먼저 사진 촬영 또는 갤러리 이미지를 등록해줘.");
+      setMessageType("error");
       return;
     }
 
@@ -420,6 +498,8 @@ export default function App() {
     parsedAnalysis.core ||
     parsedAnalysis.plan.length > 0 ||
     parsedAnalysis.cheer;
+
+  const currentDayIndex = getCurrentDayIndex(checks);
 
   return (
     <div style={styles.page}>
@@ -519,26 +599,111 @@ export default function App() {
           </div>
 
           <div style={styles.autoSaveHint}>
-            AI가 만든 7일 계획과 연결돼. 체크박스를 누르면 자동 저장돼.
+            AI가 만든 7일 계획과 연결돼. 체크하려면 사진 촬영 또는 갤러리 이미지를 먼저 등록해야 해.
           </div>
 
           <div style={styles.dayPlanGrid}>
-            {checks.map((checked, index) => (
-              <label key={index} style={styles.dayPlanCard}>
-                <div style={styles.dayPlanTop}>
+            {checks.map((checked, index) => {
+              const isCurrentDay = index === currentDayIndex;
+              const canUploadImage = !checked && isCurrentDay;
+
+              return (
+                <div key={index} style={styles.dayPlanCard}>
+                  <div style={styles.dayPlanTop}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={checked || index !== currentDayIndex || !dayImages[index]}
+                      onChange={() => toggleCheck(index)}
+                    />
+                    <span style={styles.dayLabel}>Day {index + 1}</span>
+                  </div>
+
+                  <div style={styles.dayTaskText}>
+                    {dailyPlan[index] || "AI 분석 후 이 날의 계획이 표시돼."}
+                  </div>
+
                   <input
-                    type="checkbox"
-                    checked={checked}
-                    disabled={checked || index !== getCurrentDayIndex(checks)}
-                    onChange={() => toggleCheck(index)}
+                    ref={(el) => {
+                      galleryInputRefs.current[index] = el;
+                    }}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => handleImageChange(index, e)}
                   />
-                  <span style={styles.dayLabel}>Day {index + 1}</span>
+
+                  <input
+                    ref={(el) => {
+                      cameraInputRefs.current[index] = el;
+                    }}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    style={{ display: "none" }}
+                    onChange={(e) => handleImageChange(index, e)}
+                  />
+
+                  <div style={styles.dayImageActions}>
+                    <button
+                      type="button"
+                      style={{
+                        ...styles.secondaryButton,
+                        ...(canUploadImage ? null : styles.disabledButton),
+                      }}
+                      onClick={(e) => openCameraPicker(index, e)}
+                      disabled={!canUploadImage}
+                    >
+                      사진 촬영
+                    </button>
+
+                    <button
+                      type="button"
+                      style={{
+                        ...styles.secondaryButton,
+                        ...(canUploadImage ? null : styles.disabledButton),
+                      }}
+                      onClick={(e) => openGalleryPicker(index, e)}
+                      disabled={!canUploadImage}
+                    >
+                      갤러리 선택
+                    </button>
+
+                    {dayImages[index] ? (
+                      <button
+                        type="button"
+                        style={styles.imageRemoveButton}
+                        onClick={(e) => clearDayImage(index, e)}
+                        disabled={checked}
+                      >
+                        이미지 제거
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {dayImages[index] ? (
+                    <div style={styles.dayImagePreviewBox}>
+                      <img
+                        src={dayImages[index].preview}
+                        alt={`Day ${index + 1} 인증`}
+                        style={styles.dayImagePreview}
+                      />
+                      <div style={styles.dayImageName}>
+                        {dayImages[index].name || `Day ${index + 1} 이미지`}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={styles.dayImageHint}>
+                      {checked
+                        ? "완료된 Day야."
+                        : isCurrentDay
+                          ? "체크 전에 인증 이미지를 등록해줘."
+                          : "이전 Day를 완료하면 이미지 등록이 열려."}
+                    </div>
+                  )}
                 </div>
-                <div style={styles.dayTaskText}>
-                  {dailyPlan[index] || "AI 분석 후 이 날의 계획이 표시돼."}
-                </div>
-              </label>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -799,6 +964,55 @@ const styles = {
     color: "#4b5563",
     marginLeft: "26px",
     whiteSpace: "pre-wrap",
+  },
+  dayImageActions: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+    marginTop: "12px",
+    marginLeft: "26px",
+  },
+  dayImagePreviewBox: {
+    marginTop: "12px",
+    marginLeft: "26px",
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "10px",
+  },
+  dayImagePreview: {
+    width: "100%",
+    maxHeight: "240px",
+    objectFit: "cover",
+    borderRadius: "10px",
+    display: "block",
+  },
+  dayImageName: {
+    marginTop: "8px",
+    fontSize: "12px",
+    color: "#6b7280",
+    wordBreak: "break-all",
+  },
+  dayImageHint: {
+    marginTop: "12px",
+    marginLeft: "26px",
+    fontSize: "13px",
+    color: "#6b7280",
+    lineHeight: 1.6,
+  },
+  imageRemoveButton: {
+    background: "#ffffff",
+    color: "#b91c1c",
+    border: "1px solid #fecaca",
+    borderRadius: "12px",
+    padding: "10px 14px",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  disabledButton: {
+    opacity: 0.5,
+    cursor: "not-allowed",
   },
   actionRow: {
     display: "flex",
