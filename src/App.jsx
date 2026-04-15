@@ -7,10 +7,18 @@ import {
   signOut,
 } from "firebase/auth";
 import { doc, getDoc, getFirestore, setDoc } from "firebase/firestore";
+import {
+  deleteObject,
+  getDownloadURL,
+  getStorage,
+  ref as storageRef,
+  uploadString,
+} from "firebase/storage";
 import app from "../firebase.js";
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
 const initialForm = {
@@ -133,6 +141,16 @@ function getRemainingTimeText(lastCheckedAt) {
   return `${minutes}분 후에 가능해.`;
 }
 
+function getFileExtension(file) {
+  const name = file?.name || "";
+  const ext = name.includes(".") ? name.split(".").pop()?.toLowerCase() : "";
+  return ext || "jpg";
+}
+
+function sanitizeFileName(name) {
+  return String(name || "image").replace(/[^\w.-]/g, "_");
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(initialForm);
@@ -146,6 +164,8 @@ export default function App() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [uploadingImageIndex, setUploadingImageIndex] = useState(null);
+  const [removingImageIndex, setRemovingImageIndex] = useState(null);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("info");
 
@@ -201,6 +221,20 @@ export default function App() {
           if (typeof data.lastCheckedAt === "string") {
             setLastCheckedAt(data.lastCheckedAt);
           }
+
+          if (Array.isArray(data.dayImages) && data.dayImages.length === 7) {
+            setDayImages(
+              data.dayImages.map((item) => {
+                if (!item || typeof item !== "object") return null;
+                return {
+                  name: item.name || "",
+                  preview: item.preview || item.url || "",
+                  url: item.url || item.preview || "",
+                  path: item.path || "",
+                };
+              })
+            );
+          }
         }
       } catch (error) {
         console.error(error);
@@ -220,6 +254,7 @@ export default function App() {
     nextChecks,
     nextAnalysis,
     nextLastCheckedAt = lastCheckedAt,
+    nextDayImages = dayImages,
     successText = "저장 완료!"
   ) => {
     if (!user) return;
@@ -236,6 +271,16 @@ export default function App() {
           checks: nextChecks,
           analysis: nextAnalysis,
           lastCheckedAt: nextLastCheckedAt,
+          dayImages: nextDayImages.map((item) =>
+            item
+              ? {
+                  name: item.name || "",
+                  url: item.url || item.preview || "",
+                  preview: item.preview || item.url || "",
+                  path: item.path || "",
+                }
+              : null
+          ),
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
@@ -260,11 +305,11 @@ export default function App() {
     if (loading || !user || skipAutoSaveRef.current) return;
 
     const timer = setTimeout(() => {
-      saveToFirestore(form, checks, analysis, lastCheckedAt, "자동 저장 완료!");
+      saveToFirestore(form, checks, analysis, lastCheckedAt, dayImages, "자동 저장 완료!");
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [form, checks, analysis, lastCheckedAt, user, loading]);
+  }, [form, checks, analysis, lastCheckedAt, dayImages, user, loading]);
 
   const handleLogin = async () => {
     try {
@@ -312,10 +357,17 @@ export default function App() {
     }));
   };
 
-  const handleImageChange = (index, event) => {
+  const handleImageChange = async (index, event) => {
     const file = event.target.files?.[0];
 
     if (!file) {
+      return;
+    }
+
+    if (!user) {
+      setMessage("먼저 로그인해줘.");
+      setMessageType("error");
+      event.target.value = "";
       return;
     }
 
@@ -326,31 +378,59 @@ export default function App() {
       return;
     }
 
-    const reader = new FileReader();
+    try {
+      setUploadingImageIndex(index);
+      setMessage("");
 
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
+      const reader = new FileReader();
 
-      setDayImages((prev) => {
-        const updated = [...prev];
-        updated[index] = {
-          name: file.name,
-          preview: result,
-        };
-        return updated;
+      const dataUrl = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
 
-      setMessage(`Day ${index + 1} 인증 이미지가 등록됐어.`);
+      if (typeof dataUrl !== "string") {
+        throw new Error("이미지 변환 실패");
+      }
+
+      const prevImage = dayImages[index];
+      const extension = getFileExtension(file);
+      const safeName = sanitizeFileName(file.name);
+      const path = `users/${user.uid}/day-images/day-${index + 1}-${Date.now()}-${safeName}.${extension}`;
+      const imageRef = storageRef(storage, path);
+
+      await uploadString(imageRef, dataUrl, "data_url");
+      const downloadURL = await getDownloadURL(imageRef);
+
+      if (prevImage?.path) {
+        try {
+          await deleteObject(storageRef(storage, prevImage.path));
+        } catch (deleteError) {
+          console.error("OLD IMAGE DELETE ERROR:", deleteError);
+        }
+      }
+
+      const nextDayImages = [...dayImages];
+      nextDayImages[index] = {
+        name: file.name,
+        preview: downloadURL,
+        url: downloadURL,
+        path,
+      };
+
+      setDayImages(nextDayImages);
+      await saveToFirestore(form, checks, analysis, lastCheckedAt, nextDayImages, "");
+      setMessage(`Day ${index + 1} 인증 이미지가 저장됐어.`);
       setMessageType("success");
-    };
-
-    reader.onerror = () => {
-      setMessage("이미지를 불러오지 못했어.");
+    } catch (error) {
+      console.error(error);
+      setMessage(`이미지 업로드 실패: ${error.message || "unknown"}`);
       setMessageType("error");
-    };
-
-    reader.readAsDataURL(file);
-    event.target.value = "";
+    } finally {
+      setUploadingImageIndex(null);
+      event.target.value = "";
+    }
   };
 
   const openGalleryPicker = (index, e) => {
@@ -365,18 +445,44 @@ export default function App() {
     cameraInputRefs.current[index]?.click();
   };
 
-  const clearDayImage = (index, e) => {
+  const clearDayImage = async (index, e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    setDayImages((prev) => {
-      const updated = [...prev];
-      updated[index] = null;
-      return updated;
-    });
+    if (!user) {
+      setMessage("먼저 로그인해줘.");
+      setMessageType("error");
+      return;
+    }
 
-    setMessage(`Day ${index + 1} 인증 이미지를 제거했어.`);
-    setMessageType("info");
+    const targetImage = dayImages[index];
+    if (!targetImage) return;
+
+    try {
+      setRemovingImageIndex(index);
+
+      if (targetImage.path) {
+        try {
+          await deleteObject(storageRef(storage, targetImage.path));
+        } catch (deleteError) {
+          console.error("IMAGE DELETE ERROR:", deleteError);
+        }
+      }
+
+      const nextDayImages = [...dayImages];
+      nextDayImages[index] = null;
+
+      setDayImages(nextDayImages);
+      await saveToFirestore(form, checks, analysis, lastCheckedAt, nextDayImages, "");
+      setMessage(`Day ${index + 1} 인증 이미지를 제거했어.`);
+      setMessageType("info");
+    } catch (error) {
+      console.error(error);
+      setMessage(`이미지 제거 실패: ${error.message || "unknown"}`);
+      setMessageType("error");
+    } finally {
+      setRemovingImageIndex(null);
+    }
   };
 
   const toggleCheck = async (index) => {
@@ -420,7 +526,7 @@ export default function App() {
     setMessage(`Day ${index + 1} 완료!`);
     setMessageType("success");
 
-    await saveToFirestore(form, updatedChecks, analysis, nowIso, "");
+    await saveToFirestore(form, updatedChecks, analysis, nowIso, dayImages, "");
   };
 
   const handleSave = async () => {
@@ -430,7 +536,7 @@ export default function App() {
       return;
     }
 
-    await saveToFirestore(form, checks, analysis, lastCheckedAt, "수동 저장 완료!");
+    await saveToFirestore(form, checks, analysis, lastCheckedAt, dayImages, "수동 저장 완료!");
   };
 
   const handleAnalyze = async () => {
@@ -469,7 +575,7 @@ export default function App() {
       setMessageType("success");
 
       if (user) {
-        await saveToFirestore(form, checks, resultText, lastCheckedAt, "");
+        await saveToFirestore(form, checks, resultText, lastCheckedAt, dayImages, "");
       }
     } catch (error) {
       console.error(error);
@@ -606,6 +712,8 @@ export default function App() {
             {checks.map((checked, index) => {
               const isCurrentDay = index === currentDayIndex;
               const canUploadImage = !checked && isCurrentDay;
+              const isUploading = uploadingImageIndex === index;
+              const isRemoving = removingImageIndex === index;
 
               return (
                 <div key={index} style={styles.dayPlanCard}>
@@ -649,34 +757,37 @@ export default function App() {
                       type="button"
                       style={{
                         ...styles.secondaryButton,
-                        ...(canUploadImage ? null : styles.disabledButton),
+                        ...(canUploadImage && !isUploading ? null : styles.disabledButton),
                       }}
                       onClick={(e) => openCameraPicker(index, e)}
-                      disabled={!canUploadImage}
+                      disabled={!canUploadImage || isUploading}
                     >
-                      사진 촬영
+                      {isUploading ? "업로드 중..." : "사진 촬영"}
                     </button>
 
                     <button
                       type="button"
                       style={{
                         ...styles.secondaryButton,
-                        ...(canUploadImage ? null : styles.disabledButton),
+                        ...(canUploadImage && !isUploading ? null : styles.disabledButton),
                       }}
                       onClick={(e) => openGalleryPicker(index, e)}
-                      disabled={!canUploadImage}
+                      disabled={!canUploadImage || isUploading}
                     >
-                      갤러리 선택
+                      {isUploading ? "업로드 중..." : "갤러리 선택"}
                     </button>
 
                     {dayImages[index] ? (
                       <button
                         type="button"
-                        style={styles.imageRemoveButton}
+                        style={{
+                          ...styles.imageRemoveButton,
+                          ...(checked || isRemoving ? styles.disabledButton : null),
+                        }}
                         onClick={(e) => clearDayImage(index, e)}
-                        disabled={checked}
+                        disabled={checked || isRemoving}
                       >
-                        이미지 제거
+                        {isRemoving ? "제거 중..." : "이미지 제거"}
                       </button>
                     ) : null}
                   </div>
@@ -684,7 +795,7 @@ export default function App() {
                   {dayImages[index] ? (
                     <div style={styles.dayImagePreviewBox}>
                       <img
-                        src={dayImages[index].preview}
+                        src={dayImages[index].preview || dayImages[index].url}
                         alt={`Day ${index + 1} 인증`}
                         style={styles.dayImagePreview}
                       />
