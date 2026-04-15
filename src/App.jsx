@@ -20,7 +20,6 @@ const initialForm = {
 };
 
 const initialChecks = [false, false, false, false, false, false, false];
-const initialPlan = ["", "", "", "", "", "", ""];
 
 function parseAnalysisSections(text) {
   if (!text || typeof text !== "string") {
@@ -63,45 +62,11 @@ function parseAnalysisSections(text) {
   };
 }
 
-function extractSevenDayPlan(planLines) {
-  const plan = [...initialPlan];
-
-  for (const rawLine of planLines) {
-    const line = rawLine.replace(/\*\*/g, "").trim();
-
-    let dayNumber = null;
-    let content = line;
-
-    const dayMatch = line.match(/^Day\s*([1-7])\s*[:：]?\s*(.*)$/i);
-    const koreanMatch = line.match(/^([1-7])일차?\s*[:：]?\s*(.*)$/);
-
-    if (dayMatch) {
-      dayNumber = Number(dayMatch[1]);
-      content = dayMatch[2].trim();
-    } else if (koreanMatch) {
-      dayNumber = Number(koreanMatch[1]);
-      content = koreanMatch[2].trim();
-    }
-
-    if (dayNumber && dayNumber >= 1 && dayNumber <= 7) {
-      plan[dayNumber - 1] = content || `Day ${dayNumber} 계획`;
-    }
-  }
-
-  return plan;
-}
-
-function getCurrentDayIndex(checks) {
-  return checks.findIndex((c) => c === false);
-}
-
 export default function App() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(initialForm);
   const [checks, setChecks] = useState(initialChecks);
   const [analysis, setAnalysis] = useState("");
-  const [dailyPlan, setDailyPlan] = useState(initialPlan);
-
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -117,11 +82,6 @@ export default function App() {
   }, [checks]);
 
   const parsedAnalysis = useMemo(() => parseAnalysisSections(analysis), [analysis]);
-
-  useEffect(() => {
-    const nextPlan = extractSevenDayPlan(parsedAnalysis.plan);
-    setDailyPlan(nextPlan);
-  }, [parsedAnalysis.plan]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -243,7 +203,6 @@ export default function App() {
       setForm(initialForm);
       setChecks(initialChecks);
       setAnalysis("");
-      setDailyPlan(initialPlan);
       setMessage("로그아웃 완료.");
       setMessageType("info");
     } catch (error) {
@@ -264,13 +223,8 @@ export default function App() {
 
   const toggleCheck = (index) => {
     setChecks((prev) => {
-      const currentIndex = getCurrentDayIndex(prev);
-
-      if (currentIndex === -1) return prev;
-      if (index !== currentIndex) return prev;
-
       const updated = [...prev];
-      updated[index] = true;
+      updated[index] = !updated[index];
       return updated;
     });
   };
@@ -350,8 +304,6 @@ export default function App() {
     parsedAnalysis.core ||
     parsedAnalysis.plan.length > 0 ||
     parsedAnalysis.cheer;
-
-  const currentDayIndex = getCurrentDayIndex(checks);
 
   return (
     <div style={styles.page}>
@@ -450,44 +402,19 @@ export default function App() {
             />
           </div>
 
-          <div style={styles.autoSaveHint}>
-            AI가 만든 7일 계획과 연결돼. 체크박스를 누르면 자동 저장돼.
-          </div>
+          <div style={styles.autoSaveHint}>체크박스를 누르면 자동 저장돼.</div>
 
-          <div style={styles.dayPlanGrid}>
-            {checks.map((checked, index) => {
-              const isCompleted = checked;
-              const isCurrentDay = index === currentDayIndex;
-              const isAllDone = currentDayIndex === -1;
-              const isEnabled = isAllDone ? false : isCurrentDay;
-
-              return (
-                <label
-                  key={index}
-                  style={{
-                    ...styles.dayPlanCard,
-                    ...(isEnabled
-                      ? styles.dayPlanCardActive
-                      : isCompleted
-                        ? styles.dayPlanCardDone
-                        : styles.dayPlanCardLocked),
-                  }}
-                >
-                  <div style={styles.dayPlanTop}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={!isEnabled}
-                      onChange={() => toggleCheck(index)}
-                    />
-                    <span style={styles.dayLabel}>Day {index + 1}</span>
-                  </div>
-                  <div style={styles.dayTaskText}>
-                    {dailyPlan[index] || "AI 분석 후 이 날의 계획이 표시돼."}
-                  </div>
-                </label>
-              );
-            })}
+          <div style={styles.checkList}>
+            {checks.map((checked, index) => (
+              <label key={index} style={styles.checkItem}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleCheck(index)}
+                />
+                <span>Day {index + 1}</span>
+              </label>
+            ))}
           </div>
         </div>
 
@@ -720,46 +647,20 @@ const styles = {
     fontSize: "13px",
     color: "#6b7280",
   },
-  dayPlanGrid: {
+  checkList: {
     display: "grid",
-    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+    gap: "10px",
   },
-  dayPlanCard: {
-    display: "block",
-    background: "#f9fafb",
-    border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    padding: "14px",
-    transition: "all 0.2s ease",
-  },
-  dayPlanCardActive: {
-    border: "1px solid #93c5fd",
-    background: "#eff6ff",
-  },
-  dayPlanCardDone: {
-    border: "1px solid #bbf7d0",
-    background: "#f0fdf4",
-  },
-  dayPlanCardLocked: {
-    opacity: 0.65,
-  },
-  dayPlanTop: {
+  checkItem: {
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-    marginBottom: "8px",
-  },
-  dayLabel: {
+    gap: "8px",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "10px 12px",
     fontSize: "14px",
-    fontWeight: 700,
-    color: "#111827",
-  },
-  dayTaskText: {
-    fontSize: "14px",
-    lineHeight: 1.7,
-    color: "#4b5563",
-    marginLeft: "26px",
-    whiteSpace: "pre-wrap",
   },
   actionRow: {
     display: "flex",
