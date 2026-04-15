@@ -760,91 +760,97 @@ export default function App() {
                     <span style={styles.dayLabel}>Day {index + 1}</span>
                   </div>
 
-                  <div style={styles.dayTaskText}>
-                    {dailyPlan[index] || "AI 분석 후 이 날의 계획이 표시돼."}
-                  </div>
+                  <div style={styles.dayContentRow}>
+                    <div style={styles.dayLeftContent}>
+                      <div style={styles.dayTaskText}>
+                        {dailyPlan[index] || "AI 분석 후 이 날의 계획이 표시돼."}
+                      </div>
 
-                  <input
-                    ref={(el) => {
-                      galleryInputRefs.current[index] = el;
-                    }}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={(e) => handleImageChange(index, e)}
-                  />
-
-                  <input
-                    ref={(el) => {
-                      cameraInputRefs.current[index] = el;
-                    }}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    style={{ display: "none" }}
-                    onChange={(e) => handleImageChange(index, e)}
-                  />
-
-                  <div style={styles.dayImageActions}>
-                    <button
-                      type="button"
-                      style={{
-                        ...styles.secondaryButton,
-                        ...(canUploadImage && !isUploading ? null : styles.disabledButton),
-                      }}
-                      onClick={(e) => openCameraPicker(index, e)}
-                      disabled={!canUploadImage || isUploading}
-                    >
-                      {isUploading ? "이미지 저장 중..." : "사진 촬영"}
-                    </button>
-
-                    <button
-                      type="button"
-                      style={{
-                        ...styles.secondaryButton,
-                        ...(canUploadImage && !isUploading ? null : styles.disabledButton),
-                      }}
-                      onClick={(e) => openGalleryPicker(index, e)}
-                      disabled={!canUploadImage || isUploading}
-                    >
-                      {isUploading ? "이미지 저장 중..." : "갤러리 선택"}
-                    </button>
-
-                    {dayImages[index] ? (
-                      <button
-                        type="button"
-                        style={{
-                          ...styles.imageRemoveButton,
-                          ...(checked || isRemoving ? styles.disabledButton : null),
+                      <input
+                        ref={(el) => {
+                          galleryInputRefs.current[index] = el;
                         }}
-                        onClick={(e) => clearDayImage(index, e)}
-                        disabled={checked || isRemoving}
-                      >
-                        {isRemoving ? "제거 중..." : "이미지 제거"}
-                      </button>
-                    ) : null}
-                  </div>
-
-                  {dayImages[index] ? (
-                    <div style={styles.dayImagePreviewBox}>
-                      <img
-                        src={dayImages[index].preview || dayImages[index].url}
-                        alt={`Day ${index + 1} 인증`}
-                        style={styles.dayImagePreview}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => handleImageChange(index, e)}
                       />
-                      <div style={styles.dayImageName}>
-                        {dayImages[index].name || `Day ${index + 1} 이미지`}
+
+                      <input
+                        ref={(el) => {
+                          cameraInputRefs.current[index] = el;
+                        }}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        style={{ display: "none" }}
+                        onChange={(e) => handleImageChange(index, e)}
+                      />
+
+                      <div style={styles.dayImageActions}>
+                        <button
+                          type="button"
+                          style={{
+                            ...styles.secondaryButton,
+                            ...(canUploadImage && !isUploading ? null : styles.disabledButton),
+                          }}
+                          onClick={(e) => openCameraPicker(index, e)}
+                          disabled={!canUploadImage || isUploading}
+                        >
+                          {isUploading ? "이미지 저장 중..." : "사진 촬영"}
+                        </button>
+
+                        <button
+                          type="button"
+                          style={{
+                            ...styles.secondaryButton,
+                            ...(canUploadImage && !isUploading ? null : styles.disabledButton),
+                          }}
+                          onClick={(e) => openGalleryPicker(index, e)}
+                          disabled={!canUploadImage || isUploading}
+                        >
+                          {isUploading ? "이미지 저장 중..." : "갤러리 선택"}
+                        </button>
+
+                        {dayImages[index] ? (
+                          <button
+                            type="button"
+                            style={{
+                              ...styles.imageRemoveButton,
+                              ...(checked || isRemoving ? styles.disabledButton : null),
+                            }}
+                            onClick={(e) => clearDayImage(index, e)}
+                            disabled={checked || isRemoving}
+                          >
+                            {isRemoving ? "제거 중..." : "이미지 제거"}
+                          </button>
+                        ) : null}
                       </div>
                     </div>
-                  ) : (
-                    <div style={styles.dayImageHint}>
-                      {checked
-                        ? "완료된 Day야."
-                        : isCurrentDay
-                          ? "체크 전에 인증 이미지를 등록해줘."
-                          : "이전 Day를 완료하면 이미지 등록이 열려."}
+
+                    <div style={styles.dayRightPreview}>
+                      {dayImages[index] ? (
+                        <div style={styles.dayInlinePreviewBox}>
+                          <img
+                            src={dayImages[index].preview || dayImages[index].url}
+                            alt={`Day ${index + 1} 인증`}
+                            style={styles.dayInlinePreviewImage}
+                          />
+                          <div style={styles.dayImageName}>
+                            {dayImages[index].name || `Day ${index + 1} 이미지`}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={styles.dayInlinePreviewEmpty}>
+                          {checked
+                            ? "완료된 Day야."
+                            : isCurrentDay
+                              ? "여기에 인증 사진이 보여."
+                              : "이전 Day를 완료하면 사진 등록이 열려."}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
@@ -1102,6 +1108,18 @@ const styles = {
     fontWeight: 700,
     color: "#111827",
   },
+  dayContentRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 180px",
+    gap: "14px",
+    alignItems: "start",
+  },
+  dayLeftContent: {
+    minWidth: 0,
+  },
+  dayRightPreview: {
+    width: "180px",
+  },
   dayTaskText: {
     fontSize: "14px",
     lineHeight: 1.7,
@@ -1116,33 +1134,39 @@ const styles = {
     marginTop: "12px",
     marginLeft: "26px",
   },
-  dayImagePreviewBox: {
-    marginTop: "12px",
-    marginLeft: "26px",
+  dayInlinePreviewBox: {
     background: "#ffffff",
     border: "1px solid #e5e7eb",
     borderRadius: "12px",
-    padding: "10px",
+    padding: "8px",
   },
-  dayImagePreview: {
+  dayInlinePreviewImage: {
     width: "100%",
-    maxHeight: "240px",
+    height: "140px",
     objectFit: "cover",
     borderRadius: "10px",
     display: "block",
+  },
+  dayInlinePreviewEmpty: {
+    width: "180px",
+    height: "140px",
+    borderRadius: "12px",
+    border: "1px dashed #d1d5db",
+    background: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    fontSize: "12px",
+    color: "#6b7280",
+    padding: "10px",
+    boxSizing: "border-box",
   },
   dayImageName: {
     marginTop: "8px",
     fontSize: "12px",
     color: "#6b7280",
     wordBreak: "break-all",
-  },
-  dayImageHint: {
-    marginTop: "12px",
-    marginLeft: "26px",
-    fontSize: "13px",
-    color: "#6b7280",
-    lineHeight: 1.6,
   },
   imageRemoveButton: {
     background: "#ffffff",
