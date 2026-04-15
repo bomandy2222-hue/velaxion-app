@@ -110,10 +110,7 @@ function canCheckAfter24Hours(lastCheckedAt) {
   const last = new Date(lastCheckedAt).getTime();
   if (Number.isNaN(last)) return true;
 
-  const now = Date.now();
-  const diff = now - last;
-
-  return diff >= 24 * 60 * 60 * 1000;
+  return Date.now() - last >= 24 * 60 * 60 * 1000;
 }
 
 function getRemainingTimeText(lastCheckedAt) {
@@ -141,14 +138,58 @@ function getRemainingTimeText(lastCheckedAt) {
   return `${minutes}분 후에 가능해.`;
 }
 
-function getFileExtension(file) {
-  const name = file?.name || "";
-  const ext = name.includes(".") ? name.split(".").pop()?.toLowerCase() : "";
-  return ext || "jpg";
-}
-
 function sanitizeFileName(name) {
   return String(name || "image").replace(/[^\w.-]/g, "_");
+}
+
+async function compressImage(file, maxWidth = 1280, quality = 0.82) {
+  const bitmap = await createImageBitmap(file);
+
+  const ratio = Math.min(1, maxWidth / bitmap.width);
+  const width = Math.round(bitmap.width * ratio);
+  const height = Math.round(bitmap.height * ratio);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(bitmap, 0, 0, width, height);
+
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob((result) => {
+      if (!result) {
+        reject(new Error("이미지 압축 실패"));
+        return;
+      }
+      resolve(result);
+    }, "image/jpeg", quality);
+  });
+
+  return blob;
+}
+
+function getFriendlyStorageError(error) {
+  const code = error?.code || "";
+  const message = error?.message || "unknown";
+
+  if (code.includes("storage/retry-limit-exceeded")) {
+    return "이미지 업로드 시간이 너무 오래 걸렸어. 네트워크를 확인하거나 더 작은 사진으로 다시 시도해줘.";
+  }
+
+  if (code.includes("storage/unauthorized")) {
+    return "Storage 권한 설정 때문에 업로드할 수 없어. Firebase Storage 규칙을 확인해줘.";
+  }
+
+  if (code.includes("storage/canceled")) {
+    return "이미지 업로드가 취소됐어.";
+  }
+
+  if (code.includes("storage/unknown")) {
+    return "Storage 설정 또는 버킷 연결 문제일 수 있어. Firebase 설정을 확인해줘.";
+  }
+
+  return `이미지 업로드 실패: ${message}`;
 }
 
 export default function App() {
@@ -360,9 +401,7 @@ export default function App() {
   const handleImageChange = async (index, event) => {
     const file = event.target.files?.[0];
 
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     if (!user) {
       setMessage("먼저 로그인해줘.");
@@ -383,13 +422,14 @@ export default function App() {
       setMessage("");
 
       const prevImage = dayImages[index];
-      const extension = getFileExtension(file);
       const safeName = sanitizeFileName(file.name);
-      const path = `users/${user.uid}/day-images/day-${index + 1}-${Date.now()}-${safeName}.${extension}`;
+      const path = `users/${user.uid}/day-images/day-${index + 1}-${Date.now()}-${safeName}.jpg`;
       const imageRef = storageRef(storage, path);
 
-      await uploadBytes(imageRef, file, {
-        contentType: file.type,
+      const compressedBlob = await compressImage(file, 1280, 0.82);
+
+      await uploadBytes(imageRef, compressedBlob, {
+        contentType: "image/jpeg",
       });
 
       const downloadURL = await getDownloadURL(imageRef);
@@ -411,7 +451,6 @@ export default function App() {
       };
 
       setDayImages(nextDayImages);
-
       setUploadingImageIndex(null);
 
       saveToFirestore(form, checks, analysis, lastCheckedAt, nextDayImages, "");
@@ -419,9 +458,8 @@ export default function App() {
       setMessageType("success");
     } catch (error) {
       console.error(error);
-      setMessage(`이미지 업로드 실패: ${error.message || "unknown"}`);
+      setMessage(getFriendlyStorageError(error));
       setMessageType("error");
-      setUploadingImageIndex(null);
     } finally {
       setUploadingImageIndex(null);
       event.target.value = "";
