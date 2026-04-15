@@ -499,7 +499,7 @@ export default function App() {
           </div>
 
           <div style={styles.autoSaveHint}>
-            하루에 한 번만 체크할 수 있어. 순서대로 진행돼.
+            AI가 만든 7일 계획과 연결돼. 체크박스를 누르면 자동 저장돼.
           </div>
 
           <div style={styles.dayPlanGrid}>
@@ -511,17 +511,7 @@ export default function App() {
               const isEnabled = !isAllDone && isCurrentDay && !blockedByToday;
 
               return (
-                <label
-                  key={index}
-                  style={{
-                    ...styles.dayPlanCard,
-                    ...(isEnabled
-                      ? styles.dayPlanCardActive
-                      : isCompleted
-                        ? styles.dayPlanCardDone
-                        : styles.dayPlanCardLocked),
-                  }}
-                >
+                <label key={index} style={styles.dayPlanCard}>
                   <div style={styles.dayPlanTop}>
                     <input
                       type="checkbox"
@@ -779,18 +769,6 @@ const styles = {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     padding: "14px",
-    transition: "all 0.2s ease",
-  },
-  dayPlanCardActive: {
-    border: "1px solid #93c5fd",
-    background: "#eff6ff",
-  },
-  dayPlanCardDone: {
-    border: "1px solid #bbf7d0",
-    background: "#f0fdf4",
-  },
-  dayPlanCardLocked: {
-    opacity: 0.65,
   },
   dayPlanTop: {
     display: "flex",
