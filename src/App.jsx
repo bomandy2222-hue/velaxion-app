@@ -91,6 +91,10 @@ function extractSevenDayPlan(planLines) {
   return plan;
 }
 
+function getCurrentDayIndex(checks) {
+  return checks.findIndex((c) => c === false);
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(initialForm);
@@ -260,8 +264,13 @@ export default function App() {
 
   const toggleCheck = (index) => {
     setChecks((prev) => {
+      const currentIndex = getCurrentDayIndex(prev);
+
+      if (currentIndex === -1) return prev;
+      if (index !== currentIndex) return prev;
+
       const updated = [...prev];
-      updated[index] = !updated[index];
+      updated[index] = true;
       return updated;
     });
   };
@@ -341,6 +350,8 @@ export default function App() {
     parsedAnalysis.core ||
     parsedAnalysis.plan.length > 0 ||
     parsedAnalysis.cheer;
+
+  const currentDayIndex = getCurrentDayIndex(checks);
 
   return (
     <div style={styles.page}>
@@ -444,21 +455,39 @@ export default function App() {
           </div>
 
           <div style={styles.dayPlanGrid}>
-            {checks.map((checked, index) => (
-              <label key={index} style={styles.dayPlanCard}>
-                <div style={styles.dayPlanTop}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleCheck(index)}
-                  />
-                  <span style={styles.dayLabel}>Day {index + 1}</span>
-                </div>
-                <div style={styles.dayTaskText}>
-                  {dailyPlan[index] || "AI 분석 후 이 날의 계획이 표시돼."}
-                </div>
-              </label>
-            ))}
+            {checks.map((checked, index) => {
+              const isCompleted = checked;
+              const isCurrentDay = index === currentDayIndex;
+              const isAllDone = currentDayIndex === -1;
+              const isEnabled = isAllDone ? false : isCurrentDay;
+
+              return (
+                <label
+                  key={index}
+                  style={{
+                    ...styles.dayPlanCard,
+                    ...(isEnabled
+                      ? styles.dayPlanCardActive
+                      : isCompleted
+                        ? styles.dayPlanCardDone
+                        : styles.dayPlanCardLocked),
+                  }}
+                >
+                  <div style={styles.dayPlanTop}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={!isEnabled}
+                      onChange={() => toggleCheck(index)}
+                    />
+                    <span style={styles.dayLabel}>Day {index + 1}</span>
+                  </div>
+                  <div style={styles.dayTaskText}>
+                    {dailyPlan[index] || "AI 분석 후 이 날의 계획이 표시돼."}
+                  </div>
+                </label>
+              );
+            })}
           </div>
         </div>
 
@@ -701,6 +730,18 @@ const styles = {
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
     padding: "14px",
+    transition: "all 0.2s ease",
+  },
+  dayPlanCardActive: {
+    border: "1px solid #93c5fd",
+    background: "#eff6ff",
+  },
+  dayPlanCardDone: {
+    border: "1px solid #bbf7d0",
+    background: "#f0fdf4",
+  },
+  dayPlanCardLocked: {
+    opacity: 0.65,
   },
   dayPlanTop: {
     display: "flex",
