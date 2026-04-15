@@ -248,9 +248,6 @@ export default function App() {
       }
 
       try {
-        console.log("auth current user:", currentUser?.uid);
-        console.log("storage bucket:", storage.app.options.storageBucket);
-
         const ref = doc(db, "users", currentUser.uid);
         const snap = await getDoc(ref);
 
@@ -434,20 +431,12 @@ export default function App() {
       setUploadingImageIndex(index);
       setMessage("");
 
-      console.log("UPLOAD START");
-      console.log("file name:", file.name);
-      console.log("file type:", file.type);
-      console.log("file size(bytes):", file.size);
-      console.log("auth current user:", auth.currentUser?.uid);
-      console.log("storage bucket:", storage.app.options.storageBucket);
-
       const prevImage = dayImages[index];
       const safeName = sanitizeFileName(file.name);
       const path = `users/${user.uid}/day-images/day-${index + 1}-${Date.now()}-${safeName}.jpg`;
       const imageRef = storageRef(storage, path);
 
       const compressedBlob = await compressImage(file, 720, 0.65);
-      console.log("compressed size(bytes):", compressedBlob.size);
 
       if (compressedBlob.size > 1024 * 1024) {
         throw new Error("압축 후에도 이미지가 너무 커. 더 작은 사진으로 다시 시도해줘.");
@@ -458,19 +447,7 @@ export default function App() {
       });
 
       await new Promise((resolve, reject) => {
-        uploadTask.on(
-          "state_changed",
-          (snapshot) => {
-            console.log(
-              "upload progress:",
-              snapshot.bytesTransferred,
-              "/",
-              snapshot.totalBytes
-            );
-          },
-          reject,
-          resolve
-        );
+        uploadTask.on("state_changed", null, reject, resolve);
       });
 
       const downloadURL = await getDownloadURL(imageRef);
@@ -498,10 +475,7 @@ export default function App() {
       setMessage(`Day ${index + 1} 인증 이미지가 저장됐어.`);
       setMessageType("success");
     } catch (error) {
-      console.error("UPLOAD ERROR FULL:", error);
-      console.error("UPLOAD ERROR CODE:", error?.code);
-      console.error("UPLOAD ERROR MESSAGE:", error?.message);
-
+      console.error(error);
       if (error?.message === "압축 후에도 이미지가 너무 커. 더 작은 사진으로 다시 시도해줘.") {
         setMessage(error.message);
       } else {
@@ -1271,7 +1245,7 @@ const styles = {
     border: "1px dashed #d1d5db",
     borderRadius: "12px",
     padding: "18px",
-    lineHeight: "1.7",
+    lineHeight: 1.7,
     color: "#6b7280",
   },
   analysisCards: {
