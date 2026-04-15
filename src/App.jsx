@@ -12,7 +12,7 @@ import {
   getDownloadURL,
   getStorage,
   ref as storageRef,
-  uploadBytes,
+  uploadBytesResumable,
 } from "firebase/storage";
 import app from "../firebase.js";
 
@@ -142,31 +142,42 @@ function sanitizeFileName(name) {
   return String(name || "image").replace(/[^\w.-]/g, "_");
 }
 
-async function compressImage(file, maxWidth = 1280, quality = 0.82) {
-  const bitmap = await createImageBitmap(file);
+async function compressImage(file, maxWidth = 720, quality = 0.65) {
+  const imgUrl = URL.createObjectURL(file);
 
-  const ratio = Math.min(1, maxWidth / bitmap.width);
-  const width = Math.round(bitmap.width * ratio);
-  const height = Math.round(bitmap.height * ratio);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = imgUrl;
+    });
 
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+    const ratio = Math.min(1, maxWidth / img.width);
+    const width = Math.max(1, Math.round(img.width * ratio));
+    const height = Math.max(1, Math.round(img.height * ratio));
 
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(bitmap, 0, 0, width, height);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
 
-  const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob((result) => {
-      if (!result) {
-        reject(new Error("이미지 압축 실패"));
-        return;
-      }
-      resolve(result);
-    }, "image/jpeg", quality);
-  });
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, width, height);
 
-  return blob;
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((result) => {
+        if (!result) {
+          reject(new Error("이미지 압축 실패"));
+          return;
+        }
+        resolve(result);
+      }, "image/jpeg", quality);
+    });
+
+    return blob;
+  } finally {
+    URL.revokeObjectURL(imgUrl);
+  }
 }
 
 function getFriendlyStorageError(error) {
@@ -174,7 +185,7 @@ function getFriendlyStorageError(error) {
   const message = error?.message || "unknown";
 
   if (code.includes("storage/retry-limit-exceeded")) {
-    return "이미지 업로드 시간이 너무 오래 걸렸어. 네트워크를 확인하거나 더 작은 사진으로 다시 시도해줘.";
+    return "사진 용량이 크거나 네트워크가 불안정해서 업로드가 실패했어. 더 작은 사진으로 다시 시도해줘.";
   }
 
   if (code.includes("storage/unauthorized")) {
@@ -400,7 +411,6 @@ export default function App() {
 
   const handleImageChange = async (index, event) => {
     const file = event.target.files?.[0];
-
     if (!file) return;
 
     if (!user) {
@@ -426,10 +436,18 @@ export default function App() {
       const path = `users/${user.uid}/day-images/day-${index + 1}-${Date.now()}-${safeName}.jpg`;
       const imageRef = storageRef(storage, path);
 
-      const compressedBlob = await compressImage(file, 1280, 0.82);
+      const compressedBlob = await compressImage(file, 720, 0.65);
 
-      await uploadBytes(imageRef, compressedBlob, {
+      if (compressedBlob.size > 1024 * 1024) {
+        throw new Error("압축 후에도 이미지가 너무 커. 더 작은 사진으로 다시 시도해줘.");
+      }
+
+      const uploadTask = uploadBytesResumable(imageRef, compressedBlob, {
         contentType: "image/jpeg",
+      });
+
+      await new Promise((resolve, reject) => {
+        uploadTask.on("state_changed", null, reject, resolve);
       });
 
       const downloadURL = await getDownloadURL(imageRef);
@@ -458,7 +476,11 @@ export default function App() {
       setMessageType("success");
     } catch (error) {
       console.error(error);
-      setMessage(getFriendlyStorageError(error));
+      if (error?.message === "압축 후에도 이미지가 너무 커. 더 작은 사진으로 다시 시도해줘.") {
+        setMessage(error.message);
+      } else {
+        setMessage(getFriendlyStorageError(error));
+      }
       setMessageType("error");
     } finally {
       setUploadingImageIndex(null);
