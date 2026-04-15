@@ -12,7 +12,7 @@ import {
   getDownloadURL,
   getStorage,
   ref as storageRef,
-  uploadString,
+  uploadBytes,
 } from "firebase/storage";
 import app from "../firebase.js";
 
@@ -382,25 +382,16 @@ export default function App() {
       setUploadingImageIndex(index);
       setMessage("");
 
-      const reader = new FileReader();
-
-      const dataUrl = await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      if (typeof dataUrl !== "string") {
-        throw new Error("이미지 변환 실패");
-      }
-
       const prevImage = dayImages[index];
       const extension = getFileExtension(file);
       const safeName = sanitizeFileName(file.name);
       const path = `users/${user.uid}/day-images/day-${index + 1}-${Date.now()}-${safeName}.${extension}`;
       const imageRef = storageRef(storage, path);
 
-      await uploadString(imageRef, dataUrl, "data_url");
+      await uploadBytes(imageRef, file, {
+        contentType: file.type,
+      });
+
       const downloadURL = await getDownloadURL(imageRef);
 
       if (prevImage?.path) {
@@ -420,13 +411,17 @@ export default function App() {
       };
 
       setDayImages(nextDayImages);
-      await saveToFirestore(form, checks, analysis, lastCheckedAt, nextDayImages, "");
+
+      setUploadingImageIndex(null);
+
+      saveToFirestore(form, checks, analysis, lastCheckedAt, nextDayImages, "");
       setMessage(`Day ${index + 1} 인증 이미지가 저장됐어.`);
       setMessageType("success");
     } catch (error) {
       console.error(error);
       setMessage(`이미지 업로드 실패: ${error.message || "unknown"}`);
       setMessageType("error");
+      setUploadingImageIndex(null);
     } finally {
       setUploadingImageIndex(null);
       event.target.value = "";
@@ -762,7 +757,7 @@ export default function App() {
                       onClick={(e) => openCameraPicker(index, e)}
                       disabled={!canUploadImage || isUploading}
                     >
-                      {isUploading ? "업로드 중..." : "사진 촬영"}
+                      {isUploading ? "이미지 저장 중..." : "사진 촬영"}
                     </button>
 
                     <button
@@ -774,7 +769,7 @@ export default function App() {
                       onClick={(e) => openGalleryPicker(index, e)}
                       disabled={!canUploadImage || isUploading}
                     >
-                      {isUploading ? "업로드 중..." : "갤러리 선택"}
+                      {isUploading ? "이미지 저장 중..." : "갤러리 선택"}
                     </button>
 
                     {dayImages[index] ? (
