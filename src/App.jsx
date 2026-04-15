@@ -91,12 +91,54 @@ function extractSevenDayPlan(planLines) {
   return plan;
 }
 
+function getCurrentDayIndex(checks) {
+  return checks.findIndex((c) => c === false);
+}
+
+function canCheckAfter24Hours(lastCheckedAt) {
+  if (!lastCheckedAt) return true;
+
+  const last = new Date(lastCheckedAt).getTime();
+  if (Number.isNaN(last)) return true;
+
+  const now = Date.now();
+  const diff = now - last;
+
+  return diff >= 24 * 60 * 60 * 1000;
+}
+
+function getRemainingTimeText(lastCheckedAt) {
+  if (!lastCheckedAt) return "";
+
+  const last = new Date(lastCheckedAt).getTime();
+  if (Number.isNaN(last)) return "";
+
+  const remainingMs = 24 * 60 * 60 * 1000 - (Date.now() - last);
+
+  if (remainingMs <= 0) return "";
+
+  const totalMinutes = Math.ceil(remainingMs / (60 * 1000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours}시간 ${minutes}분 후에 가능해.`;
+  }
+
+  if (hours > 0) {
+    return `${hours}시간 후에 가능해.`;
+  }
+
+  return `${minutes}분 후에 가능해.`;
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(initialForm);
   const [checks, setChecks] = useState(initialChecks);
   const [analysis, setAnalysis] = useState("");
   const [dailyPlan, setDailyPlan] = useState(initialPlan);
+  const [lastCheckedAt, setLastCheckedAt] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -151,6 +193,10 @@ export default function App() {
           if (typeof data.analysis === "string") {
             setAnalysis(data.analysis);
           }
+
+          if (typeof data.lastCheckedAt === "string") {
+            setLastCheckedAt(data.lastCheckedAt);
+          }
         }
       } catch (error) {
         console.error(error);
@@ -169,6 +215,7 @@ export default function App() {
     nextForm,
     nextChecks,
     nextAnalysis,
+    nextLastCheckedAt = lastCheckedAt,
     successText = "저장 완료!"
   ) => {
     if (!user) return;
@@ -184,6 +231,7 @@ export default function App() {
           form: nextForm,
           checks: nextChecks,
           analysis: nextAnalysis,
+          lastCheckedAt: nextLastCheckedAt,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
@@ -208,11 +256,11 @@ export default function App() {
     if (loading || !user || skipAutoSaveRef.current) return;
 
     const timer = setTimeout(() => {
-      saveToFirestore(form, checks, analysis, "자동 저장 완료!");
+      saveToFirestore(form, checks, analysis, lastCheckedAt, "자동 저장 완료!");
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [form, checks, analysis, user, loading]);
+  }, [form, checks, analysis, lastCheckedAt, user, loading]);
 
   const handleLogin = async () => {
     try {
@@ -240,6 +288,7 @@ export default function App() {
       setChecks(initialChecks);
       setAnalysis("");
       setDailyPlan(initialPlan);
+      setLastCheckedAt(null);
       setMessage("로그아웃 완료.");
       setMessageType("info");
     } catch (error) {
@@ -258,12 +307,42 @@ export default function App() {
     }));
   };
 
-  const toggleCheck = (index) => {
-    setChecks((prev) => {
-      const updated = [...prev];
-      updated[index] = !updated[index];
-      return updated;
-    });
+  const toggleCheck = async (index) => {
+    if (!user) {
+      setMessage("먼저 로그인해줘.");
+      setMessageType("error");
+      return;
+    }
+
+    const currentIndex = getCurrentDayIndex(checks);
+
+    if (currentIndex === -1) {
+      setMessage("7일 계획을 모두 완료했어!");
+      setMessageType("success");
+      return;
+    }
+
+    if (index !== currentIndex) {
+      return;
+    }
+
+    if (!canCheckAfter24Hours(lastCheckedAt)) {
+      setMessage(`다음 체크는 ${getRemainingTimeText(lastCheckedAt)}`);
+      setMessageType("info");
+      return;
+    }
+
+    const updatedChecks = [...checks];
+    updatedChecks[index] = true;
+
+    const nowIso = new Date().toISOString();
+
+    setChecks(updatedChecks);
+    setLastCheckedAt(nowIso);
+    setMessage(`Day ${index + 1} 완료!`);
+    setMessageType("success");
+
+    await saveToFirestore(form, updatedChecks, analysis, nowIso, "");
   };
 
   const handleSave = async () => {
@@ -273,7 +352,7 @@ export default function App() {
       return;
     }
 
-    await saveToFirestore(form, checks, analysis, "수동 저장 완료!");
+    await saveToFirestore(form, checks, analysis, lastCheckedAt, "수동 저장 완료!");
   };
 
   const handleAnalyze = async () => {
@@ -312,7 +391,7 @@ export default function App() {
       setMessageType("success");
 
       if (user) {
-        await saveToFirestore(form, checks, resultText, "");
+        await saveToFirestore(form, checks, resultText, lastCheckedAt, "");
       }
     } catch (error) {
       console.error(error);
@@ -450,6 +529,7 @@ export default function App() {
                   <input
                     type="checkbox"
                     checked={checked}
+                    disabled={checked || index !== getCurrentDayIndex(checks)}
                     onChange={() => toggleCheck(index)}
                   />
                   <span style={styles.dayLabel}>Day {index + 1}</span>
