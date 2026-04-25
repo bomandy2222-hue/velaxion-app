@@ -365,7 +365,7 @@ function LandingPage({ onStart }) {
           </div>
 
           <button style={landingStyles.introButton} onClick={onStart}>
-            컨설팅 화면으로 이동하기
+            7일 먼저 체험해보기
           </button>
         </div>
       </section>
