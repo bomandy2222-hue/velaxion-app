@@ -203,6 +203,126 @@ function getFriendlyStorageError(error) {
   return `이미지 업로드 실패: ${message}`;
 }
 
+
+function LandingPage({ onStart }) {
+  const testimonials = [
+    {
+      quote: "사진 인증이 있으니까 미룰 수가 없었어요. 처음으로 3일을 넘겼습니다.",
+      name: "체험 사용자 A",
+    },
+    {
+      quote: "해야 할 일이 하루 1개라서 부담이 적었고, 완료했다는 느낌이 확실했어요.",
+      name: "체험 사용자 B",
+    },
+    {
+      quote: "기록만 하는 앱이 아니라 실제로 움직이게 만드는 느낌이었습니다.",
+      name: "체험 사용자 C",
+    },
+  ];
+
+  return (
+    <div style={landingStyles.page}>
+      <header style={landingStyles.nav}>
+        <div style={landingStyles.brand}>VELAXION</div>
+        <div style={landingStyles.navLinks}>
+          <a style={landingStyles.navLink} href="#reviews">후기</a>
+          <a style={landingStyles.navLink} href="#intro">소개</a>
+          <button style={landingStyles.navButton} onClick={onStart}>
+            7일 체험
+          </button>
+        </div>
+      </header>
+
+      <section style={landingStyles.heroSection}>
+        <video
+          style={landingStyles.heroVideo}
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster="/velaxion-hero.jpg"
+        >
+          <source src="/velaxion-hero.mp4" type="video/mp4" />
+        </video>
+        <div style={landingStyles.overlay} />
+        <div style={landingStyles.heroContent}>
+          <p style={landingStyles.kicker}>사진 인증 기반 실행 시스템</p>
+          <h1 style={landingStyles.heroTitle}>
+            생각만 하던 목표를
+            <br />
+            행동으로 바꾸는 7일
+          </h1>
+          <p style={landingStyles.heroSubtitle}>
+            고객이 직접 행동하고, 사진으로 증명하고, 7일 동안 이어가도록 만드는 벨락시온.
+          </p>
+          <button style={landingStyles.heroButton} onClick={onStart}>
+            7일 먼저 체험해보기
+          </button>
+        </div>
+        <div style={landingStyles.scrollHint}>아래로 스크롤</div>
+      </section>
+
+      <section id="reviews" style={landingStyles.reviewSection}>
+        <div style={landingStyles.sectionInner}>
+          <p style={landingStyles.kickerDark}>Customer Voice</p>
+          <h2 style={landingStyles.sectionTitle}>먼저 체험한 사람들의 후기</h2>
+          <p style={landingStyles.sectionDescription}>
+            벨락시온은 말보다 실행을 중요하게 봅니다. 사람들은 기록이 아니라
+            실제 행동이 쌓일 때 변화를 느낍니다.
+          </p>
+
+          <div style={landingStyles.reviewGrid}>
+            {testimonials.map((item) => (
+              <div key={item.name} style={landingStyles.reviewCard}>
+                <div style={landingStyles.reviewImageArea}>
+                  <span style={landingStyles.reviewImageText}>후기 사진 영역</span>
+                </div>
+                <p style={landingStyles.reviewQuote}>“{item.quote}”</p>
+                <p style={landingStyles.reviewName}>{item.name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="intro" style={landingStyles.introSection}>
+        <div style={landingStyles.introOverlay} />
+        <div style={landingStyles.introContent}>
+          <p style={landingStyles.kicker}>What is Velaxion?</p>
+          <h2 style={landingStyles.introTitle}>
+            벨락시온은 컨설팅을
+            <br />
+            행동으로 연결합니다
+          </h2>
+          <p style={landingStyles.introText}>
+            고민과 목표를 입력하면 AI가 현재 상태를 분석하고, 7일 행동 계획을 제안합니다.
+            사용자는 매일 사진 인증을 통해 실제 실행을 완료합니다.
+          </p>
+
+          <div style={landingStyles.featureGrid}>
+            <div style={landingStyles.featureCard}>
+              <strong>01</strong>
+              <span>AI 분석</span>
+            </div>
+            <div style={landingStyles.featureCard}>
+              <strong>02</strong>
+              <span>7일 행동 계획</span>
+            </div>
+            <div style={landingStyles.featureCard}>
+              <strong>03</strong>
+              <span>사진 인증 완료</span>
+            </div>
+          </div>
+
+          <button style={landingStyles.introButton} onClick={onStart}>
+            컨설팅 화면으로 이동하기
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(initialForm);
@@ -220,6 +340,7 @@ export default function App() {
   const [removingImageIndex, setRemovingImageIndex] = useState(null);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("info");
+  const [showExperience, setShowExperience] = useState(false);
 
   const skipAutoSaveRef = useRef(true);
   const galleryInputRefs = useRef([]);
@@ -641,6 +762,10 @@ export default function App() {
     }
   };
 
+  if (!showExperience) {
+    return <LandingPage onStart={() => setShowExperience(true)} />;
+  }
+
   if (loading) {
     return (
       <div style={styles.page}>
@@ -665,6 +790,9 @@ export default function App() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
+        <button style={styles.backToLandingButton} onClick={() => setShowExperience(false)}>
+          ← 소개 화면으로 돌아가기
+        </button>
         <div style={styles.header}>
           <div>
             <h1 style={styles.title}>Velaxion 🚀</h1>
@@ -1355,5 +1483,292 @@ const styles = {
     background: "#eff6ff",
     color: "#1d4ed8",
     border: "1px solid #bfdbfe",
+  },
+  backToLandingButton: {
+    background: "#ffffff",
+    color: "#111827",
+    border: "1px solid #d1d5db",
+    borderRadius: "999px",
+    padding: "10px 14px",
+    fontSize: "14px",
+    fontWeight: 700,
+    cursor: "pointer",
+    marginBottom: "16px",
+    boxShadow: "0 6px 18px rgba(15, 23, 42, 0.06)",
+  },
+};
+
+const landingStyles = {
+  page: {
+    minHeight: "100vh",
+    background: "#050505",
+    color: "#ffffff",
+    fontFamily:
+      'Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    scrollBehavior: "smooth",
+  },
+  nav: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "68px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0 28px",
+    zIndex: 20,
+    background: "linear-gradient(180deg, rgba(0,0,0,0.62), rgba(0,0,0,0))",
+    boxSizing: "border-box",
+  },
+  brand: {
+    fontSize: "20px",
+    fontWeight: 900,
+    letterSpacing: "0.18em",
+  },
+  navLinks: {
+    display: "flex",
+    alignItems: "center",
+    gap: "18px",
+  },
+  navLink: {
+    color: "#ffffff",
+    textDecoration: "none",
+    fontSize: "14px",
+    fontWeight: 700,
+    textShadow: "0 2px 12px rgba(0,0,0,0.45)",
+  },
+  navButton: {
+    border: "1px solid rgba(255,255,255,0.55)",
+    background: "rgba(255,255,255,0.14)",
+    color: "#ffffff",
+    borderRadius: "999px",
+    padding: "10px 16px",
+    fontSize: "14px",
+    fontWeight: 800,
+    cursor: "pointer",
+    backdropFilter: "blur(10px)",
+  },
+  heroSection: {
+    position: "relative",
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  heroVideo: {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    background: "linear-gradient(135deg, #111827 0%, #374151 45%, #0f172a 100%)",
+  },
+  overlay: {
+    position: "absolute",
+    inset: 0,
+    background: "linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.42) 48%, rgba(0,0,0,0.72))",
+  },
+  heroContent: {
+    position: "relative",
+    zIndex: 2,
+    width: "min(920px, calc(100% - 36px))",
+    textAlign: "center",
+    paddingTop: "80px",
+  },
+  kicker: {
+    margin: 0,
+    fontSize: "15px",
+    fontWeight: 800,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.82)",
+  },
+  kickerDark: {
+    margin: 0,
+    fontSize: "14px",
+    fontWeight: 900,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    color: "#6b7280",
+  },
+  heroTitle: {
+    margin: "18px 0 0",
+    fontSize: "clamp(44px, 7vw, 88px)",
+    lineHeight: 1.02,
+    fontWeight: 950,
+    letterSpacing: "-0.06em",
+    textShadow: "0 12px 40px rgba(0,0,0,0.35)",
+  },
+  heroSubtitle: {
+    maxWidth: "680px",
+    margin: "22px auto 0",
+    color: "rgba(255,255,255,0.86)",
+    fontSize: "clamp(16px, 2.2vw, 21px)",
+    lineHeight: 1.65,
+    fontWeight: 500,
+  },
+  heroButton: {
+    marginTop: "34px",
+    border: "none",
+    background: "#ffffff",
+    color: "#111827",
+    borderRadius: "999px",
+    padding: "15px 28px",
+    fontSize: "16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    boxShadow: "0 18px 45px rgba(0,0,0,0.28)",
+  },
+  scrollHint: {
+    position: "absolute",
+    bottom: "28px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: 2,
+    fontSize: "13px",
+    color: "rgba(255,255,255,0.72)",
+    fontWeight: 700,
+  },
+  reviewSection: {
+    minHeight: "100vh",
+    background: "#f5f7fb",
+    color: "#111827",
+    display: "flex",
+    alignItems: "center",
+    padding: "92px 22px",
+    boxSizing: "border-box",
+  },
+  sectionInner: {
+    width: "min(1120px, 100%)",
+    margin: "0 auto",
+  },
+  sectionTitle: {
+    margin: "14px 0 0",
+    fontSize: "clamp(34px, 5vw, 64px)",
+    lineHeight: 1.06,
+    letterSpacing: "-0.05em",
+    fontWeight: 950,
+  },
+  sectionDescription: {
+    maxWidth: "720px",
+    marginTop: "18px",
+    color: "#4b5563",
+    fontSize: "18px",
+    lineHeight: 1.75,
+    fontWeight: 500,
+  },
+  reviewGrid: {
+    marginTop: "40px",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    gap: "20px",
+  },
+  reviewCard: {
+    background: "#ffffff",
+    borderRadius: "28px",
+    overflow: "hidden",
+    border: "1px solid #e5e7eb",
+    boxShadow: "0 18px 48px rgba(15, 23, 42, 0.08)",
+  },
+  reviewImageArea: {
+    height: "260px",
+    background: "linear-gradient(135deg, #111827 0%, #4b5563 48%, #d1d5db 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "rgba(255,255,255,0.8)",
+    fontSize: "14px",
+    fontWeight: 800,
+  },
+  reviewImageText: {
+    border: "1px solid rgba(255,255,255,0.35)",
+    borderRadius: "999px",
+    padding: "10px 14px",
+    background: "rgba(0,0,0,0.18)",
+  },
+  reviewQuote: {
+    margin: 0,
+    padding: "22px 22px 0",
+    fontSize: "17px",
+    lineHeight: 1.65,
+    color: "#111827",
+    fontWeight: 800,
+  },
+  reviewName: {
+    margin: 0,
+    padding: "16px 22px 24px",
+    fontSize: "14px",
+    color: "#6b7280",
+    fontWeight: 700,
+  },
+  introSection: {
+    position: "relative",
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    padding: "92px 22px",
+    boxSizing: "border-box",
+    background: "linear-gradient(135deg, #0f172a 0%, #111827 45%, #020617 100%)",
+  },
+  introOverlay: {
+    position: "absolute",
+    inset: 0,
+    background: "radial-gradient(circle at 50% 25%, rgba(255,255,255,0.18), rgba(255,255,255,0) 34%)",
+  },
+  introContent: {
+    position: "relative",
+    zIndex: 2,
+    width: "min(960px, 100%)",
+    textAlign: "center",
+  },
+  introTitle: {
+    margin: "18px 0 0",
+    fontSize: "clamp(38px, 6vw, 76px)",
+    lineHeight: 1.05,
+    letterSpacing: "-0.06em",
+    fontWeight: 950,
+  },
+  introText: {
+    maxWidth: "760px",
+    margin: "24px auto 0",
+    color: "rgba(255,255,255,0.78)",
+    fontSize: "18px",
+    lineHeight: 1.8,
+    fontWeight: 500,
+  },
+  featureGrid: {
+    margin: "42px auto 0",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: "14px",
+    maxWidth: "760px",
+  },
+  featureCard: {
+    minHeight: "120px",
+    borderRadius: "26px",
+    border: "1px solid rgba(255,255,255,0.14)",
+    background: "rgba(255,255,255,0.08)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "12px",
+    backdropFilter: "blur(10px)",
+  },
+  introButton: {
+    marginTop: "38px",
+    border: "none",
+    background: "#ffffff",
+    color: "#111827",
+    borderRadius: "999px",
+    padding: "15px 28px",
+    fontSize: "16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    boxShadow: "0 18px 45px rgba(0,0,0,0.28)",
   },
 };
