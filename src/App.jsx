@@ -340,9 +340,9 @@ function LandingPage({ onStart }) {
         <div style={landingStyles.introContent}>
           <p style={landingStyles.kicker}>VELAXION SYSTEM</p>
           <h2 style={landingStyles.introTitle}>
-            컨설팅을 듣는 데서 끝내지 않고
+            AI와 함께 미래를 그려나가고
             <br />
-            실제 행동까지 연결합니다
+            행동까지 실행시켜줍니다
           </h2>
           <p style={landingStyles.introText}>
             고민과 목표를 입력하면 AI가 현재 상태를 분석하고, 실행 가능한 행동 계획을 만듭니다.
