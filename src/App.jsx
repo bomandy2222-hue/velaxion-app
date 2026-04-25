@@ -205,6 +205,51 @@ function getFriendlyStorageError(error) {
 
 
 function LandingPage({ onStart }) {
+  const resultVideos = [
+    {
+      number: "01",
+      title: "목표를 정합니다",
+      caption: "생각을 화면 밖으로 꺼내는 첫 장면",
+      src: "/videos/result1.mp4",
+      poster: "/videos/result1.jpg",
+    },
+    {
+      number: "02",
+      title: "하루 하나씩 실행합니다",
+      caption: "복잡한 계획보다 오늘의 행동 하나",
+      src: "/videos/result2.mp4",
+      poster: "/videos/result2.jpg",
+    },
+    {
+      number: "03",
+      title: "사진으로 증명합니다",
+      caption: "말이 아니라 실제 행동의 증거",
+      src: "/videos/result3.mp4",
+      poster: "/videos/result3.jpg",
+    },
+    {
+      number: "04",
+      title: "기록이 쌓입니다",
+      caption: "변화가 눈에 보이기 시작합니다",
+      src: "/videos/result4.mp4",
+      poster: "/videos/result4.jpg",
+    },
+    {
+      number: "05",
+      title: "습관이 일상이 됩니다",
+      caption: "어제의 내가 오늘을 밀어줍니다",
+      src: "/videos/result5.mp4",
+      poster: "/videos/result5.jpg",
+    },
+    {
+      number: "06",
+      title: "결과가 남습니다",
+      caption: "처음과 다른 나를 확인합니다",
+      src: "/videos/result6.mp4",
+      poster: "/videos/result6.jpg",
+    },
+  ];
+
   const testimonials = [
     {
       quote: "사진 인증이 있으니까 미룰 수가 없었어요. 처음으로 3일을 넘겼습니다.",
@@ -228,48 +273,53 @@ function LandingPage({ onStart }) {
           <a style={landingStyles.navLink} href="#reviews">후기</a>
           <a style={landingStyles.navLink} href="#intro">소개</a>
           <button style={landingStyles.navButton} onClick={onStart}>
-            7일 체험
+            시작하기
           </button>
         </div>
       </header>
 
-      <section style={landingStyles.heroSection}>
-        <video
-          style={landingStyles.heroVideo}
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster="/velaxion-hero.jpg"
-        >
-          <source src="/velaxion-hero.mp4" type="video/mp4" />
-        </video>
-        <div style={landingStyles.overlay} />
-        <div style={landingStyles.heroContent}>
-          <p style={landingStyles.kicker}>사진 인증 기반 실행 시스템</p>
-          <h1 style={landingStyles.heroTitle}>
-            생각만 하던 목표를
-            <br />
-            행동으로 바꾸는 7일
-          </h1>
-          <p style={landingStyles.heroSubtitle}>
-            고객이 직접 행동하고, 사진으로 증명하고, 7일 동안 이어가도록 만드는 벨락시온.
-          </p>
-          <button style={landingStyles.heroButton} onClick={onStart}>
-            7일 먼저 체험해보기
-          </button>
+      <section style={landingStyles.videoWallSection}>
+        <div style={landingStyles.videoWallGrid}>
+          {resultVideos.map((item) => (
+            <div key={item.number} style={landingStyles.videoPanel}>
+              <video
+                style={landingStyles.panelVideo}
+                autoPlay
+                muted
+                loop
+                playsInline
+                poster={item.poster}
+              >
+                <source src={item.src} type="video/mp4" />
+              </video>
+              <div style={landingStyles.panelFallback} />
+              <div style={landingStyles.panelOverlay} />
+              <button
+                type="button"
+                aria-label={`${item.title} 영상 보기`}
+                style={landingStyles.playButton}
+              >
+                ▶
+              </button>
+              <div style={landingStyles.panelText}>
+                <div style={landingStyles.panelNumber}>{item.number}</div>
+                <h2 style={landingStyles.panelTitle}>{item.title}</h2>
+                <p style={landingStyles.panelCaption}>{item.caption}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        <div style={landingStyles.scrollHint}>아래로 스크롤</div>
       </section>
 
       <section id="reviews" style={landingStyles.reviewSection}>
         <div style={landingStyles.sectionInner}>
-          <p style={landingStyles.kickerDark}>Customer Voice</p>
-          <h2 style={landingStyles.sectionTitle}>먼저 체험한 사람들의 후기</h2>
-          <p style={landingStyles.sectionDescription}>
-            벨락시온은 말보다 실행을 중요하게 봅니다. 사람들은 기록이 아니라
-            실제 행동이 쌓일 때 변화를 느낍니다.
-          </p>
+          <div style={landingStyles.sectionTopRow}>
+            <div>
+              <p style={landingStyles.kickerDark}>Customer Voice</p>
+              <h2 style={landingStyles.sectionTitle}>실제 사용자들의 변화</h2>
+            </div>
+            <a style={landingStyles.moreLink} href="#intro">더 알아보기 →</a>
+          </div>
 
           <div style={landingStyles.reviewGrid}>
             {testimonials.map((item) => (
@@ -288,15 +338,15 @@ function LandingPage({ onStart }) {
       <section id="intro" style={landingStyles.introSection}>
         <div style={landingStyles.introOverlay} />
         <div style={landingStyles.introContent}>
-          <p style={landingStyles.kicker}>What is Velaxion?</p>
+          <p style={landingStyles.kicker}>VELAXION SYSTEM</p>
           <h2 style={landingStyles.introTitle}>
-            벨락시온은 컨설팅을
+            컨설팅을 듣는 데서 끝내지 않고
             <br />
-            행동으로 연결합니다
+            실제 행동까지 연결합니다
           </h2>
           <p style={landingStyles.introText}>
-            고민과 목표를 입력하면 AI가 현재 상태를 분석하고, 7일 행동 계획을 제안합니다.
-            사용자는 매일 사진 인증을 통해 실제 실행을 완료합니다.
+            고민과 목표를 입력하면 AI가 현재 상태를 분석하고, 실행 가능한 행동 계획을 만듭니다.
+            사용자는 매일 사진으로 행동을 증명하고 자신의 변화를 확인합니다.
           </p>
 
           <div style={landingStyles.featureGrid}>
@@ -306,11 +356,11 @@ function LandingPage({ onStart }) {
             </div>
             <div style={landingStyles.featureCard}>
               <strong>02</strong>
-              <span>7일 행동 계획</span>
+              <span>실행 계획</span>
             </div>
             <div style={landingStyles.featureCard}>
               <strong>03</strong>
-              <span>사진 인증 완료</span>
+              <span>사진 인증</span>
             </div>
           </div>
 
@@ -1512,75 +1562,132 @@ const landingStyles = {
     top: 0,
     left: 0,
     right: 0,
-    height: "68px",
+    height: "72px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "0 28px",
-    zIndex: 20,
-    background: "linear-gradient(180deg, rgba(0,0,0,0.62), rgba(0,0,0,0))",
+    padding: "0 34px",
+    zIndex: 30,
+    background: "linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0))",
     boxSizing: "border-box",
   },
   brand: {
-    fontSize: "20px",
-    fontWeight: 900,
-    letterSpacing: "0.18em",
+    fontSize: "22px",
+    fontWeight: 950,
+    letterSpacing: "0.22em",
   },
   navLinks: {
     display: "flex",
     alignItems: "center",
-    gap: "18px",
+    gap: "22px",
   },
   navLink: {
     color: "#ffffff",
     textDecoration: "none",
     fontSize: "14px",
-    fontWeight: 700,
-    textShadow: "0 2px 12px rgba(0,0,0,0.45)",
+    fontWeight: 800,
+    textShadow: "0 2px 12px rgba(0,0,0,0.55)",
   },
   navButton: {
-    border: "1px solid rgba(255,255,255,0.55)",
-    background: "rgba(255,255,255,0.14)",
+    border: "1px solid rgba(255,255,255,0.58)",
+    background: "rgba(255,255,255,0.12)",
     color: "#ffffff",
     borderRadius: "999px",
-    padding: "10px 16px",
+    padding: "10px 18px",
     fontSize: "14px",
-    fontWeight: 800,
+    fontWeight: 900,
     cursor: "pointer",
     backdropFilter: "blur(10px)",
   },
-  heroSection: {
-    position: "relative",
+  videoWallSection: {
     minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
+    background: "#050505",
+    padding: "82px 8px 8px",
+    boxSizing: "border-box",
   },
-  heroVideo: {
+  videoWallGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(6, minmax(170px, 1fr))",
+    gap: "8px",
+    height: "calc(100vh - 90px)",
+    minHeight: "620px",
+  },
+  videoPanel: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: "4px",
+    background: "#111827",
+    isolation: "isolate",
+  },
+  panelVideo: {
     position: "absolute",
     inset: 0,
     width: "100%",
     height: "100%",
     objectFit: "cover",
-    background: "linear-gradient(135deg, #111827 0%, #374151 45%, #0f172a 100%)",
+    zIndex: 1,
   },
-  overlay: {
+  panelFallback: {
     position: "absolute",
     inset: 0,
-    background: "linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0.42) 48%, rgba(0,0,0,0.72))",
+    background:
+      "linear-gradient(135deg, #111827 0%, #374151 45%, #020617 100%)",
+    zIndex: 0,
   },
-  heroContent: {
-    position: "relative",
+  panelOverlay: {
+    position: "absolute",
+    inset: 0,
+    background:
+      "linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.18) 38%, rgba(0,0,0,0.82))",
     zIndex: 2,
-    width: "min(920px, calc(100% - 36px))",
-    textAlign: "center",
-    paddingTop: "80px",
+  },
+  playButton: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: "58px",
+    height: "58px",
+    borderRadius: "999px",
+    border: "1.5px solid rgba(255,255,255,0.86)",
+    background: "rgba(0,0,0,0.18)",
+    color: "#ffffff",
+    fontSize: "18px",
+    cursor: "pointer",
+    zIndex: 3,
+    backdropFilter: "blur(8px)",
+  },
+  panelText: {
+    position: "absolute",
+    left: "22px",
+    right: "18px",
+    bottom: "22px",
+    zIndex: 4,
+  },
+  panelNumber: {
+    fontSize: "22px",
+    fontWeight: 950,
+    marginBottom: "12px",
+  },
+  panelTitle: {
+    margin: 0,
+    fontSize: "clamp(20px, 2vw, 30px)",
+    lineHeight: 1.25,
+    fontWeight: 950,
+    letterSpacing: "-0.04em",
+    textShadow: "0 8px 24px rgba(0,0,0,0.45)",
+  },
+  panelCaption: {
+    margin: "10px 0 0",
+    color: "rgba(255,255,255,0.86)",
+    fontSize: "14px",
+    lineHeight: 1.55,
+    fontWeight: 650,
   },
   kicker: {
     margin: 0,
     fontSize: "15px",
-    fontWeight: 800,
+    fontWeight: 900,
     letterSpacing: "0.16em",
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.82)",
@@ -1588,48 +1695,10 @@ const landingStyles = {
   kickerDark: {
     margin: 0,
     fontSize: "14px",
-    fontWeight: 900,
+    fontWeight: 950,
     letterSpacing: "0.16em",
     textTransform: "uppercase",
     color: "#6b7280",
-  },
-  heroTitle: {
-    margin: "18px 0 0",
-    fontSize: "clamp(44px, 7vw, 88px)",
-    lineHeight: 1.02,
-    fontWeight: 950,
-    letterSpacing: "-0.06em",
-    textShadow: "0 12px 40px rgba(0,0,0,0.35)",
-  },
-  heroSubtitle: {
-    maxWidth: "680px",
-    margin: "22px auto 0",
-    color: "rgba(255,255,255,0.86)",
-    fontSize: "clamp(16px, 2.2vw, 21px)",
-    lineHeight: 1.65,
-    fontWeight: 500,
-  },
-  heroButton: {
-    marginTop: "34px",
-    border: "none",
-    background: "#ffffff",
-    color: "#111827",
-    borderRadius: "999px",
-    padding: "15px 28px",
-    fontSize: "16px",
-    fontWeight: 900,
-    cursor: "pointer",
-    boxShadow: "0 18px 45px rgba(0,0,0,0.28)",
-  },
-  scrollHint: {
-    position: "absolute",
-    bottom: "28px",
-    left: "50%",
-    transform: "translateX(-50%)",
-    zIndex: 2,
-    fontSize: "13px",
-    color: "rgba(255,255,255,0.72)",
-    fontWeight: 700,
   },
   reviewSection: {
     minHeight: "100vh",
@@ -1641,28 +1710,33 @@ const landingStyles = {
     boxSizing: "border-box",
   },
   sectionInner: {
-    width: "min(1120px, 100%)",
+    width: "min(1180px, 100%)",
     margin: "0 auto",
+  },
+  sectionTopRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "end",
+    gap: "22px",
+    flexWrap: "wrap",
   },
   sectionTitle: {
     margin: "14px 0 0",
-    fontSize: "clamp(34px, 5vw, 64px)",
+    fontSize: "clamp(34px, 5vw, 62px)",
     lineHeight: 1.06,
     letterSpacing: "-0.05em",
     fontWeight: 950,
   },
-  sectionDescription: {
-    maxWidth: "720px",
-    marginTop: "18px",
-    color: "#4b5563",
-    fontSize: "18px",
-    lineHeight: 1.75,
-    fontWeight: 500,
+  moreLink: {
+    color: "#111827",
+    textDecoration: "none",
+    fontSize: "16px",
+    fontWeight: 900,
   },
   reviewGrid: {
     marginTop: "40px",
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
     gap: "20px",
   },
   reviewCard: {
@@ -1680,7 +1754,7 @@ const landingStyles = {
     justifyContent: "center",
     color: "rgba(255,255,255,0.8)",
     fontSize: "14px",
-    fontWeight: 800,
+    fontWeight: 900,
   },
   reviewImageText: {
     border: "1px solid rgba(255,255,255,0.35)",
@@ -1694,14 +1768,14 @@ const landingStyles = {
     fontSize: "17px",
     lineHeight: 1.65,
     color: "#111827",
-    fontWeight: 800,
+    fontWeight: 850,
   },
   reviewName: {
     margin: 0,
     padding: "16px 22px 24px",
     fontSize: "14px",
     color: "#6b7280",
-    fontWeight: 700,
+    fontWeight: 800,
   },
   introSection: {
     position: "relative",
@@ -1738,7 +1812,7 @@ const landingStyles = {
     color: "rgba(255,255,255,0.78)",
     fontSize: "18px",
     lineHeight: 1.8,
-    fontWeight: 500,
+    fontWeight: 550,
   },
   featureGrid: {
     margin: "42px auto 0",
@@ -1767,7 +1841,7 @@ const landingStyles = {
     borderRadius: "999px",
     padding: "15px 28px",
     fontSize: "16px",
-    fontWeight: 900,
+    fontWeight: 950,
     cursor: "pointer",
     boxShadow: "0 18px 45px rgba(0,0,0,0.28)",
   },
