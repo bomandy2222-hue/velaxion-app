@@ -425,7 +425,9 @@ function LandingPage({ onStart }) {
               <p style={landingStyles.megaTitle}>고객 리소스</p>
               <button style={landingStyles.megaItem} onClick={() => openDetail("reviews")}>고객 경험담</button>
               <button style={landingStyles.megaItem} onClick={onStart}>7일 먼저 체험하기</button>
-            </div>        </div>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       <section style={landingStyles.videoWallSection}>
