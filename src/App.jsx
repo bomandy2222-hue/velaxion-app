@@ -289,6 +289,70 @@ function DetailPage({ type, onBack, onStart }) {
 
   const currentMediaSections = mediaSections[type] || mediaSections.intro;
 
+  const reviewStories = [
+    {
+      image: "/reviews/review1.jpg",
+      title: "사진 인증 때문에 처음으로 실행이 이어졌어요",
+      text: "생각만 하던 목표가 매일 하나의 행동으로 바뀌었습니다. 체크하기 전에 사진을 남겨야 해서 스스로에게 더 솔직해졌습니다.",
+      meta: "체험 사용자 A · 2026년 4월",
+    },
+    {
+      image: "/reviews/review2.jpg",
+      title: "하루 1개라서 부담 없이 시작할 수 있었어요",
+      text: "해야 할 일이 너무 많으면 포기했는데, 벨락시온은 오늘 할 일 하나에 집중하게 만들어줘서 끝까지 해볼 수 있었습니다.",
+      meta: "체험 사용자 B · 2026년 4월",
+    },
+    {
+      image: "/reviews/review3.jpg",
+      title: "기록이 쌓이니까 변화가 보이기 시작했어요",
+      text: "단순히 글로 적는 게 아니라 사진으로 남기니까 내가 실제로 움직였다는 게 눈에 보였습니다.",
+      meta: "체험 사용자 C · 2026년 4월",
+    },
+    {
+      image: "/reviews/review4.jpg",
+      title: "혼자였다면 멈췄을 행동을 계속하게 됐습니다",
+      text: "사진을 남기는 과정이 귀찮을 줄 알았는데, 오히려 행동을 끝내는 확실한 기준이 되어줬습니다.",
+      meta: "체험 사용자 D · 2026년 4월",
+    },
+  ];
+
+  if (type === "reviews") {
+    return (
+      <div style={landingStyles.reviewDetailPage}>
+        <header style={landingStyles.detailNav}>
+          <button style={landingStyles.detailBackButton} onClick={onBack}>← 홈으로</button>
+          <div style={landingStyles.brandDark}>VELAXION</div>
+          <button style={landingStyles.detailStartButton} onClick={onStart}>7일 먼저 체험하기</button>
+        </header>
+
+        <main style={landingStyles.reviewDetailMain}>
+          <section style={landingStyles.reviewDetailHeader}>
+            <p style={landingStyles.detailEyebrow}>CUSTOMER STORIES</p>
+            <h1 style={landingStyles.reviewDetailTitle}>고객 경험담</h1>
+            <p style={landingStyles.reviewDetailSubtitle}>
+              실제 사용자들이 벨락시온을 사용하며 경험한 변화입니다.
+              사진과 문장으로 결과가 먼저 보이도록 구성했습니다.
+            </p>
+          </section>
+
+          <section style={landingStyles.reviewStoryGrid}>
+            {reviewStories.map((story) => (
+              <article key={story.title} style={landingStyles.reviewStoryCard}>
+                <div style={landingStyles.reviewStoryImageWrap}>
+                  <img src={story.image} alt={story.title} style={landingStyles.reviewStoryImage} />
+                  <div style={landingStyles.reviewStoryImageFallback}>후기 사진 영역</div>
+                </div>
+                <h2 style={landingStyles.reviewStoryTitle}>{story.title}</h2>
+                <p style={landingStyles.reviewStoryText}>{story.text}</p>
+                <p style={landingStyles.reviewStoryMeta}>{story.meta}</p>
+              </article>
+            ))}
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div style={landingStyles.detailPage}>
       <header style={landingStyles.detailNav}>
@@ -2341,6 +2405,95 @@ const landingStyles = {
     fontWeight: 900,
     background: "linear-gradient(135deg, #111827 0%, #4b5563 48%, #020617 100%)",
     zIndex: 1,
+  },
+  reviewDetailPage: {
+    minHeight: "100vh",
+    background: "#ffffff",
+    color: "#111827",
+    fontFamily:
+      'Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  },
+  reviewDetailMain: {
+    width: "min(1180px, calc(100% - 36px))",
+    margin: "0 auto",
+    padding: "72px 0 96px",
+  },
+  reviewDetailHeader: {
+    marginBottom: "40px",
+  },
+  reviewDetailTitle: {
+    margin: "18px 0 0",
+    fontSize: "clamp(44px, 6vw, 76px)",
+    lineHeight: 1.02,
+    letterSpacing: "-0.06em",
+    fontWeight: 950,
+  },
+  reviewDetailSubtitle: {
+    maxWidth: "700px",
+    marginTop: "18px",
+    color: "#4b5563",
+    fontSize: "18px",
+    lineHeight: 1.75,
+    fontWeight: 600,
+  },
+  reviewStoryGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "28px",
+    alignItems: "start",
+  },
+  reviewStoryCard: {
+    background: "#ffffff",
+    borderRadius: "8px",
+  },
+  reviewStoryImageWrap: {
+    position: "relative",
+    width: "100%",
+    height: "240px",
+    borderRadius: "4px",
+    overflow: "hidden",
+    background: "#e5e7eb",
+    marginBottom: "18px",
+  },
+  reviewStoryImage: {
+    position: "relative",
+    zIndex: 2,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  },
+  reviewStoryImageFallback: {
+    position: "absolute",
+    inset: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#6b7280",
+    fontSize: "14px",
+    fontWeight: 900,
+    zIndex: 1,
+  },
+  reviewStoryTitle: {
+    margin: 0,
+    fontSize: "22px",
+    lineHeight: 1.28,
+    letterSpacing: "-0.04em",
+    fontWeight: 950,
+    color: "#111827",
+  },
+  reviewStoryText: {
+    margin: "12px 0 0",
+    color: "#374151",
+    fontSize: "15px",
+    lineHeight: 1.7,
+    fontWeight: 650,
+  },
+  reviewStoryMeta: {
+    margin: "14px 0 0",
+    color: "#6b7280",
+    fontSize: "13px",
+    fontWeight: 800,
   },
 
 };
