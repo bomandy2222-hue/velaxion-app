@@ -219,14 +219,14 @@ function DetailPage({ type, onBack, onStart }) {
       ],
     },
     principle: {
-      eyebrow: "VELAXION PRINCIPLE",
-      title: "행동을 만드는 원리",
-      subtitle: "목표를 크게 말하는 대신, 오늘 증명 가능한 작은 행동으로 쪼개고 누적합니다.",
-      hero: "실행 원리 상세 영상 영역",
+      eyebrow: "FUTURE PLAN",
+      title: "미래는 실행으로 완성됩니다",
+      subtitle: "생각이 아닌 행동으로 실제 변화를 만듭니다.",
+      hero: "앞으로의 계획 영상 영역",
       cards: [
-        { title: "작게 시작", desc: "하루에 하나만 수행해 부담을 줄입니다." },
-        { title: "사진으로 증명", desc: "완료 버튼 전에 증거를 요구해 실행력을 높입니다." },
-        { title: "누적 확인", desc: "기록이 쌓이며 변화가 눈에 보이게 됩니다." },
+        { title: "AI로 방향을 잡습니다", desc: "막연한 고민을 선명한 다음 행동으로 바꿉니다." },
+        { title: "실행을 설계합니다", desc: "하루 하나의 행동이 쌓이도록 만듭니다." },
+        { title: "변화를 증명합니다", desc: "사진과 기록으로 성장의 흔적을 남깁니다." },
       ],
     },
     intro: {
@@ -276,9 +276,9 @@ function DetailPage({ type, onBack, onStart }) {
       },
     ],
     principle: [
-      { label: "01 · 작게 시작", title: "하루 하나의 행동에 집중합니다", text: "너무 많은 목표보다 오늘 하나의 실행을 명확히 만드는 것이 핵심입니다.", media: "/videos/principle1.mp4", poster: "/videos/principle1.jpg" },
-      { label: "02 · 증명", title: "사진 인증으로 실행을 확인합니다", text: "행동의 증거가 있어야 완료되기 때문에 실천 가능성이 높아집니다.", media: "/videos/principle2.mp4", poster: "/videos/principle2.jpg" },
-      { label: "03 · 누적", title: "작은 성공이 다음 행동을 만듭니다", text: "매일 쌓이는 기록은 사용자가 계속 나아가게 만드는 근거가 됩니다.", media: "/videos/principle3.mp4", poster: "/videos/principle3.jpg" },
+      { label: "01", title: "미래는 실행입니다", text: "AI가 방향을 잡고, 행동이 결과를 만듭니다.", media: "/videos/future1.mp4", poster: "/videos/future1.jpg" },
+      { label: "02", title: "하루 하나면 충분합니다", text: "작은 실행이 쌓이면 삶의 방향이 바뀝니다.", media: "/videos/future2.mp4", poster: "/videos/future2.jpg" },
+      { label: "03", title: "변화는 증명됩니다", text: "사진과 기록으로 나의 성장을 확인합니다.", media: "/videos/future3.mp4", poster: "/videos/future3.jpg" },
     ],
     reviews: [
       { label: "01 · 사용자 변화", title: "처음으로 며칠을 이어간 경험", text: "사용자들은 사진 인증과 하루 1개 구조 때문에 행동을 미루기 어려웠다고 말합니다.", media: "/videos/review1.mp4", poster: "/videos/review1.jpg" },
@@ -400,16 +400,18 @@ function DetailPage({ type, onBack, onStart }) {
             <div
               key={item.title}
               style={{
-                ...landingStyles.detailStorySection,
-                ...(index % 2 === 1 ? landingStyles.detailStoryReverse : null),
+                ...(type === "principle"
+                  ? landingStyles.futureStorySection
+                  : landingStyles.detailStorySection),
+                ...(type !== "principle" && index % 2 === 1 ? landingStyles.detailStoryReverse : null),
               }}
             >
-              <div style={landingStyles.detailStoryTextBox}>
-                <p style={landingStyles.detailStoryLabel}>{item.label}</p>
-                <h2 style={landingStyles.detailStoryTitle}>{item.title}</h2>
-                <p style={landingStyles.detailStoryText}>{item.text}</p>
+              <div style={type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
+                <p style={type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
+                <h2 style={type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
+                <p style={type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
               </div>
-              <div style={landingStyles.detailStoryMedia}>
+              <div style={type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
                 <video
                   style={landingStyles.detailStoryVideo}
                   autoPlay
@@ -2339,6 +2341,45 @@ const landingStyles = {
     fontSize: "15px",
     lineHeight: 1.7,
     fontWeight: 600,
+  },
+  futureStorySection: {
+    display: "grid",
+    gap: "26px",
+    marginBottom: "120px",
+  },
+  futureStoryTextBox: {
+    width: "min(980px, 100%)",
+    margin: "0 auto",
+  },
+  futureStoryLabel: {
+    margin: 0,
+    color: "#6b7280",
+    fontSize: "13px",
+    fontWeight: 950,
+    letterSpacing: "0.18em",
+  },
+  futureStoryTitle: {
+    margin: "14px 0 0",
+    fontSize: "clamp(30px, 4.2vw, 56px)",
+    lineHeight: 1.05,
+    letterSpacing: "-0.055em",
+    fontWeight: 950,
+  },
+  futureStoryText: {
+    margin: "14px 0 0",
+    color: "#4b5563",
+    fontSize: "18px",
+    lineHeight: 1.6,
+    fontWeight: 700,
+  },
+  futureStoryMedia: {
+    position: "relative",
+    width: "100%",
+    minHeight: "76vh",
+    borderRadius: "0",
+    overflow: "hidden",
+    background: "#111827",
+    boxShadow: "0 28px 80px rgba(15,23,42,0.18)",
   },
   detailStoryWrap: {
     marginTop: "90px",
