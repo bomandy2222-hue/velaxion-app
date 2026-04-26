@@ -244,6 +244,51 @@ function DetailPage({ type, onBack, onStart }) {
 
   const page = detailMap[type] || detailMap.intro;
 
+  const mediaSections = {
+    intro: [
+      {
+        label: "01 · AI 미래 설계",
+        title: "막연한 고민을 미래 그림으로 바꿉니다",
+        text: "사용자가 고민과 목표를 입력하면 벨락시온은 현재 상태를 정리하고, 앞으로 어떤 방향으로 움직여야 할지 시각적으로 이해할 수 있게 도와줍니다.",
+        media: "/videos/intro1.mp4",
+        poster: "/videos/intro1.jpg",
+      },
+      {
+        label: "02 · 실행 계획",
+        title: "생각에서 끝나지 않도록 행동 단위로 쪼갭니다",
+        text: "큰 목표를 오늘 할 수 있는 작은 행동으로 나누고, 사용자가 매일 하나씩 실행할 수 있도록 구조를 만듭니다.",
+        media: "/videos/intro2.mp4",
+        poster: "/videos/intro2.jpg",
+      },
+      {
+        label: "03 · 사진 인증",
+        title: "실행한 행동을 사진으로 증명합니다",
+        text: "체크 버튼만 누르는 기록이 아니라, 실제 행동을 사진으로 남기게 하여 스스로에게 책임감을 만들어 줍니다.",
+        media: "/videos/intro3.mp4",
+        poster: "/videos/intro3.jpg",
+      },
+      {
+        label: "04 · 변화 확인",
+        title: "쌓인 기록이 변화를 보여줍니다",
+        text: "하루의 행동이 누적되면 사용자는 자신이 실제로 움직이고 있다는 것을 확인하고 다음 행동으로 이어갈 힘을 얻습니다.",
+        media: "/videos/intro4.mp4",
+        poster: "/videos/intro4.jpg",
+      },
+    ],
+    principle: [
+      { label: "01 · 작게 시작", title: "하루 하나의 행동에 집중합니다", text: "너무 많은 목표보다 오늘 하나의 실행을 명확히 만드는 것이 핵심입니다.", media: "/videos/principle1.mp4", poster: "/videos/principle1.jpg" },
+      { label: "02 · 증명", title: "사진 인증으로 실행을 확인합니다", text: "행동의 증거가 있어야 완료되기 때문에 실천 가능성이 높아집니다.", media: "/videos/principle2.mp4", poster: "/videos/principle2.jpg" },
+      { label: "03 · 누적", title: "작은 성공이 다음 행동을 만듭니다", text: "매일 쌓이는 기록은 사용자가 계속 나아가게 만드는 근거가 됩니다.", media: "/videos/principle3.mp4", poster: "/videos/principle3.jpg" },
+    ],
+    reviews: [
+      { label: "01 · 사용자 변화", title: "처음으로 며칠을 이어간 경험", text: "사용자들은 사진 인증과 하루 1개 구조 때문에 행동을 미루기 어려웠다고 말합니다.", media: "/videos/review1.mp4", poster: "/videos/review1.jpg" },
+      { label: "02 · 실제 기록", title: "행동이 남으니 변화가 보입니다", text: "완료한 행동이 시각적으로 남기 때문에 자신이 무엇을 해냈는지 분명히 확인할 수 있습니다.", media: "/videos/review2.mp4", poster: "/videos/review2.jpg" },
+      { label: "03 · 지속", title: "작은 실행이 습관으로 이어집니다", text: "처음에는 하나의 행동이지만, 반복되면 일상의 패턴으로 바뀝니다.", media: "/videos/review3.mp4", poster: "/videos/review3.jpg" },
+    ],
+  };
+
+  const currentMediaSections = mediaSections[type] || mediaSections.intro;
+
   return (
     <div style={landingStyles.detailPage}>
       <header style={landingStyles.detailNav}>
@@ -259,7 +304,21 @@ function DetailPage({ type, onBack, onStart }) {
             <h1 style={landingStyles.detailTitle}>{page.title}</h1>
             <p style={landingStyles.detailSubtitle}>{page.subtitle}</p>
           </div>
-          <div style={landingStyles.detailVisual}>{page.hero}</div>
+          <div style={landingStyles.detailVideoHero}>
+            <video
+              style={landingStyles.detailVideo}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              poster={`/videos/${type || "intro"}-hero.jpg`}
+            >
+              <source src={`/videos/${type || "intro"}-hero.mp4`} type="video/mp4" />
+            </video>
+            <div style={landingStyles.detailVideoOverlay} />
+            <div style={landingStyles.detailVideoText}>{page.hero}</div>
+          </div>
         </section>
 
         <section style={landingStyles.detailCards}>
@@ -268,6 +327,38 @@ function DetailPage({ type, onBack, onStart }) {
               <div style={landingStyles.detailCardNumber}>0{index + 1}</div>
               <h2 style={landingStyles.detailCardTitle}>{card.title}</h2>
               <p style={landingStyles.detailCardText}>{card.desc}</p>
+            </div>
+          ))}
+        </section>
+
+        <section style={landingStyles.detailStoryWrap}>
+          {currentMediaSections.map((item, index) => (
+            <div
+              key={item.title}
+              style={{
+                ...landingStyles.detailStorySection,
+                ...(index % 2 === 1 ? landingStyles.detailStoryReverse : null),
+              }}
+            >
+              <div style={landingStyles.detailStoryTextBox}>
+                <p style={landingStyles.detailStoryLabel}>{item.label}</p>
+                <h2 style={landingStyles.detailStoryTitle}>{item.title}</h2>
+                <p style={landingStyles.detailStoryText}>{item.text}</p>
+              </div>
+              <div style={landingStyles.detailStoryMedia}>
+                <video
+                  style={landingStyles.detailStoryVideo}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="auto"
+                  poster={item.poster}
+                >
+                  <source src={item.media} type="video/mp4" />
+                </video>
+                <div style={landingStyles.detailStoryFallback}>영상 / 사진 영역</div>
+              </div>
             </div>
           ))}
         </section>
@@ -2124,17 +2215,34 @@ const landingStyles = {
     lineHeight: 1.75,
     fontWeight: 600,
   },
-  detailVisual: {
+  detailVideoHero: {
+    position: "relative",
     minHeight: "480px",
     borderRadius: "34px",
+    overflow: "hidden",
     background: "linear-gradient(135deg, #111827 0%, #374151 52%, #d1d5db 100%)",
-    color: "rgba(255,255,255,0.86)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    boxShadow: "0 28px 80px rgba(15,23,42,0.2)",
+  },
+  detailVideo: {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  detailVideoOverlay: {
+    position: "absolute",
+    inset: 0,
+    background: "linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.58))",
+  },
+  detailVideoText: {
+    position: "absolute",
+    left: "28px",
+    right: "28px",
+    bottom: "28px",
+    color: "rgba(255,255,255,0.9)",
     fontSize: "18px",
     fontWeight: 900,
-    boxShadow: "0 28px 80px rgba(15,23,42,0.2)",
   },
   detailCards: {
     marginTop: "34px",
@@ -2167,6 +2275,72 @@ const landingStyles = {
     fontSize: "15px",
     lineHeight: 1.7,
     fontWeight: 600,
+  },
+  detailStoryWrap: {
+    marginTop: "90px",
+    display: "grid",
+    gap: "90px",
+  },
+  detailStorySection: {
+    display: "grid",
+    gridTemplateColumns: "0.82fr 1.18fr",
+    gap: "42px",
+    alignItems: "center",
+  },
+  detailStoryReverse: {
+    gridTemplateColumns: "1.18fr 0.82fr",
+  },
+  detailStoryTextBox: {
+    minWidth: 0,
+  },
+  detailStoryLabel: {
+    margin: 0,
+    color: "#6b7280",
+    fontSize: "13px",
+    fontWeight: 950,
+    letterSpacing: "0.16em",
+  },
+  detailStoryTitle: {
+    margin: "16px 0 0",
+    fontSize: "clamp(32px, 4.4vw, 58px)",
+    lineHeight: 1.08,
+    letterSpacing: "-0.055em",
+    fontWeight: 950,
+  },
+  detailStoryText: {
+    margin: "18px 0 0",
+    color: "#4b5563",
+    fontSize: "18px",
+    lineHeight: 1.8,
+    fontWeight: 600,
+  },
+  detailStoryMedia: {
+    position: "relative",
+    minHeight: "520px",
+    borderRadius: "34px",
+    overflow: "hidden",
+    background: "#111827",
+    boxShadow: "0 28px 80px rgba(15,23,42,0.18)",
+  },
+  detailStoryVideo: {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    zIndex: 2,
+  },
+  detailStoryFallback: {
+    position: "absolute",
+    inset: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "rgba(255,255,255,0.75)",
+    fontSize: "16px",
+    fontWeight: 900,
+    background: "linear-gradient(135deg, #111827 0%, #4b5563 48%, #020617 100%)",
+    zIndex: 1,
   },
 
 };
