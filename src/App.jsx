@@ -279,6 +279,33 @@ function DetailPage({ type, onBack, onStart }) {
 function LandingPage({ onStart }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [detailPage, setDetailPage] = useState(null);
+  const menuCloseTimerRef = useRef(null);
+
+  const openMegaMenu = () => {
+    if (menuCloseTimerRef.current) {
+      clearTimeout(menuCloseTimerRef.current);
+      menuCloseTimerRef.current = null;
+    }
+    setMenuOpen(true);
+  };
+
+  const closeMegaMenuSoon = () => {
+    if (menuCloseTimerRef.current) {
+      clearTimeout(menuCloseTimerRef.current);
+    }
+    menuCloseTimerRef.current = setTimeout(() => {
+      setMenuOpen(false);
+      menuCloseTimerRef.current = null;
+    }, 180);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (menuCloseTimerRef.current) {
+        clearTimeout(menuCloseTimerRef.current);
+      }
+    };
+  }, []);
 
   if (detailPage) {
     return (
@@ -358,13 +385,15 @@ function LandingPage({ onStart }) {
 
   return (
     <div style={landingStyles.page}>
-      <header style={landingStyles.nav}>
+      <header style={landingStyles.nav} onMouseLeave={closeMegaMenuSoon}>
         <div style={landingStyles.brand}>VELAXION</div>
         <div style={landingStyles.navLinks}>
           <button
             type="button"
             style={landingStyles.navTextButton}
-            onClick={() => setMenuOpen((prev) => !prev)}
+            onMouseEnter={openMegaMenu}
+            onFocus={openMegaMenu}
+            onClick={openMegaMenu}
           >
             살펴보기
           </button>
@@ -381,7 +410,11 @@ function LandingPage({ onStart }) {
       </header>
 
       {menuOpen ? (
-        <div style={landingStyles.megaMenu}>
+        <div
+          style={landingStyles.megaMenu}
+          onMouseEnter={openMegaMenu}
+          onMouseLeave={() => setMenuOpen(false)}
+        >
           <div style={landingStyles.megaMenuInner}>
             <div style={landingStyles.megaColumn}>
               <p style={landingStyles.megaTitle}>고객 리소스</p>
@@ -415,19 +448,13 @@ function LandingPage({ onStart }) {
                 muted
                 loop
                 playsInline
+                preload="auto"
                 poster={item.poster}
               >
                 <source src={item.src} type="video/mp4" />
               </video>
               <div style={landingStyles.panelFallback} />
               <div style={landingStyles.panelOverlay} />
-              <button
-                type="button"
-                aria-label={`${item.title} 영상 보기`}
-                style={landingStyles.playButton}
-              >
-                ▶
-              </button>
               <div style={landingStyles.panelText}>
                 <div style={landingStyles.panelNumber}>{item.number}</div>
                 <h2 style={landingStyles.panelTitle}>{item.title}</h2>
@@ -1808,6 +1835,7 @@ const landingStyles = {
     height: "100%",
     objectFit: "cover",
     zIndex: 1,
+    pointerEvents: "none",
   },
   panelFallback: {
     position: "absolute",
