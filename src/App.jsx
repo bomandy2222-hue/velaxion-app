@@ -417,25 +417,15 @@ function LandingPage({ onStart }) {
         >
           <div style={landingStyles.megaMenuInner}>
             <div style={landingStyles.megaColumn}>
+              <p style={landingStyles.megaTitle}>회사</p>
+              <button style={landingStyles.megaItem} onClick={() => openDetail("intro")}>소개</button>
+              <button style={landingStyles.megaItem} onClick={() => openDetail("principle")}>앞으로의 계획</button>
+            </div>
+            <div style={landingStyles.megaColumn}>
               <p style={landingStyles.megaTitle}>고객 리소스</p>
-              <button style={landingStyles.megaItem} onClick={() => openDetail("reviews")}>사용자 후기</button>
-              <button style={landingStyles.megaItem} onClick={() => openDetail("principle")}>실행 원리</button>
+              <button style={landingStyles.megaItem} onClick={() => openDetail("reviews")}>고객 경험담</button>
               <button style={landingStyles.megaItem} onClick={onStart}>7일 먼저 체험하기</button>
-            </div>
-            <div style={landingStyles.megaColumn}>
-              <p style={landingStyles.megaTitle}>벨락시온</p>
-              <button style={landingStyles.megaItem} onClick={() => openDetail("intro")}>서비스 소개</button>
-              <a style={landingStyles.megaItemLink} href="#reviews" onClick={() => setMenuOpen(false)}>후기 섹션 보기</a>
-              <a style={landingStyles.megaItemLink} href="#intro" onClick={() => setMenuOpen(false)}>소개 섹션 보기</a>
-            </div>
-            <div style={landingStyles.megaColumn}>
-              <p style={landingStyles.megaTitle}>진행</p>
-              <button style={landingStyles.megaItem} onClick={onStart}>컨설팅 화면</button>
-              <button style={landingStyles.megaItem} onClick={onStart}>AI 분석 시작</button>
-              <button style={landingStyles.megaItem} onClick={onStart}>사진 인증 체험</button>
-            </div>
-          </div>
-        </div>
+            </div>        </div>
       ) : null}
 
       <section style={landingStyles.videoWallSection}>
@@ -1775,10 +1765,10 @@ const landingStyles = {
     boxShadow: "0 24px 70px rgba(0,0,0,0.18)",
   },
   megaMenuInner: {
-    width: "min(980px, 100%)",
+    width: "min(780px, 100%)",
     margin: "0 auto",
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(2, minmax(220px, 1fr))",
     gap: "80px",
   },
   megaColumn: {
@@ -2147,7 +2137,7 @@ const landingStyles = {
   detailCards: {
     marginTop: "34px",
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(2, minmax(220px, 1fr))",
     gap: "18px",
   },
   detailCard: {
