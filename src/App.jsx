@@ -204,7 +204,98 @@ function getFriendlyStorageError(error) {
 }
 
 
+
+function DetailPage({ type, onBack, onStart }) {
+  const detailMap = {
+    reviews: {
+      eyebrow: "CUSTOMER VOICE",
+      title: "실제 사용자들의 변화",
+      subtitle: "벨락시온을 먼저 체험한 사람들이 어디서 행동하게 됐는지 더 자세히 보여줍니다.",
+      hero: "후기 상세 이미지 / 영상 영역",
+      cards: [
+        { title: "처음으로 3일을 넘겼어요", desc: "사진 인증이 있으니까 미루기 어려웠고, 완료했다는 느낌이 확실했습니다." },
+        { title: "하루 1개라 부담이 적었어요", desc: "복잡한 계획보다 오늘 해야 할 하나에 집중할 수 있었습니다." },
+        { title: "기록이 아니라 행동이 됐어요", desc: "체크를 누르기 위해 실제로 움직이게 되는 구조가 좋았습니다." },
+      ],
+    },
+    principle: {
+      eyebrow: "VELAXION PRINCIPLE",
+      title: "행동을 만드는 원리",
+      subtitle: "목표를 크게 말하는 대신, 오늘 증명 가능한 작은 행동으로 쪼개고 누적합니다.",
+      hero: "실행 원리 상세 영상 영역",
+      cards: [
+        { title: "작게 시작", desc: "하루에 하나만 수행해 부담을 줄입니다." },
+        { title: "사진으로 증명", desc: "완료 버튼 전에 증거를 요구해 실행력을 높입니다." },
+        { title: "누적 확인", desc: "기록이 쌓이며 변화가 눈에 보이게 됩니다." },
+      ],
+    },
+    intro: {
+      eyebrow: "ABOUT VELAXION",
+      title: "AI와 함께 미래를 그려나가고 행동까지 실행시켜줍니다",
+      subtitle: "고민과 목표를 입력하면 AI가 현재 상태를 분석하고, 실행 가능한 계획과 인증 구조를 연결합니다.",
+      hero: "서비스 소개 이미지 영역",
+      cards: [
+        { title: "AI 컨설팅", desc: "현재 상태와 목표를 바탕으로 방향을 정리합니다." },
+        { title: "실행 계획", desc: "생각에서 끝나지 않도록 행동 단위로 바꿉니다." },
+        { title: "사진 인증", desc: "실제 행동을 증명하고 완료합니다." },
+      ],
+    },
+  };
+
+  const page = detailMap[type] || detailMap.intro;
+
+  return (
+    <div style={landingStyles.detailPage}>
+      <header style={landingStyles.detailNav}>
+        <button style={landingStyles.detailBackButton} onClick={onBack}>← 홈으로</button>
+        <div style={landingStyles.brandDark}>VELAXION</div>
+        <button style={landingStyles.detailStartButton} onClick={onStart}>7일 먼저 체험하기</button>
+      </header>
+
+      <main style={landingStyles.detailMain}>
+        <section style={landingStyles.detailHero}>
+          <div>
+            <p style={landingStyles.detailEyebrow}>{page.eyebrow}</p>
+            <h1 style={landingStyles.detailTitle}>{page.title}</h1>
+            <p style={landingStyles.detailSubtitle}>{page.subtitle}</p>
+          </div>
+          <div style={landingStyles.detailVisual}>{page.hero}</div>
+        </section>
+
+        <section style={landingStyles.detailCards}>
+          {page.cards.map((card, index) => (
+            <div key={card.title} style={landingStyles.detailCard}>
+              <div style={landingStyles.detailCardNumber}>0{index + 1}</div>
+              <h2 style={landingStyles.detailCardTitle}>{card.title}</h2>
+              <p style={landingStyles.detailCardText}>{card.desc}</p>
+            </div>
+          ))}
+        </section>
+      </main>
+    </div>
+  );
+}
+
 function LandingPage({ onStart }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [detailPage, setDetailPage] = useState(null);
+
+  if (detailPage) {
+    return (
+      <DetailPage
+        type={detailPage}
+        onBack={() => setDetailPage(null)}
+        onStart={onStart}
+      />
+    );
+  }
+
+  const openDetail = (type) => {
+    setMenuOpen(false);
+    setDetailPage(type);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const resultVideos = [
     {
       number: "01",
@@ -270,13 +361,49 @@ function LandingPage({ onStart }) {
       <header style={landingStyles.nav}>
         <div style={landingStyles.brand}>VELAXION</div>
         <div style={landingStyles.navLinks}>
-          <a style={landingStyles.navLink} href="#reviews">후기</a>
-          <a style={landingStyles.navLink} href="#intro">소개</a>
+          <button
+            type="button"
+            style={landingStyles.navTextButton}
+            onClick={() => setMenuOpen((prev) => !prev)}
+          >
+            살펴보기
+          </button>
+          <button type="button" style={landingStyles.navTextButton} onClick={() => openDetail("reviews")}>
+            후기
+          </button>
+          <button type="button" style={landingStyles.navTextButton} onClick={() => openDetail("intro")}>
+            소개
+          </button>
           <button style={landingStyles.navButton} onClick={onStart}>
-            시작하기
+            7일 먼저 체험하기
           </button>
         </div>
       </header>
+
+      {menuOpen ? (
+        <div style={landingStyles.megaMenu}>
+          <div style={landingStyles.megaMenuInner}>
+            <div style={landingStyles.megaColumn}>
+              <p style={landingStyles.megaTitle}>고객 리소스</p>
+              <button style={landingStyles.megaItem} onClick={() => openDetail("reviews")}>사용자 후기</button>
+              <button style={landingStyles.megaItem} onClick={() => openDetail("principle")}>실행 원리</button>
+              <button style={landingStyles.megaItem} onClick={onStart}>7일 먼저 체험하기</button>
+            </div>
+            <div style={landingStyles.megaColumn}>
+              <p style={landingStyles.megaTitle}>벨락시온</p>
+              <button style={landingStyles.megaItem} onClick={() => openDetail("intro")}>서비스 소개</button>
+              <a style={landingStyles.megaItemLink} href="#reviews" onClick={() => setMenuOpen(false)}>후기 섹션 보기</a>
+              <a style={landingStyles.megaItemLink} href="#intro" onClick={() => setMenuOpen(false)}>소개 섹션 보기</a>
+            </div>
+            <div style={landingStyles.megaColumn}>
+              <p style={landingStyles.megaTitle}>진행</p>
+              <button style={landingStyles.megaItem} onClick={onStart}>컨설팅 화면</button>
+              <button style={landingStyles.megaItem} onClick={onStart}>AI 분석 시작</button>
+              <button style={landingStyles.megaItem} onClick={onStart}>사진 인증 체험</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <section style={landingStyles.videoWallSection}>
         <div style={landingStyles.videoWallGrid}>
@@ -365,7 +492,7 @@ function LandingPage({ onStart }) {
           </div>
 
           <button style={landingStyles.introButton} onClick={onStart}>
-            7일 먼저 체험해보기
+            7일 먼저 체험하기
           </button>
         </div>
       </section>
@@ -1599,6 +1726,61 @@ const landingStyles = {
     cursor: "pointer",
     backdropFilter: "blur(10px)",
   },
+  navTextButton: {
+    border: "none",
+    background: "transparent",
+    color: "#ffffff",
+    fontSize: "14px",
+    fontWeight: 850,
+    cursor: "pointer",
+    padding: "10px 4px",
+    textShadow: "0 2px 12px rgba(0,0,0,0.55)",
+  },
+  megaMenu: {
+    position: "fixed",
+    top: "0",
+    left: 0,
+    right: 0,
+    zIndex: 24,
+    background: "rgba(255,255,255,0.96)",
+    color: "#111827",
+    padding: "96px 32px 54px",
+    boxShadow: "0 24px 70px rgba(0,0,0,0.18)",
+  },
+  megaMenuInner: {
+    width: "min(980px, 100%)",
+    margin: "0 auto",
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "80px",
+  },
+  megaColumn: {
+    display: "grid",
+    gap: "16px",
+    alignContent: "start",
+  },
+  megaTitle: {
+    margin: "0 0 8px",
+    color: "#6b7280",
+    fontSize: "14px",
+    fontWeight: 800,
+  },
+  megaItem: {
+    border: "none",
+    background: "transparent",
+    padding: 0,
+    textAlign: "left",
+    color: "#111827",
+    fontSize: "18px",
+    fontWeight: 850,
+    cursor: "pointer",
+  },
+  megaItemLink: {
+    color: "#111827",
+    textDecoration: "none",
+    fontSize: "18px",
+    fontWeight: 850,
+  },
   videoWallSection: {
     minHeight: "100vh",
     background: "#050505",
@@ -1845,4 +2027,126 @@ const landingStyles = {
     cursor: "pointer",
     boxShadow: "0 18px 45px rgba(0,0,0,0.28)",
   },
+  detailPage: {
+    minHeight: "100vh",
+    background: "#f7f7f5",
+    color: "#111827",
+    fontFamily:
+      'Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  },
+  detailNav: {
+    height: "72px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "0 32px",
+    background: "rgba(255,255,255,0.9)",
+    borderBottom: "1px solid #e5e7eb",
+    position: "sticky",
+    top: 0,
+    zIndex: 20,
+    backdropFilter: "blur(14px)",
+  },
+  brandDark: {
+    fontSize: "20px",
+    fontWeight: 950,
+    letterSpacing: "0.2em",
+  },
+  detailBackButton: {
+    border: "1px solid #d1d5db",
+    background: "#ffffff",
+    color: "#111827",
+    borderRadius: "999px",
+    padding: "10px 16px",
+    fontSize: "14px",
+    fontWeight: 850,
+    cursor: "pointer",
+  },
+  detailStartButton: {
+    border: "none",
+    background: "#111827",
+    color: "#ffffff",
+    borderRadius: "999px",
+    padding: "11px 18px",
+    fontSize: "14px",
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+  detailMain: {
+    width: "min(1180px, calc(100% - 36px))",
+    margin: "0 auto",
+    padding: "54px 0 80px",
+  },
+  detailHero: {
+    display: "grid",
+    gridTemplateColumns: "0.9fr 1.1fr",
+    gap: "34px",
+    alignItems: "stretch",
+  },
+  detailEyebrow: {
+    margin: 0,
+    color: "#6b7280",
+    fontSize: "13px",
+    fontWeight: 950,
+    letterSpacing: "0.18em",
+  },
+  detailTitle: {
+    margin: "20px 0 0",
+    fontSize: "clamp(42px, 6vw, 76px)",
+    lineHeight: 1.02,
+    letterSpacing: "-0.06em",
+    fontWeight: 950,
+  },
+  detailSubtitle: {
+    marginTop: "22px",
+    color: "#4b5563",
+    fontSize: "19px",
+    lineHeight: 1.75,
+    fontWeight: 600,
+  },
+  detailVisual: {
+    minHeight: "480px",
+    borderRadius: "34px",
+    background: "linear-gradient(135deg, #111827 0%, #374151 52%, #d1d5db 100%)",
+    color: "rgba(255,255,255,0.86)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "18px",
+    fontWeight: 900,
+    boxShadow: "0 28px 80px rgba(15,23,42,0.2)",
+  },
+  detailCards: {
+    marginTop: "34px",
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "18px",
+  },
+  detailCard: {
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "28px",
+    padding: "26px",
+    boxShadow: "0 16px 42px rgba(15,23,42,0.08)",
+  },
+  detailCardNumber: {
+    fontSize: "14px",
+    fontWeight: 950,
+    color: "#6b7280",
+  },
+  detailCardTitle: {
+    margin: "18px 0 0",
+    fontSize: "24px",
+    lineHeight: 1.25,
+    fontWeight: 950,
+    letterSpacing: "-0.04em",
+  },
+  detailCardText: {
+    margin: "12px 0 0",
+    color: "#4b5563",
+    fontSize: "15px",
+    lineHeight: 1.7,
+    fontWeight: 600,
+  },
+
 };
