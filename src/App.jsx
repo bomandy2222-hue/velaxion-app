@@ -33,6 +33,12 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
+// ✅ 채팅방 소개 섹션 영상 주소
+// 네가 원하는 동영상으로 바꾸려면 아래 URL만 교체하면 돼.
+// 예: Firebase Storage, Vercel public 파일, YouTube가 아닌 직접 mp4 링크
+const COMMUNITY_VIDEO_URL = "https://www.w3schools.com/html/mov_bbb.mp4";
+
+
 const initialForm = {
   name: "",
   concern: "",
@@ -707,14 +713,12 @@ function LandingPage({ onStart, onCommunity }) {
           <div style={landingStyles.communityIntroMediaBox}>
             <video
               style={landingStyles.communityIntroVideo}
-              autoPlay
-              muted
-              loop
+              controls
               playsInline
-              preload="auto"
-              poster="/videos/community.jpg"
+              preload="metadata"
             >
-              <source src="/videos/community.mp4" type="video/mp4" />
+              <source src={COMMUNITY_VIDEO_URL} type="video/mp4" />
+              브라우저가 동영상을 지원하지 않습니다.
             </video>
             <div style={landingStyles.communityIntroVideoFallback} />
             <div style={landingStyles.communityIntroVideoOverlay} />
@@ -2783,7 +2787,7 @@ const landingStyles = {
     height: "100%",
     objectFit: "cover",
     zIndex: 2,
-    pointerEvents: "none",
+    pointerEvents: "auto",
   },
   communityIntroVideoFallback: {
     position: "absolute",
@@ -2794,8 +2798,9 @@ const landingStyles = {
   communityIntroVideoOverlay: {
     position: "absolute",
     inset: 0,
-    background: "linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.42))",
+    background: "linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.28))",
     zIndex: 3,
+    pointerEvents: "none",
   },
   communityPlayButton: {
     position: "absolute",
@@ -2814,6 +2819,7 @@ const landingStyles = {
     fontWeight: 950,
     zIndex: 5,
     boxShadow: "0 22px 60px rgba(0,0,0,0.28)",
+    pointerEvents: "none",
   },
   communityChatBubbleTop: {
     position: "absolute",
@@ -2826,7 +2832,8 @@ const landingStyles = {
     padding: "15px 18px",
     fontSize: "14px",
     fontWeight: 850,
-    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
+    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",,
+    pointerEvents: "none"
   },
   communityChatBubbleMiddle: {
     position: "absolute",
@@ -2839,7 +2846,8 @@ const landingStyles = {
     padding: "15px 18px",
     fontSize: "14px",
     fontWeight: 850,
-    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
+    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",,
+    pointerEvents: "none"
   },
   communityChatBubbleBottom: {
     position: "absolute",
@@ -2852,7 +2860,8 @@ const landingStyles = {
     padding: "15px 18px",
     fontSize: "14px",
     fontWeight: 850,
-    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
+    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",,
+    pointerEvents: "none"
   },
   reviewSection: {
     minHeight: "100vh",
