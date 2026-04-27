@@ -232,7 +232,7 @@ function DetailPage({ type, onBack, onStart }) {
     intro: {
       eyebrow: "VELAXION VISION",
       title: "생각을 현실로, 행동으로 증명합니다",
-      subtitle: "",
+      subtitle: "상상은 시작일 뿐, 실행이 결과를 만듭니다.",
       hero: "VELAXION INTRO",
       cards: [
         { title: "상상이 현실로", desc: "생각을 행동으로 바꾸고 현실로 만듭니다." },
@@ -249,29 +249,29 @@ function DetailPage({ type, onBack, onStart }) {
     intro: [
       {
         label: "01 · AI 미래 설계",
-        title: "막연한 고민을 미래 그림으로 바꿉니다",
-        text: "사용자가 고민과 목표를 입력하면 벨락시온은 현재 상태를 정리하고, 앞으로 어떤 방향으로 움직여야 할지 시각적으로 이해할 수 있게 도와줍니다.",
+        title: "막연한 고민을 미래로 바꿉니다",
+        text: "입력한 생각을 정리하고, 어디로 가야 할지 명확하게 보여줍니다.",
         media: "/videos/intro1.mp4",
         poster: "/videos/intro1.jpg",
       },
       {
         label: "02 · 실행 계획",
-        title: "생각에서 끝나지 않도록 행동 단위로 쪼갭니다",
-        text: "큰 목표를 오늘 할 수 있는 작은 행동으로 나누고, 사용자가 매일 하나씩 실행할 수 있도록 구조를 만듭니다.",
+        title: "생각을 행동으로 쪼갭니다",
+        text: "지금 당장 할 수 있는 단위로 나눠, 매일 하나씩 실행할 수 있게 만듭니다.",
         media: "/videos/intro2.mp4",
         poster: "/videos/intro2.jpg",
       },
       {
         label: "03 · 사진 인증",
-        title: "실행한 행동을 사진으로 증명합니다",
-        text: "체크 버튼만 누르는 기록이 아니라, 실제 행동을 사진으로 남기게 하여 스스로에게 책임감을 만들어 줍니다.",
+        title: "행동을 증명하게 만듭니다",
+        text: "말이 아니라 실제 행동으로 남기고, 스스로에게 책임을 부여합니다.",
         media: "/videos/intro3.mp4",
         poster: "/videos/intro3.jpg",
       },
       {
         label: "04 · 변화 확인",
-        title: "쌓인 기록이 변화를 보여줍니다",
-        text: "하루의 행동이 누적되면 사용자는 자신이 실제로 움직이고 있다는 것을 확인하고 다음 행동으로 이어갈 힘을 얻습니다.",
+        title: "쌓인 행동이 변화를 만듭니다",
+        text: "기록이 쌓일수록 스스로 변하고 있다는 걸 확인하게 됩니다.",
         media: "/videos/intro4.mp4",
         poster: "/videos/intro4.jpg",
       },
@@ -386,49 +386,49 @@ function DetailPage({ type, onBack, onStart }) {
           </div>
         </section>
 
-            <section style={landingStyles.detailCards}>
-              {page.cards.map((card, index) => (
-                <div key={card.title} style={landingStyles.detailCard}>
-                  <div style={landingStyles.detailCardNumber}>0{index + 1}</div>
-                  <h2 style={landingStyles.detailCardTitle}>{card.title}</h2>
-                  <p style={landingStyles.detailCardText}>{card.desc}</p>
-                </div>
-              ))}
-            </section>
+        <section style={landingStyles.detailCards}>
+          {page.cards.map((card, index) => (
+            <div key={card.title} style={landingStyles.detailCard}>
+              <div style={landingStyles.detailCardNumber}>0{index + 1}</div>
+              <h2 style={landingStyles.detailCardTitle}>{card.title}</h2>
+              <p style={landingStyles.detailCardText}>{card.desc}</p>
+            </div>
+          ))}
+        </section>
 
-            <section style={landingStyles.detailStoryWrap}>
-              {currentMediaSections.map((item, index) => (
-                <div
-                  key={item.title}
-                  style={{
-                    ...(type === "principle"
-                      ? landingStyles.futureStorySection
-                      : landingStyles.detailStorySection),
-                    ...(type !== "principle" && index % 2 === 1 ? landingStyles.detailStoryReverse : null),
-                  }}
+        <section style={landingStyles.detailStoryWrap}>
+          {currentMediaSections.map((item, index) => (
+            <div
+              key={item.title}
+              style={{
+                ...(type === "principle"
+                  ? landingStyles.futureStorySection
+                  : landingStyles.detailStorySection),
+                ...(type !== "principle" && index % 2 === 1 ? landingStyles.detailStoryReverse : null),
+              }}
+            >
+              <div style={type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
+                <p style={type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
+                <h2 style={type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
+                <p style={type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
+              </div>
+              <div style={type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
+                <video
+                  style={landingStyles.detailStoryVideo}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="auto"
+                  poster={item.poster}
                 >
-                  <div style={type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
-                    <p style={type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
-                    <h2 style={type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
-                    <p style={type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
-                  </div>
-                  <div style={type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
-                    <video
-                      style={landingStyles.detailStoryVideo}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      preload="auto"
-                      poster={item.poster}
-                    >
-                      <source src={item.media} type="video/mp4" />
-                    </video>
-                    <div style={landingStyles.detailStoryFallback}>영상 / 사진 영역</div>
-                  </div>
-                </div>
-              ))}
-            </section>
+                  <source src={item.media} type="video/mp4" />
+                </video>
+                <div style={landingStyles.detailStoryFallback}>영상 / 사진 영역</div>
+              </div>
+            </div>
+          ))}
+        </section>
       </main>
     </div>
   );
@@ -656,15 +656,19 @@ function LandingPage({ onStart }) {
           <div style={landingStyles.featureGrid}>
             <div style={landingStyles.featureCard}>
               <strong>01</strong>
-              <span>AI 분석</span>
+              <span>상상이 현실로</span>
             </div>
             <div style={landingStyles.featureCard}>
               <strong>02</strong>
-              <span>실행 계획</span>
+              <span>함께 노력하면서 경험</span>
             </div>
             <div style={landingStyles.featureCard}>
               <strong>03</strong>
-              <span>사진 인증</span>
+              <span>서로가 서로를 돕는</span>
+            </div>
+            <div style={landingStyles.featureCard}>
+              <strong>04</strong>
+              <span>이끄는 힘</span>
             </div>
           </div>
 
@@ -2310,49 +2314,6 @@ const landingStyles = {
     color: "rgba(255,255,255,0.9)",
     fontSize: "18px",
     fontWeight: 900,
-  },
-  introVisionStatement: {
-    width: "min(1180px, 100%)",
-    margin: "0 auto",
-    padding: "30px 0 90px",
-  },
-  introVisionLine: {
-    margin: "0 0 40px",
-    color: "#111827",
-    fontSize: "clamp(42px, 6vw, 92px)",
-    lineHeight: 1.02,
-    letterSpacing: "-0.065em",
-    fontWeight: 950,
-  },
-  introVisionVideoWrap: {
-    position: "relative",
-    width: "100%",
-    minHeight: "520px",
-    borderRadius: "34px",
-    overflow: "hidden",
-    background: "linear-gradient(135deg, #111827 0%, #374151 48%, #020617 100%)",
-    boxShadow: "0 34px 80px rgba(15, 23, 42, 0.22)",
-  },
-  introVisionVideo: {
-    position: "absolute",
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
-  introVisionVideoOverlay: {
-    position: "absolute",
-    inset: 0,
-    background: "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.52))",
-  },
-  introVisionVideoText: {
-    position: "absolute",
-    left: "34px",
-    bottom: "30px",
-    color: "#ffffff",
-    fontSize: "18px",
-    fontWeight: 950,
-    letterSpacing: "0.08em",
   },
   detailCards: {
     marginTop: "34px",
