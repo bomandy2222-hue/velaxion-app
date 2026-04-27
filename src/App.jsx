@@ -232,9 +232,14 @@ function DetailPage({ type, onBack, onStart }) {
     intro: {
       eyebrow: "VELAXION VISION",
       title: "생각을 현실로, 행동으로 증명합니다",
-      subtitle: "상상은 시작일 뿐, 실행이 결과를 만듭니다.",
+      subtitle: "",
       hero: "VELAXION INTRO",
-      cards: [],
+      cards: [
+        { title: "상상이 현실로", desc: "생각을 행동으로 바꾸고 현실로 만듭니다." },
+        { title: "함께 노력하면서 경험", desc: "혼자가 아닌 구조 속에서 함께 실행합니다." },
+        { title: "서로가 서로를 돕는", desc: "각자의 행동이 서로에게 영향을 주고 연결됩니다." },
+        { title: "이끄는 힘", desc: "작은 실행이 결국 큰 변화를 만들어냅니다." },
+      ],
     },
   };
 
@@ -364,48 +369,23 @@ function DetailPage({ type, onBack, onStart }) {
             <h1 style={landingStyles.detailTitle}>{page.title}</h1>
             <p style={landingStyles.detailSubtitle}>{page.subtitle}</p>
           </div>
-          {type !== "intro" ? (
-            <div style={landingStyles.detailVideoHero}>
-              <video
-                style={landingStyles.detailVideo}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="auto"
-                poster={`/videos/${type || "intro"}-hero.jpg`}
-              >
-                <source src={`/videos/${type || "intro"}-hero.mp4`} type="video/mp4" />
-              </video>
-              <div style={landingStyles.detailVideoOverlay} />
-              <div style={landingStyles.detailVideoText}>{page.hero}</div>
-            </div>
-          ) : null}
+          <div style={landingStyles.detailVideoHero}>
+            <video
+              style={landingStyles.detailVideo}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              poster={`/videos/${type || "intro"}-hero.jpg`}
+            >
+              <source src={`/videos/${type || "intro"}-hero.mp4`} type="video/mp4" />
+            </video>
+            <div style={landingStyles.detailVideoOverlay} />
+            <div style={landingStyles.detailVideoText}>{page.hero}</div>
+          </div>
         </section>
 
-        {type === "intro" ? (
-          <section style={landingStyles.introVisionStatement}>
-            <h2 style={landingStyles.introVisionLine}>
-              함께 실천하고 경험하고 이끌어나갑니다
-            </h2>
-            <div style={landingStyles.introVisionVideoWrap}>
-              <video
-                style={landingStyles.introVisionVideo}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="auto"
-                poster="/videos/intro-vision.jpg"
-              >
-                <source src="/videos/intro-vision.mp4" type="video/mp4" />
-              </video>
-              <div style={landingStyles.introVisionVideoOverlay} />
-              <div style={landingStyles.introVisionVideoText}>VELAXION VISION</div>
-            </div>
-          </section>
-        ) : (
-          <>
             <section style={landingStyles.detailCards}>
               {page.cards.map((card, index) => (
                 <div key={card.title} style={landingStyles.detailCard}>
@@ -449,8 +429,6 @@ function DetailPage({ type, onBack, onStart }) {
                 </div>
               ))}
             </section>
-          </>
-        )}
       </main>
     </div>
   );
