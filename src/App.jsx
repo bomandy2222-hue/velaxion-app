@@ -248,30 +248,30 @@ function DetailPage({ type, onBack, onStart }) {
   const mediaSections = {
     intro: [
       {
-        label: "01 · AI 미래 설계",
-        title: "막연한 고민을 미래 그림으로 바꿉니다",
-        text: "사용자가 고민과 목표를 입력하면 벨락시온은 현재 상태를 정리하고, 앞으로 어떤 방향으로 움직여야 할지 시각적으로 이해할 수 있게 도와줍니다.",
+        label: "01 · 상상이 현실로",
+        title: "상상이 현실로",
+        text: "생각을 행동으로 바꾸고 현실로 만듭니다.",
         media: "/videos/intro1.mp4",
         poster: "/videos/intro1.jpg",
       },
       {
-        label: "02 · 실행 계획",
-        title: "생각에서 끝나지 않도록 행동 단위로 쪼갭니다",
-        text: "큰 목표를 오늘 할 수 있는 작은 행동으로 나누고, 사용자가 매일 하나씩 실행할 수 있도록 구조를 만듭니다.",
+        label: "02 · 함께 노력하면서 경험",
+        title: "함께 노력하면서 경험",
+        text: "혼자가 아닌 구조 속에서 함께 실행합니다.",
         media: "/videos/intro2.mp4",
         poster: "/videos/intro2.jpg",
       },
       {
-        label: "03 · 사진 인증",
-        title: "실행한 행동을 사진으로 증명합니다",
-        text: "체크 버튼만 누르는 기록이 아니라, 실제 행동을 사진으로 남기게 하여 스스로에게 책임감을 만들어 줍니다.",
+        label: "03 · 서로가 서로를 돕는",
+        title: "서로가 서로를 돕는",
+        text: "각자의 행동이 서로에게 영향을 주고 연결됩니다.",
         media: "/videos/intro3.mp4",
         poster: "/videos/intro3.jpg",
       },
       {
-        label: "04 · 변화 확인",
-        title: "쌓인 기록이 변화를 보여줍니다",
-        text: "하루의 행동이 누적되면 사용자는 자신이 실제로 움직이고 있다는 것을 확인하고 다음 행동으로 이어갈 힘을 얻습니다.",
+        label: "04 · 이끄는 힘",
+        title: "이끄는 힘",
+        text: "작은 실행이 결국 큰 변화를 만들어냅니다.",
         media: "/videos/intro4.mp4",
         poster: "/videos/intro4.jpg",
       },
@@ -656,15 +656,19 @@ function LandingPage({ onStart }) {
           <div style={landingStyles.featureGrid}>
             <div style={landingStyles.featureCard}>
               <strong>01</strong>
-              <span>AI 분석</span>
+              <span>상상이 현실로</span>
             </div>
             <div style={landingStyles.featureCard}>
               <strong>02</strong>
-              <span>실행 계획</span>
+              <span>함께 노력하면서 경험</span>
             </div>
             <div style={landingStyles.featureCard}>
               <strong>03</strong>
-              <span>사진 인증</span>
+              <span>서로가 서로를 돕는</span>
+            </div>
+            <div style={landingStyles.featureCard}>
+              <strong>04</strong>
+              <span>이끄는 힘</span>
             </div>
           </div>
 
