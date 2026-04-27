@@ -2832,7 +2832,7 @@ const landingStyles = {
     padding: "15px 18px",
     fontSize: "14px",
     fontWeight: 850,
-    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
     pointerEvents: "none"
   },
   communityChatBubbleMiddle: {
@@ -2846,7 +2846,7 @@ const landingStyles = {
     padding: "15px 18px",
     fontSize: "14px",
     fontWeight: 850,
-    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
     pointerEvents: "none"
   },
   communityChatBubbleBottom: {
@@ -2860,7 +2860,7 @@ const landingStyles = {
     padding: "15px 18px",
     fontSize: "14px",
     fontWeight: 850,
-    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
     pointerEvents: "none"
   },
   reviewSection: {
