@@ -231,8 +231,8 @@ function DetailPage({ type, onBack, onStart }) {
     },
     intro: {
       eyebrow: "VELAXION VISION",
-      title: "생각을 현실로, 행동으로 증명합니다",
-      subtitle: "상상은 시작일 뿐, 실행이 결과를 만듭니다.",
+      title: "함께 실천하고 경험하고 이끌어나갑니다",
+      subtitle: "",
       hero: "VELAXION INTRO",
       cards: [
         { title: "상상이 현실로", desc: "생각을 행동으로 바꾸고 현실로 만듭니다." },
@@ -248,30 +248,30 @@ function DetailPage({ type, onBack, onStart }) {
   const mediaSections = {
     intro: [
       {
-        label: "01 · 상상이 현실로",
-        title: "상상이 현실로",
-        text: "생각을 행동으로 바꾸고 현실로 만듭니다.",
+        label: "01 · AI 미래 설계",
+        title: "막연한 고민을 미래 그림으로 바꿉니다",
+        text: "사용자가 고민과 목표를 입력하면 벨락시온은 현재 상태를 정리하고, 앞으로 어떤 방향으로 움직여야 할지 시각적으로 이해할 수 있게 도와줍니다.",
         media: "/videos/intro1.mp4",
         poster: "/videos/intro1.jpg",
       },
       {
-        label: "02 · 함께 노력하면서 경험",
-        title: "함께 노력하면서 경험",
-        text: "혼자가 아닌 구조 속에서 함께 실행합니다.",
+        label: "02 · 실행 계획",
+        title: "생각에서 끝나지 않도록 행동 단위로 쪼갭니다",
+        text: "큰 목표를 오늘 할 수 있는 작은 행동으로 나누고, 사용자가 매일 하나씩 실행할 수 있도록 구조를 만듭니다.",
         media: "/videos/intro2.mp4",
         poster: "/videos/intro2.jpg",
       },
       {
-        label: "03 · 서로가 서로를 돕는",
-        title: "서로가 서로를 돕는",
-        text: "각자의 행동이 서로에게 영향을 주고 연결됩니다.",
+        label: "03 · 사진 인증",
+        title: "실행한 행동을 사진으로 증명합니다",
+        text: "체크 버튼만 누르는 기록이 아니라, 실제 행동을 사진으로 남기게 하여 스스로에게 책임감을 만들어 줍니다.",
         media: "/videos/intro3.mp4",
         poster: "/videos/intro3.jpg",
       },
       {
-        label: "04 · 이끄는 힘",
-        title: "이끄는 힘",
-        text: "작은 실행이 결국 큰 변화를 만들어냅니다.",
+        label: "04 · 변화 확인",
+        title: "쌓인 기록이 변화를 보여줍니다",
+        text: "하루의 행동이 누적되면 사용자는 자신이 실제로 움직이고 있다는 것을 확인하고 다음 행동으로 이어갈 힘을 얻습니다.",
         media: "/videos/intro4.mp4",
         poster: "/videos/intro4.jpg",
       },
@@ -363,27 +363,29 @@ function DetailPage({ type, onBack, onStart }) {
       </header>
 
       <main style={landingStyles.detailMain}>
-        <section style={landingStyles.detailHero}>
+        <section style={type === "intro" ? landingStyles.detailHeroIntroOnly : landingStyles.detailHero}>
           <div>
             <p style={landingStyles.detailEyebrow}>{page.eyebrow}</p>
-            <h1 style={landingStyles.detailTitle}>{page.title}</h1>
-            <p style={landingStyles.detailSubtitle}>{page.subtitle}</p>
+            <h1 style={type === "intro" ? landingStyles.detailTitleIntroOnly : landingStyles.detailTitle}>{page.title}</h1>
+            {page.subtitle ? <p style={landingStyles.detailSubtitle}>{page.subtitle}</p> : null}
           </div>
-          <div style={landingStyles.detailVideoHero}>
-            <video
-              style={landingStyles.detailVideo}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              poster={`/videos/${type || "intro"}-hero.jpg`}
-            >
-              <source src={`/videos/${type || "intro"}-hero.mp4`} type="video/mp4" />
-            </video>
-            <div style={landingStyles.detailVideoOverlay} />
-            <div style={landingStyles.detailVideoText}>{page.hero}</div>
-          </div>
+          {type !== "intro" ? (
+            <div style={landingStyles.detailVideoHero}>
+              <video
+                style={landingStyles.detailVideo}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                poster={`/videos/${type || "intro"}-hero.jpg`}
+              >
+                <source src={`/videos/${type || "intro"}-hero.mp4`} type="video/mp4" />
+              </video>
+              <div style={landingStyles.detailVideoOverlay} />
+              <div style={landingStyles.detailVideoText}>{page.hero}</div>
+            </div>
+          ) : null}
         </section>
 
         <section style={landingStyles.detailCards}>
@@ -396,39 +398,59 @@ function DetailPage({ type, onBack, onStart }) {
           ))}
         </section>
 
-        <section style={landingStyles.detailStoryWrap}>
-          {currentMediaSections.map((item, index) => (
-            <div
-              key={item.title}
-              style={{
-                ...(type === "principle"
-                  ? landingStyles.futureStorySection
-                  : landingStyles.detailStorySection),
-                ...(type !== "principle" && index % 2 === 1 ? landingStyles.detailStoryReverse : null),
-              }}
-            >
-              <div style={type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
-                <p style={type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
-                <h2 style={type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
-                <p style={type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
-              </div>
-              <div style={type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
-                <video
-                  style={landingStyles.detailStoryVideo}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="auto"
-                  poster={item.poster}
-                >
-                  <source src={item.media} type="video/mp4" />
-                </video>
-                <div style={landingStyles.detailStoryFallback}>영상 / 사진 영역</div>
-              </div>
+        {type === "intro" ? (
+          <section style={landingStyles.introVideoBelowSection}>
+            <div style={landingStyles.introVideoBelowHero}>
+              <video
+                style={landingStyles.detailVideo}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                poster="/videos/intro-hero.jpg"
+              >
+                <source src="/videos/intro-hero.mp4" type="video/mp4" />
+              </video>
+              <div style={landingStyles.detailVideoOverlay} />
+              <div style={landingStyles.detailVideoText}>{page.hero}</div>
             </div>
-          ))}
-        </section>
+          </section>
+        ) : null}
+
+            <section style={landingStyles.detailStoryWrap}>
+              {currentMediaSections.map((item, index) => (
+                <div
+                  key={item.title}
+                  style={{
+                    ...(type === "principle"
+                      ? landingStyles.futureStorySection
+                      : landingStyles.detailStorySection),
+                    ...(type !== "principle" && index % 2 === 1 ? landingStyles.detailStoryReverse : null),
+                  }}
+                >
+                  <div style={type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
+                    <p style={type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
+                    <h2 style={type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
+                    <p style={type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
+                  </div>
+                  <div style={type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
+                    <video
+                      style={landingStyles.detailStoryVideo}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      preload="auto"
+                      poster={item.poster}
+                    >
+                      <source src={item.media} type="video/mp4" />
+                    </video>
+                    <div style={landingStyles.detailStoryFallback}>영상 / 사진 영역</div>
+                  </div>
+                </div>
+              ))}
+            </section>
       </main>
     </div>
   );
@@ -656,19 +678,15 @@ function LandingPage({ onStart }) {
           <div style={landingStyles.featureGrid}>
             <div style={landingStyles.featureCard}>
               <strong>01</strong>
-              <span>상상이 현실로</span>
+              <span>AI 분석</span>
             </div>
             <div style={landingStyles.featureCard}>
               <strong>02</strong>
-              <span>함께 노력하면서 경험</span>
+              <span>실행 계획</span>
             </div>
             <div style={landingStyles.featureCard}>
               <strong>03</strong>
-              <span>서로가 서로를 돕는</span>
-            </div>
-            <div style={landingStyles.featureCard}>
-              <strong>04</strong>
-              <span>이끄는 힘</span>
+              <span>사진 인증</span>
             </div>
           </div>
 
@@ -2265,6 +2283,18 @@ const landingStyles = {
     gap: "34px",
     alignItems: "stretch",
   },
+  detailHeroIntroOnly: {
+    display: "block",
+    maxWidth: "980px",
+    paddingTop: "18px",
+  },
+  detailTitleIntroOnly: {
+    margin: "20px 0 0",
+    fontSize: "clamp(54px, 7vw, 96px)",
+    lineHeight: 1.02,
+    letterSpacing: "-0.07em",
+    fontWeight: 950,
+  },
   detailEyebrow: {
     margin: 0,
     color: "#6b7280",
@@ -2314,6 +2344,62 @@ const landingStyles = {
     color: "rgba(255,255,255,0.9)",
     fontSize: "18px",
     fontWeight: 900,
+  },
+  introVisionStatement: {
+    width: "min(1180px, 100%)",
+    margin: "0 auto",
+    padding: "30px 0 90px",
+  },
+  introVisionLine: {
+    margin: "0 0 40px",
+    color: "#111827",
+    fontSize: "clamp(42px, 6vw, 92px)",
+    lineHeight: 1.02,
+    letterSpacing: "-0.065em",
+    fontWeight: 950,
+  },
+  introVisionVideoWrap: {
+    position: "relative",
+    width: "100%",
+    minHeight: "520px",
+    borderRadius: "34px",
+    overflow: "hidden",
+    background: "linear-gradient(135deg, #111827 0%, #374151 48%, #020617 100%)",
+    boxShadow: "0 34px 80px rgba(15, 23, 42, 0.22)",
+  },
+  introVisionVideo: {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  introVisionVideoOverlay: {
+    position: "absolute",
+    inset: 0,
+    background: "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.52))",
+  },
+  introVisionVideoText: {
+    position: "absolute",
+    left: "34px",
+    bottom: "30px",
+    color: "#ffffff",
+    fontSize: "18px",
+    fontWeight: 950,
+    letterSpacing: "0.08em",
+  },
+  introVideoBelowSection: {
+    marginTop: "34px",
+  },
+  introVideoBelowHero: {
+    position: "relative",
+    width: "100%",
+    height: "min(72vh, 680px)",
+    minHeight: "420px",
+    borderRadius: "34px",
+    overflow: "hidden",
+    background: "linear-gradient(135deg, #111827 0%, #374151 52%, #d1d5db 100%)",
+    boxShadow: "0 28px 80px rgba(15,23,42,0.2)",
   },
   detailCards: {
     marginTop: "34px",
