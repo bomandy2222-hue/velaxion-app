@@ -36,7 +36,7 @@ const provider = new GoogleAuthProvider();
 // ✅ 채팅방 소개 섹션 영상 주소
 // 네가 원하는 동영상으로 바꾸려면 아래 URL만 교체하면 돼.
 // 예: Firebase Storage, Vercel public 파일, YouTube가 아닌 직접 mp4 링크
-const COMMUNITY_VIDEO_URL = "https://www.w3schools.com/html/mov_bbb.mp4";
+const COMMUNITY_VIDEO_URL = "/videos/community.mp4";
 
 
 const initialForm = {
@@ -713,25 +713,16 @@ function LandingPage({ onStart, onCommunity }) {
           <div style={landingStyles.communityIntroMediaBox}>
             <video
               style={landingStyles.communityIntroVideo}
-              controls
+              autoPlay
+              muted
+              loop
               playsInline
-              preload="metadata"
+              preload="auto"
             >
               <source src={COMMUNITY_VIDEO_URL} type="video/mp4" />
               브라우저가 동영상을 지원하지 않습니다.
             </video>
             <div style={landingStyles.communityIntroVideoFallback} />
-            <div style={landingStyles.communityIntroVideoOverlay} />
-            <div style={landingStyles.communityChatBubbleTop}>
-              오늘 운동 완료! 역시 아침이 최고네요 💪
-            </div>
-            <div style={landingStyles.communityChatBubbleMiddle}>
-              와 대단해요! 저도 오늘 해봐야겠어요 🔥
-            </div>
-            <div style={landingStyles.communityChatBubbleBottom}>
-              저는 3일 연속 성공했어요! 모두 화이팅입니다 ✨
-            </div>
-            <div style={landingStyles.communityPlayButton}>▶</div>
           </div>
         </div>
       </section>
