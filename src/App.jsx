@@ -230,14 +230,15 @@ function DetailPage({ type, onBack, onStart }) {
       ],
     },
     intro: {
-      eyebrow: "ABOUT VELAXION",
-      title: "AI와 함께 미래를 그려나가고 행동까지 실행시켜줍니다",
-      subtitle: "고민과 목표를 입력하면 AI가 현재 상태를 분석하고, 실행 가능한 계획과 인증 구조를 연결합니다.",
-      hero: "서비스 소개 이미지 영역",
+      eyebrow: "VELAXION VISION",
+      title: "생각을 현실로, 행동으로 증명합니다",
+      subtitle: "상상은 시작일 뿐, 실행이 결과를 만듭니다.",
+      hero: "VELAXION INTRO",
       cards: [
-        { title: "AI 컨설팅", desc: "현재 상태와 목표를 바탕으로 방향을 정리합니다." },
-        { title: "실행 계획", desc: "생각에서 끝나지 않도록 행동 단위로 바꿉니다." },
-        { title: "사진 인증", desc: "실제 행동을 증명하고 완료합니다." },
+        { title: "상상이 현실로", desc: "생각을 행동으로 바꾸고 현실로 만듭니다." },
+        { title: "함께 노력하면서 경험", desc: "혼자가 아닌 구조 속에서 함께 실행합니다." },
+        { title: "서로가 서로를 돕는", desc: "각자의 행동이 서로에게 영향을 주고 연결됩니다." },
+        { title: "이끄는 힘", desc: "작은 실행이 결국 큰 변화를 만들어냅니다." },
       ],
     },
   };
