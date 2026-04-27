@@ -468,7 +468,7 @@ function DetailPage({ type, onBack, onStart }) {
   );
 }
 
-function LandingPage({ onStart }) {
+function LandingPage({ onStart, onCommunity }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [detailPage, setDetailPage] = useState(null);
   const menuCloseTimerRef = useRef(null);
@@ -589,6 +589,9 @@ function LandingPage({ onStart }) {
           >
             살펴보기
           </button>
+          <button type="button" style={landingStyles.navTextButton} onClick={onCommunity}>
+            커뮤니티
+          </button>
           <button type="button" style={landingStyles.navTextButton} onClick={() => openDetail("reviews")}>
             후기
           </button>
@@ -615,6 +618,7 @@ function LandingPage({ onStart }) {
             </div>
             <div style={landingStyles.megaColumn}>
               <p style={landingStyles.megaTitle}>고객 리소스</p>
+              <button style={landingStyles.megaItem} onClick={onCommunity}>경험 공유 채팅방</button>
               <button style={landingStyles.megaItem} onClick={() => openDetail("reviews")}>고객 경험담</button>
               <button style={landingStyles.megaItem} onClick={onStart}>7일 먼저 체험하기</button>
             </div>
@@ -646,6 +650,85 @@ function LandingPage({ onStart }) {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+
+      <section id="community" style={landingStyles.communityIntroSection}>
+        <div style={landingStyles.communityIntroInner}>
+          <div style={landingStyles.communityIntroTextBox}>
+            <p style={landingStyles.kickerDark}>VELAXION COMMUNITY</p>
+            <h2 style={landingStyles.communityIntroTitle}>
+              함께 성장하는
+              <br />
+              경험 공유 채팅방
+            </h2>
+            <p style={landingStyles.communityIntroText}>
+              같은 목표를 가진 사람들이 모여 서로의 경험을 나누고,
+              조언하고, 함께 성장하는 공간입니다.
+            </p>
+
+            <div style={landingStyles.communityIntroList}>
+              <div style={landingStyles.communityIntroListItem}>
+                <span style={landingStyles.communityIntroIcon}>✦</span>
+                <div>
+                  <strong>경험을 나누고 동기부여를 받아요</strong>
+                  <p style={landingStyles.communityIntroListText}>나의 경험이 누군가에게 큰 도움이 됩니다.</p>
+                </div>
+              </div>
+              <div style={landingStyles.communityIntroListItem}>
+                <span style={landingStyles.communityIntroIcon}>☑</span>
+                <div>
+                  <strong>사진과 메시지로 소통해요</strong>
+                  <p style={landingStyles.communityIntroListText}>일상 속 실천을 사진으로 공유하고 응원받아요.</p>
+                </div>
+              </div>
+              <div style={landingStyles.communityIntroListItem}>
+                <span style={landingStyles.communityIntroIcon}>↗</span>
+                <div>
+                  <strong>서로에게 조언하고 도움을 줘요</strong>
+                  <p style={landingStyles.communityIntroListText}>다양한 사람들의 인사이트가 나의 변화를 이끌어요.</p>
+                </div>
+              </div>
+              <div style={landingStyles.communityIntroListItem}>
+                <span style={landingStyles.communityIntroIcon}>∞</span>
+                <div>
+                  <strong>함께 성장하며 더 멀리 나아가요</strong>
+                  <p style={landingStyles.communityIntroListText}>혼자가 아닌 연결 속에서 끝까지 해낼 수 있습니다.</p>
+                </div>
+              </div>
+            </div>
+
+            <button style={landingStyles.communityIntroButton} onClick={onCommunity}>
+              채팅방 바로가기 →
+            </button>
+          </div>
+
+          <div style={landingStyles.communityIntroMediaBox}>
+            <video
+              style={landingStyles.communityIntroVideo}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              poster="/videos/community.jpg"
+            >
+              <source src="/videos/community.mp4" type="video/mp4" />
+            </video>
+            <div style={landingStyles.communityIntroVideoFallback} />
+            <div style={landingStyles.communityIntroVideoOverlay} />
+            <div style={landingStyles.communityChatBubbleTop}>
+              오늘 운동 완료! 역시 아침이 최고네요 💪
+            </div>
+            <div style={landingStyles.communityChatBubbleMiddle}>
+              와 대단해요! 저도 오늘 해봐야겠어요 🔥
+            </div>
+            <div style={landingStyles.communityChatBubbleBottom}>
+              저는 3일 연속 성공했어요! 모두 화이팅입니다 ✨
+            </div>
+            <div style={landingStyles.communityPlayButton}>▶</div>
+          </div>
         </div>
       </section>
 
@@ -1418,7 +1501,15 @@ export default function App() {
   };
 
   if (!showExperience) {
-    return <LandingPage onStart={() => setShowExperience(true)} />;
+    return (
+      <LandingPage
+        onStart={() => setShowExperience(true)}
+        onCommunity={() => {
+          setShowExperience(true);
+          setShowCommunity(true);
+        }}
+      />
+    );
   }
 
   if (loading) {
@@ -2598,6 +2689,170 @@ const landingStyles = {
     letterSpacing: "0.16em",
     textTransform: "uppercase",
     color: "#6b7280",
+  },
+  communityIntroSection: {
+    minHeight: "100vh",
+    background: "#f5f7fb",
+    color: "#111827",
+    display: "flex",
+    alignItems: "center",
+    padding: "104px 22px",
+    boxSizing: "border-box",
+  },
+  communityIntroInner: {
+    width: "min(1180px, 100%)",
+    margin: "0 auto",
+    display: "grid",
+    gridTemplateColumns: "0.86fr 1.14fr",
+    gap: "54px",
+    alignItems: "center",
+  },
+  communityIntroTextBox: {
+    minWidth: 0,
+  },
+  communityIntroTitle: {
+    margin: "14px 0 0",
+    fontSize: "clamp(38px, 5vw, 64px)",
+    lineHeight: 1.06,
+    letterSpacing: "-0.06em",
+    fontWeight: 950,
+  },
+  communityIntroText: {
+    margin: "22px 0 0",
+    color: "#374151",
+    fontSize: "17px",
+    lineHeight: 1.75,
+    fontWeight: 700,
+  },
+  communityIntroList: {
+    display: "grid",
+    gap: "18px",
+    marginTop: "32px",
+  },
+  communityIntroListItem: {
+    display: "grid",
+    gridTemplateColumns: "46px 1fr",
+    gap: "14px",
+    alignItems: "start",
+  },
+  communityIntroListText: {
+    margin: "6px 0 0",
+    color: "#6b7280",
+    fontSize: "14px",
+    lineHeight: 1.55,
+    fontWeight: 650,
+  },
+  communityIntroIcon: {
+    width: "42px",
+    height: "42px",
+    borderRadius: "999px",
+    background: "#111827",
+    color: "#ffffff",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "16px",
+    fontWeight: 950,
+    boxShadow: "0 12px 26px rgba(15,23,42,0.16)",
+  },
+  communityIntroButton: {
+    marginTop: "34px",
+    border: "none",
+    background: "#111827",
+    color: "#ffffff",
+    borderRadius: "999px",
+    padding: "16px 24px",
+    fontSize: "15px",
+    fontWeight: 950,
+    cursor: "pointer",
+    boxShadow: "0 18px 38px rgba(15,23,42,0.18)",
+  },
+  communityIntroMediaBox: {
+    position: "relative",
+    minHeight: "470px",
+    borderRadius: "30px",
+    overflow: "hidden",
+    background: "#111827",
+    boxShadow: "0 28px 80px rgba(15,23,42,0.22)",
+    isolation: "isolate",
+  },
+  communityIntroVideo: {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    zIndex: 2,
+    pointerEvents: "none",
+  },
+  communityIntroVideoFallback: {
+    position: "absolute",
+    inset: 0,
+    background: "radial-gradient(circle at 40% 35%, #4b5563 0%, #111827 46%, #020617 100%)",
+    zIndex: 1,
+  },
+  communityIntroVideoOverlay: {
+    position: "absolute",
+    inset: 0,
+    background: "linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.42))",
+    zIndex: 3,
+  },
+  communityPlayButton: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: "78px",
+    height: "78px",
+    borderRadius: "999px",
+    background: "rgba(255,255,255,0.92)",
+    color: "#111827",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "26px",
+    fontWeight: 950,
+    zIndex: 5,
+    boxShadow: "0 22px 60px rgba(0,0,0,0.28)",
+  },
+  communityChatBubbleTop: {
+    position: "absolute",
+    top: "58px",
+    left: "92px",
+    zIndex: 6,
+    background: "rgba(255,255,255,0.96)",
+    color: "#111827",
+    borderRadius: "18px",
+    padding: "15px 18px",
+    fontSize: "14px",
+    fontWeight: 850,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
+  },
+  communityChatBubbleMiddle: {
+    position: "absolute",
+    left: "48px",
+    bottom: "112px",
+    zIndex: 6,
+    background: "rgba(255,255,255,0.96)",
+    color: "#111827",
+    borderRadius: "18px",
+    padding: "15px 18px",
+    fontSize: "14px",
+    fontWeight: 850,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
+  },
+  communityChatBubbleBottom: {
+    position: "absolute",
+    right: "58px",
+    bottom: "46px",
+    zIndex: 6,
+    background: "rgba(255,255,255,0.96)",
+    color: "#111827",
+    borderRadius: "18px",
+    padding: "15px 18px",
+    fontSize: "14px",
+    fontWeight: 850,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.18)",
   },
   reviewSection: {
     minHeight: "100vh",
