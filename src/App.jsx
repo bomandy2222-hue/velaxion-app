@@ -6,7 +6,19 @@ import {
   signInWithPopup,
   signOut,
 } from "firebase/auth";
-import { doc, getDoc, getFirestore, setDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getFirestore,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import {
   deleteObject,
   getDownloadURL,
@@ -699,6 +711,272 @@ function LandingPage({ onStart }) {
   );
 }
 
+
+function CommunityChat({ user, form, onBack, onLogin }) {
+  const [messages, setMessages] = useState([]);
+  const [chatText, setChatText] = useState("");
+  const [chatImage, setChatImage] = useState(null);
+  const [chatImagePreview, setChatImagePreview] = useState("");
+  const [sending, setSending] = useState(false);
+  const [chatMessage, setChatMessage] = useState("");
+  const chatFileInputRef = useRef(null);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "communityMessages"),
+      orderBy("createdAt", "asc"),
+      limit(120)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const nextMessages = snapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }));
+        setMessages(nextMessages);
+      },
+      (error) => {
+        console.error("COMMUNITY SNAPSHOT ERROR:", error);
+        setChatMessage("채팅을 불러오지 못했어. Firestore 규칙이나 인덱스를 확인해줘.");
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
+
+  useEffect(() => {
+    if (!chatImage) {
+      setChatImagePreview("");
+      return;
+    }
+
+    const url = URL.createObjectURL(chatImage);
+    setChatImagePreview(url);
+
+    return () => URL.revokeObjectURL(url);
+  }, [chatImage]);
+
+  const handleChatImageChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setChatMessage("이미지 파일만 올릴 수 있어.");
+      event.target.value = "";
+      return;
+    }
+
+    setChatImage(file);
+    setChatMessage("");
+    event.target.value = "";
+  };
+
+  const removeChatImage = () => {
+    setChatImage(null);
+    setChatImagePreview("");
+  };
+
+  const sendCommunityMessage = async () => {
+    if (!user) {
+      setChatMessage("채팅방을 사용하려면 먼저 로그인해줘.");
+      return;
+    }
+
+    const cleanText = chatText.trim();
+    if (!cleanText && !chatImage) {
+      setChatMessage("메시지나 사진 중 하나는 입력해줘.");
+      return;
+    }
+
+    try {
+      setSending(true);
+      setChatMessage("");
+
+      let imageUrl = "";
+      let imagePath = "";
+
+      if (chatImage) {
+        const safeName = sanitizeFileName(chatImage.name);
+        imagePath = `community-images/${user.uid}/${Date.now()}-${safeName}.jpg`;
+        const imageRef = storageRef(storage, imagePath);
+        const compressedBlob = await compressImage(chatImage, 900, 0.7);
+
+        await new Promise((resolve, reject) => {
+          const uploadTask = uploadBytesResumable(imageRef, compressedBlob, {
+            contentType: "image/jpeg",
+          });
+          uploadTask.on("state_changed", null, reject, resolve);
+        });
+
+        imageUrl = await getDownloadURL(imageRef);
+      }
+
+      await addDoc(collection(db, "communityMessages"), {
+        uid: user.uid,
+        name: user.displayName || form?.name || "벨락시온 사용자",
+        email: user.email || "",
+        photoURL: user.photoURL || "",
+        text: cleanText,
+        imageUrl,
+        imagePath,
+        createdAt: serverTimestamp(),
+        createdAtText: new Date().toISOString(),
+      });
+
+      setChatText("");
+      setChatImage(null);
+      setChatImagePreview("");
+    } catch (error) {
+      console.error("COMMUNITY SEND ERROR:", error);
+      setChatMessage(getFriendlyStorageError(error));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const formatChatTime = (message) => {
+    const date = message.createdAt?.toDate?.() || new Date(message.createdAtText || Date.now());
+    if (Number.isNaN(date.getTime())) return "방금 전";
+
+    return date.toLocaleString("ko-KR", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
+    <div style={styles.page}>
+      <div style={styles.communityContainer}>
+        <button style={styles.backToLandingButton} onClick={onBack}>
+          ← 컨설팅 화면으로 돌아가기
+        </button>
+
+        <div style={styles.communityHeroCard}>
+          <p style={styles.communityEyebrow}>VELAXION COMMUNITY</p>
+          <h1 style={styles.communityTitle}>함께 성장하는 경험 공유방</h1>
+          <p style={styles.communitySubtitle}>
+            컨설팅을 받은 사람들이 서로의 실행 경험을 나누고, 조언하고, 다시 행동할 힘을 얻는 공간이야.
+          </p>
+
+          {!user ? (
+            <button style={styles.primaryButton} onClick={onLogin}>
+              Google 로그인 후 참여하기
+            </button>
+          ) : (
+            <div style={styles.communityUserPill}>
+              {user.photoURL ? <img src={user.photoURL} alt="프로필" style={styles.communityUserImage} /> : null}
+              <span>{user.displayName || form?.name || "사용자"}님으로 참여 중</span>
+            </div>
+          )}
+        </div>
+
+        <div style={styles.communityChatCard}>
+          <div style={styles.communityMessagesBox}>
+            {messages.length === 0 ? (
+              <div style={styles.communityEmptyBox}>
+                아직 메시지가 없어. 첫 경험을 공유해봐.
+              </div>
+            ) : (
+              messages.map((item) => {
+                const isMine = user && item.uid === user.uid;
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      ...styles.communityMessageRow,
+                      ...(isMine ? styles.communityMessageMine : null),
+                    }}
+                  >
+                    <div style={styles.communityAvatar}>
+                      {item.photoURL ? (
+                        <img src={item.photoURL} alt="프로필" style={styles.communityAvatarImage} />
+                      ) : (
+                        <span>{(item.name || "V").slice(0, 1)}</span>
+                      )}
+                    </div>
+
+                    <div style={styles.communityBubbleWrap}>
+                      <div style={styles.communityMetaRow}>
+                        <strong>{item.name || "벨락시온 사용자"}</strong>
+                        <span>{formatChatTime(item)}</span>
+                      </div>
+
+                      <div style={styles.communityBubble}>
+                        {item.text ? <p style={styles.communityBubbleText}>{item.text}</p> : null}
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt="공유 이미지" style={styles.communitySharedImage} />
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          <div style={styles.communityComposer}>
+            {chatImagePreview ? (
+              <div style={styles.communityPreviewBox}>
+                <img src={chatImagePreview} alt="업로드 미리보기" style={styles.communityPreviewImage} />
+                <button style={styles.imageRemoveButton} onClick={removeChatImage} type="button">
+                  사진 제거
+                </button>
+              </div>
+            ) : null}
+
+            <textarea
+              style={styles.communityTextarea}
+              placeholder="경험, 조언, 오늘 실행한 내용을 공유해줘."
+              value={chatText}
+              onChange={(e) => setChatText(e.target.value)}
+              rows={3}
+            />
+
+            <input
+              ref={chatFileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleChatImageChange}
+            />
+
+            <div style={styles.communityComposerActions}>
+              <button
+                type="button"
+                style={styles.secondaryButton}
+                onClick={() => chatFileInputRef.current?.click()}
+                disabled={sending}
+              >
+                사진 올리기
+              </button>
+              <button
+                type="button"
+                style={styles.primaryButton}
+                onClick={sendCommunityMessage}
+                disabled={sending || !user}
+              >
+                {sending ? "공유 중..." : "공유하기"}
+              </button>
+            </div>
+
+            {chatMessage ? <p style={{ ...styles.message, ...styles.messageInfo }}>{chatMessage}</p> : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(initialForm);
@@ -717,6 +995,7 @@ export default function App() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("info");
   const [showExperience, setShowExperience] = useState(false);
+  const [showCommunity, setShowCommunity] = useState(false);
 
   const skipAutoSaveRef = useRef(true);
   const galleryInputRefs = useRef([]);
@@ -1155,6 +1434,17 @@ export default function App() {
     );
   }
 
+  if (showCommunity) {
+    return (
+      <CommunityChat
+        user={user}
+        form={form}
+        onBack={() => setShowCommunity(false)}
+        onLogin={handleLogin}
+      />
+    );
+  }
+
   const hasStructuredAnalysis =
     parsedAnalysis.current ||
     parsedAnalysis.core ||
@@ -1206,6 +1496,19 @@ export default function App() {
               {loginLoading ? "로그인 중..." : "Google 로그인"}
             </button>
           )}
+        </div>
+
+        <div style={styles.communityEntryCard}>
+          <div>
+            <p style={styles.communityEntryEyebrow}>COMMUNITY</p>
+            <h2 style={styles.communityEntryTitle}>함께 성장하기</h2>
+            <p style={styles.communityEntryText}>
+              컨설팅을 받은 사람끼리 경험을 공유하고, 사진과 메시지로 서로에게 조언을 주고받는 공간이야.
+            </p>
+          </div>
+          <button style={styles.primaryButton} onClick={() => setShowCommunity(true)}>
+            경험 공유방 들어가기
+          </button>
         </div>
 
         <div style={styles.card}>
@@ -1872,6 +2175,220 @@ const styles = {
     marginBottom: "16px",
     boxShadow: "0 6px 18px rgba(15, 23, 42, 0.06)",
   },
+  communityContainer: {
+    maxWidth: "980px",
+    margin: "0 auto",
+  },
+  communityEntryCard: {
+    background: "linear-gradient(135deg, #111827 0%, #1f2937 52%, #374151 100%)",
+    color: "#ffffff",
+    border: "1px solid rgba(255,255,255,0.16)",
+    borderRadius: "22px",
+    padding: "22px",
+    boxShadow: "0 18px 50px rgba(15, 23, 42, 0.16)",
+    marginBottom: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "18px",
+    flexWrap: "wrap",
+  },
+  communityEntryEyebrow: {
+    margin: 0,
+    color: "#bfdbfe",
+    fontSize: "12px",
+    fontWeight: 900,
+    letterSpacing: "0.16em",
+  },
+  communityEntryTitle: {
+    margin: "8px 0 0",
+    fontSize: "24px",
+    fontWeight: 850,
+  },
+  communityEntryText: {
+    margin: "8px 0 0",
+    color: "#d1d5db",
+    fontSize: "14px",
+    lineHeight: 1.7,
+    maxWidth: "620px",
+  },
+  communityHeroCard: {
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "24px",
+    padding: "26px",
+    boxShadow: "0 18px 50px rgba(15, 23, 42, 0.08)",
+    marginBottom: "16px",
+  },
+  communityEyebrow: {
+    margin: 0,
+    color: "#2563eb",
+    fontSize: "13px",
+    fontWeight: 900,
+    letterSpacing: "0.16em",
+  },
+  communityTitle: {
+    margin: "10px 0 0",
+    fontSize: "34px",
+    lineHeight: 1.12,
+    letterSpacing: "-0.04em",
+    fontWeight: 900,
+  },
+  communitySubtitle: {
+    margin: "12px 0 18px",
+    color: "#4b5563",
+    fontSize: "16px",
+    lineHeight: 1.75,
+    maxWidth: "720px",
+  },
+  communityUserPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "10px",
+    background: "#eff6ff",
+    color: "#1d4ed8",
+    border: "1px solid #bfdbfe",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    fontSize: "14px",
+    fontWeight: 800,
+  },
+  communityUserImage: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "999px",
+    objectFit: "cover",
+  },
+  communityChatCard: {
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "24px",
+    overflow: "hidden",
+    boxShadow: "0 18px 50px rgba(15, 23, 42, 0.08)",
+  },
+  communityMessagesBox: {
+    height: "560px",
+    overflowY: "auto",
+    padding: "20px",
+    background: "#f9fafb",
+    display: "grid",
+    alignContent: "start",
+    gap: "14px",
+  },
+  communityEmptyBox: {
+    minHeight: "220px",
+    border: "1px dashed #d1d5db",
+    borderRadius: "18px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#6b7280",
+    fontSize: "15px",
+    fontWeight: 700,
+    background: "#ffffff",
+  },
+  communityMessageRow: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "flex-start",
+  },
+  communityMessageMine: {
+    flexDirection: "row-reverse",
+  },
+  communityAvatar: {
+    width: "38px",
+    height: "38px",
+    borderRadius: "999px",
+    background: "#111827",
+    color: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "15px",
+    fontWeight: 900,
+    flexShrink: 0,
+    overflow: "hidden",
+  },
+  communityAvatarImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  communityBubbleWrap: {
+    maxWidth: "min(620px, 78%)",
+  },
+  communityMetaRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginBottom: "6px",
+    color: "#6b7280",
+    fontSize: "12px",
+  },
+  communityBubble: {
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "16px",
+    padding: "12px",
+    boxShadow: "0 8px 20px rgba(15, 23, 42, 0.05)",
+  },
+  communityBubbleText: {
+    margin: 0,
+    color: "#111827",
+    fontSize: "15px",
+    lineHeight: 1.7,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+  },
+  communitySharedImage: {
+    display: "block",
+    width: "min(360px, 100%)",
+    maxHeight: "360px",
+    objectFit: "cover",
+    borderRadius: "14px",
+    marginTop: "10px",
+    border: "1px solid #e5e7eb",
+  },
+  communityComposer: {
+    padding: "16px",
+    borderTop: "1px solid #e5e7eb",
+    background: "#ffffff",
+  },
+  communityTextarea: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "13px 14px",
+    borderRadius: "14px",
+    border: "1px solid #d1d5db",
+    fontSize: "15px",
+    lineHeight: 1.6,
+    outline: "none",
+    resize: "vertical",
+  },
+  communityComposerActions: {
+    marginTop: "10px",
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "10px",
+    flexWrap: "wrap",
+  },
+  communityPreviewBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "12px",
+    padding: "10px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    background: "#f9fafb",
+  },
+  communityPreviewImage: {
+    width: "92px",
+    height: "92px",
+    objectFit: "cover",
+    borderRadius: "12px",
+  },
+
 };
 
 const landingStyles = {
