@@ -336,6 +336,45 @@ function DetailPage({ type, onBack, onStart, scrollTarget = null }) {
   ];
 
 
+  if (type === "reviewSingle") {
+    const selectedReview = reviewStories[scrollTarget ?? 0] || reviewStories[0];
+
+    return (
+      <div style={landingStyles.reviewDetailPage}>
+        <header style={landingStyles.detailNav}>
+          <button style={landingStyles.detailBackButton} onClick={onBack}>← 돌아가기</button>
+          <div style={landingStyles.brandDark}>VELAXION</div>
+          <button style={landingStyles.detailStartButton} onClick={onStart}>7일 먼저 체험하기</button>
+        </header>
+
+        <main style={landingStyles.singleReviewMain}>
+          <section style={landingStyles.singleReviewHeader}>
+            <p style={landingStyles.detailEyebrow}>CUSTOMER STORY</p>
+            <h1 style={landingStyles.singleReviewMainTitle}>고객 경험담</h1>
+          </section>
+
+          <article style={landingStyles.singleReviewCard}>
+            <div style={landingStyles.singleReviewImageWrap}>
+              <img
+                src={selectedReview.image}
+                alt={selectedReview.title}
+                style={landingStyles.singleReviewImage}
+              />
+              <div style={landingStyles.reviewStoryImageFallback}>후기 사진 영역</div>
+            </div>
+
+            <div style={landingStyles.singleReviewContent}>
+              <h2 style={landingStyles.singleReviewTitle}>{selectedReview.title}</h2>
+              <p style={landingStyles.singleReviewText}>{selectedReview.text}</p>
+              <p style={landingStyles.singleReviewMeta}>{selectedReview.meta}</p>
+            </div>
+          </article>
+        </main>
+      </div>
+    );
+  }
+
+
   const reviewCardRefs = useRef([]);
 
   useEffect(() => {
@@ -756,11 +795,11 @@ function LandingPage({ onStart, onCommunity }) {
                 style={{ ...landingStyles.reviewCard, cursor: "pointer" }}
                 role="button"
                 tabIndex={0}
-                onClick={() => openDetail("reviews", index)}
+                onClick={() => openDetail("reviewSingle", index)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    openDetail("reviews", index);
+                    openDetail("reviewSingle", index);
                   }
                 }}
               >
@@ -3379,6 +3418,71 @@ const landingStyles = {
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
     gap: "28px",
     alignItems: "start",
+  },
+  singleReviewMain: {
+    minHeight: "100vh",
+    padding: "120px 22px 80px",
+    boxSizing: "border-box",
+    background: "#f5f7fb",
+    color: "#111827",
+  },
+  singleReviewHeader: {
+    width: "min(980px, 100%)",
+    margin: "0 auto 28px",
+    textAlign: "center",
+  },
+  singleReviewMainTitle: {
+    margin: "12px 0 0",
+    fontSize: "clamp(38px, 6vw, 72px)",
+    lineHeight: 1.04,
+    letterSpacing: "-0.06em",
+    fontWeight: 950,
+  },
+  singleReviewCard: {
+    width: "min(980px, 100%)",
+    margin: "0 auto",
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "34px",
+    overflow: "hidden",
+    boxShadow: "0 24px 70px rgba(15, 23, 42, 0.10)",
+  },
+  singleReviewImageWrap: {
+    position: "relative",
+    height: "min(52vw, 460px)",
+    minHeight: "280px",
+    background: "linear-gradient(135deg, #111827 0%, #4b5563 48%, #020617 100%)",
+    overflow: "hidden",
+  },
+  singleReviewImage: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  },
+  singleReviewContent: {
+    padding: "clamp(26px, 5vw, 54px)",
+  },
+  singleReviewTitle: {
+    margin: 0,
+    fontSize: "clamp(28px, 4vw, 46px)",
+    lineHeight: 1.12,
+    letterSpacing: "-0.04em",
+    fontWeight: 950,
+    color: "#111827",
+  },
+  singleReviewText: {
+    margin: "22px 0 0",
+    fontSize: "18px",
+    lineHeight: 1.9,
+    color: "#4b5563",
+    whiteSpace: "pre-wrap",
+  },
+  singleReviewMeta: {
+    margin: "28px 0 0",
+    fontSize: "14px",
+    fontWeight: 800,
+    color: "#6b7280",
   },
   reviewStoryCard: {
     background: "#ffffff",
