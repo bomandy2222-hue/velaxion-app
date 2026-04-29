@@ -720,7 +720,7 @@ function LandingPage({ onStart, onCommunity }) {
               <p style={landingStyles.kickerDark}>Customer Voice</p>
               <h2 style={landingStyles.sectionTitle}>실제 사용자들의 변화</h2>
             </div>
-            <a style={landingStyles.moreLink} href="#intro">더 알아보기 →</a>
+            <button type="button" style={landingStyles.moreLinkButton} onClick={() => openDetail("reviews")}>더 알아보기 →</button>
           </div>
 
           <div style={landingStyles.reviewGrid}>
@@ -2872,6 +2872,16 @@ const landingStyles = {
     textDecoration: "none",
     fontSize: "16px",
     fontWeight: 900,
+  },
+  moreLinkButton: {
+    border: "none",
+    background: "transparent",
+    color: "#111827",
+    textDecoration: "none",
+    fontSize: "16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    padding: 0,
   },
   reviewGrid: {
     marginTop: "40px",
