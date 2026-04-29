@@ -223,7 +223,7 @@ function getFriendlyStorageError(error) {
 
 
 
-function DetailPage({ type, onBack, onStart }) {
+function DetailPage({ type, onBack, onStart, scrollTarget = null }) {
   const detailMap = {
     reviews: {
       eyebrow: "CUSTOMER VOICE",
@@ -335,6 +335,22 @@ function DetailPage({ type, onBack, onStart }) {
     },
   ];
 
+
+  const reviewCardRefs = useRef([]);
+
+  useEffect(() => {
+    if (type !== "reviews" || scrollTarget === null || scrollTarget === undefined) return;
+
+    const timer = setTimeout(() => {
+      const target = reviewCardRefs.current[scrollTarget];
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [type, scrollTarget]);
+
   if (type === "reviews") {
     return (
       <div style={landingStyles.reviewDetailPage}>
@@ -351,8 +367,12 @@ function DetailPage({ type, onBack, onStart }) {
           </section>
 
           <section style={landingStyles.reviewStoryGrid}>
-            {reviewStories.map((story) => (
-              <article key={story.title} style={landingStyles.reviewStoryCard}>
+            {reviewStories.map((story, index) => (
+              <article
+                key={story.title}
+                ref={(el) => { reviewCardRefs.current[index] = el; }}
+                style={landingStyles.reviewStoryCard}
+              >
                 <div style={landingStyles.reviewStoryImageWrap}>
                   <img src={story.image} alt={story.title} style={landingStyles.reviewStoryImage} />
                   <div style={landingStyles.reviewStoryImageFallback}>후기 사진 영역</div>
@@ -463,6 +483,7 @@ function DetailPage({ type, onBack, onStart }) {
 function LandingPage({ onStart, onCommunity }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [detailPage, setDetailPage] = useState(null);
+  const [detailScrollTarget, setDetailScrollTarget] = useState(null);
   const menuCloseTimerRef = useRef(null);
 
   const openMegaMenu = () => {
@@ -495,14 +516,19 @@ function LandingPage({ onStart, onCommunity }) {
     return (
       <DetailPage
         type={detailPage}
-        onBack={() => setDetailPage(null)}
+        scrollTarget={detailScrollTarget}
+        onBack={() => {
+          setDetailPage(null);
+          setDetailScrollTarget(null);
+        }}
         onStart={onStart}
       />
     );
   }
 
-  const openDetail = (type) => {
+  const openDetail = (type, scrollTarget = null) => {
     setMenuOpen(false);
+    setDetailScrollTarget(scrollTarget);
     setDetailPage(type);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -724,8 +750,20 @@ function LandingPage({ onStart, onCommunity }) {
           </div>
 
           <div style={landingStyles.reviewGrid}>
-            {testimonials.map((item) => (
-              <div key={item.name} style={landingStyles.reviewCard}>
+            {testimonials.map((item, index) => (
+              <div
+                key={item.name}
+                style={{ ...landingStyles.reviewCard, cursor: "pointer" }}
+                role="button"
+                tabIndex={0}
+                onClick={() => openDetail("reviews", index)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openDetail("reviews", index);
+                  }
+                }}
+              >
                 <div style={landingStyles.reviewImageArea}>
                   <span style={landingStyles.reviewImageText}>후기 사진 영역</span>
                 </div>
