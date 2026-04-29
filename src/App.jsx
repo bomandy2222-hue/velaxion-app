@@ -358,7 +358,6 @@ function DetailPage({ type, onBack, onStart }) {
                   <div style={landingStyles.reviewStoryImageFallback}>후기 사진 영역</div>
                 </div>
                 <h2 style={landingStyles.reviewStoryTitle}>{story.title}</h2>
-                <p style={landingStyles.reviewStoryText}>{story.text}</p>
                 <p style={landingStyles.reviewStoryMeta}>{story.meta}</p>
               </article>
             ))}
