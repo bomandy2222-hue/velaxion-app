@@ -406,17 +406,6 @@ function DetailPage({ type, onBack, onStart }) {
           ) : null}
         </section>
 
-        {type !== "intro" ? (
-          <section style={landingStyles.detailCards}>
-            {page.cards.map((card, index) => (
-              <div key={card.title} style={landingStyles.detailCard}>
-                <div style={landingStyles.detailCardNumber}>0{index + 1}</div>
-                <h2 style={landingStyles.detailCardTitle}>{card.title}</h2>
-                <p style={landingStyles.detailCardText}>{card.desc}</p>
-              </div>
-            ))}
-          </section>
-        ) : null}
 
         {type === "intro" ? (
           <section style={landingStyles.introVideoBelowSection}>
