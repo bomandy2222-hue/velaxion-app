@@ -348,10 +348,6 @@ function DetailPage({ type, onBack, onStart }) {
           <section style={landingStyles.reviewDetailHeader}>
             <p style={landingStyles.detailEyebrow}>CUSTOMER STORIES</p>
             <h1 style={landingStyles.reviewDetailTitle}>고객 경험담</h1>
-            <p style={landingStyles.reviewDetailSubtitle}>
-              실제 사용자들이 벨락시온을 사용하며 경험한 변화입니다.
-              사진과 문장으로 결과가 먼저 보이도록 구성했습니다.
-            </p>
           </section>
 
           <section style={landingStyles.reviewStoryGrid}>
