@@ -1,16 +1,26 @@
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed" });
+    return res.status(405).json({
+      error: "POST 요청만 가능",
+    });
   }
 
   try {
     const { question, context } = req.body;
 
     if (!question) {
-      return res.status(400).json({ message: "질문이 없습니다." });
+      return res.status(400).json({
+        error: "질문 없음",
+      });
     }
 
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+    if (!OPENAI_API_KEY) {
+      return res.status(500).json({
+        error: "API 키 없음",
+      });
+    }
 
     const prompt = `
 너는 사용자의 실행을 도와주는 AI 코치야.
@@ -21,13 +31,13 @@ ${context || "없음"}
 사용자 질문:
 ${question}
 
-답변 규칙:
-- 현실적이고 실행 가능한 조언
-- 구체적으로 단계 제시
-- 동기부여 포함
+답변:
+- 현실적인 조언
+- 바로 실행 가능한 행동
+- 짧고 강하게
 `;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -35,22 +45,37 @@ ${question}
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "너는 실행 코치다." },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.7,
+        input: prompt,
       }),
     });
 
-    const data = await response.json();
+    const text = await response.text();
 
-    const answer = data.choices?.[0]?.message?.content || "답변 생성 실패";
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      return res.status(500).json({
+        error: "JSON 파싱 실패",
+        raw: text,
+      });
+    }
 
-    return res.status(200).json({ answer });
+    if (!response.ok) {
+      return res.status(500).json({
+        error: data?.error?.message || "OpenAI 오류",
+      });
+    }
 
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "서버 에러" });
+    const result =
+      data.output_text ||
+      data.output?.[0]?.content?.[0]?.text ||
+      "응답 없음";
+
+    return res.status(200).json({ result });
+  } catch (err) {
+    return res.status(500).json({
+      error: "서버 에러",
+    });
   }
 }
