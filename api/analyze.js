@@ -31,7 +31,7 @@ ${question}
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEYsk-proj-mUilQC4BT5daQxBhJMHsm-MEojFqHJg9a810gnbbXjH5LkJMFPcDoEQ9V83ezkKz6Ua-gxBq3xT3BlbkFJd7OLbfzgZxeOag4dKB9sMDXfNqXfv7kiIHK4M3FBsfTNWqfwe00EIWnAABVmRNopfUzL9XFUEA}`,
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
