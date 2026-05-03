@@ -1734,10 +1734,41 @@ export default function App() {
         </button>
         <div style={styles.header}>
           <div>
-            <h1 style={styles.title}>Velaxion 🚀</h1>
+            <p style={styles.workspaceEyebrow}>VELAXION EXECUTION OS</p>
+            <h1 style={styles.title}>나만의 실행 컨설팅룸</h1>
             <p style={styles.subtitle}>
-              성장 기록, 실행 체크, AI 분석을 한 곳에서 관리해.
+              목표를 분석하고, 하루 행동으로 쪼개고, AI 코치와 함께 끝까지 실행해.
             </p>
+          </div>
+        </div>
+
+        <div style={styles.commandCenter}>
+          <div style={styles.commandGlow} />
+          <div style={styles.commandContent}>
+            <div>
+              <p style={styles.commandLabel}>오늘의 실행 상태</p>
+              <h2 style={styles.commandTitle}>
+                {currentDayIndex === -1 ? "7일 실행 완료" : `Day ${currentDayIndex + 1} 실행 준비`}
+              </h2>
+              <p style={styles.commandText}>
+                컨설팅은 방향을 만들고, 코칭은 실행을 계속 이어가게 합니다.
+              </p>
+            </div>
+
+            <div style={styles.commandStats}>
+              <div style={styles.commandStatCard}>
+                <span>진행률</span>
+                <strong>{progress}%</strong>
+              </div>
+              <div style={styles.commandStatCard}>
+                <span>완료</span>
+                <strong>{checks.filter(Boolean).length}/7</strong>
+              </div>
+              <div style={styles.commandStatCard}>
+                <span>인증 사진</span>
+                <strong>{dayImages.filter(Boolean).length}</strong>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2141,41 +2172,48 @@ export default function App() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#f5f7fb",
-    padding: "32px 16px",
+    background:
+      "radial-gradient(circle at top left, rgba(148,163,184,0.25), transparent 34%), linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%)",
+    padding: "40px 16px",
     fontFamily:
       'Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    color: "#111827",
+    color: "#0f172a",
   },
   container: {
-    maxWidth: "860px",
+    maxWidth: "1040px",
     margin: "0 auto",
   },
   header: {
-    marginBottom: "20px",
+    marginBottom: "18px",
+    padding: "0 4px",
   },
   title: {
-    fontSize: "40px",
-    fontWeight: 800,
+    fontSize: "clamp(34px, 5vw, 56px)",
+    fontWeight: 950,
     margin: 0,
-    lineHeight: 1.1,
+    lineHeight: 1.05,
+    letterSpacing: "-0.055em",
+    color: "#0b1120",
   },
   subtitle: {
-    marginTop: "8px",
-    color: "#6b7280",
+    marginTop: "12px",
+    color: "#64748b",
     fontSize: "16px",
+    lineHeight: 1.75,
+    maxWidth: "660px",
   },
   subtleText: {
     color: "#6b7280",
     fontSize: "15px",
   },
   card: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "18px",
-    padding: "20px",
-    boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
-    marginBottom: "16px",
+    background: "rgba(255,255,255,0.86)",
+    border: "1px solid rgba(148,163,184,0.24)",
+    borderRadius: "28px",
+    padding: "24px",
+    boxShadow: "0 24px 70px rgba(15, 23, 42, 0.08)",
+    marginBottom: "18px",
+    backdropFilter: "blur(16px)",
   },
   sectionHeader: {
     display: "flex",
@@ -2185,8 +2223,10 @@ const styles = {
   },
   sectionTitle: {
     margin: 0,
-    fontSize: "20px",
-    fontWeight: 700,
+    fontSize: "22px",
+    fontWeight: 900,
+    letterSpacing: "-0.03em",
+    color: "#0f172a",
   },
   userBox: {
     background: "#f9fafb",
@@ -2224,21 +2264,26 @@ const styles = {
   input: {
     width: "100%",
     boxSizing: "border-box",
-    padding: "12px 14px",
-    borderRadius: "12px",
-    border: "1px solid #d1d5db",
+    padding: "14px 16px",
+    borderRadius: "16px",
+    border: "1px solid rgba(148,163,184,0.36)",
     fontSize: "15px",
     outline: "none",
+    background: "rgba(255,255,255,0.92)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
   },
   textarea: {
     width: "100%",
     boxSizing: "border-box",
-    padding: "12px 14px",
-    borderRadius: "12px",
-    border: "1px solid #d1d5db",
+    padding: "14px 16px",
+    borderRadius: "18px",
+    border: "1px solid rgba(148,163,184,0.36)",
     fontSize: "15px",
     outline: "none",
     resize: "vertical",
+    background: "rgba(255,255,255,0.92)",
+    lineHeight: 1.7,
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
   },
   progressText: {
     fontSize: "14px",
@@ -2255,9 +2300,10 @@ const styles = {
   },
   progressFill: {
     height: "100%",
-    background: "linear-gradient(90deg, #2563eb, #60a5fa)",
+    background: "linear-gradient(90deg, #0f172a, #2563eb, #7dd3fc)",
     borderRadius: "999px",
     transition: "width 0.25s ease",
+    boxShadow: "0 0 18px rgba(37, 99, 235, 0.35)",
   },
   autoSaveHint: {
     marginBottom: "16px",
@@ -2270,10 +2316,11 @@ const styles = {
   },
   dayPlanCard: {
     display: "block",
-    background: "#f9fafb",
-    border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    padding: "14px",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92))",
+    border: "1px solid rgba(148,163,184,0.26)",
+    borderRadius: "22px",
+    padding: "16px",
+    boxShadow: "0 14px 36px rgba(15, 23, 42, 0.055)",
   },
   dayPlanTop: {
     display: "flex",
@@ -2366,24 +2413,26 @@ const styles = {
     flexWrap: "wrap",
   },
   primaryButton: {
-    background: "#111827",
+    background: "linear-gradient(135deg, #0f172a 0%, #111827 45%, #334155 100%)",
     color: "#ffffff",
     border: "none",
-    borderRadius: "12px",
-    padding: "12px 16px",
+    borderRadius: "16px",
+    padding: "13px 18px",
     fontSize: "15px",
-    fontWeight: 700,
+    fontWeight: 850,
     cursor: "pointer",
+    boxShadow: "0 14px 34px rgba(15, 23, 42, 0.22)",
   },
   secondaryButton: {
-    background: "#ffffff",
-    color: "#111827",
-    border: "1px solid #d1d5db",
-    borderRadius: "12px",
-    padding: "10px 14px",
+    background: "rgba(255,255,255,0.88)",
+    color: "#0f172a",
+    border: "1px solid rgba(148,163,184,0.34)",
+    borderRadius: "16px",
+    padding: "11px 15px",
     fontSize: "14px",
-    fontWeight: 600,
+    fontWeight: 750,
     cursor: "pointer",
+    boxShadow: "0 8px 22px rgba(15, 23, 42, 0.06)",
   },
   analysisBox: {
     marginTop: "14px",
@@ -2410,10 +2459,11 @@ const styles = {
     gap: "14px",
   },
   resultCard: {
-    background: "#f9fafb",
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "16px",
+    background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+    border: "1px solid rgba(148,163,184,0.28)",
+    borderRadius: "24px",
+    padding: "20px",
+    boxShadow: "0 18px 44px rgba(15, 23, 42, 0.065)",
   },
   resultCardHeader: {
     display: "flex",
@@ -2425,14 +2475,15 @@ const styles = {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "32px",
-    height: "32px",
+    width: "36px",
+    height: "36px",
     borderRadius: "999px",
-    background: "#111827",
+    background: "linear-gradient(135deg, #0f172a, #2563eb)",
     color: "#ffffff",
     fontSize: "13px",
-    fontWeight: 700,
+    fontWeight: 900,
     flexShrink: 0,
+    boxShadow: "0 10px 24px rgba(37,99,235,0.25)",
   },
   resultTitle: {
     margin: 0,
@@ -2491,11 +2542,13 @@ const styles = {
     whiteSpace: "pre-wrap",
   },
   coachBox: {
-    marginTop: "18px",
-    background: "linear-gradient(180deg, #ffffff, #f8fafc)",
-    border: "1px solid #e5e7eb",
-    borderRadius: "18px",
-    padding: "18px",
+    marginTop: "20px",
+    background:
+      "radial-gradient(circle at top right, rgba(37,99,235,0.13), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94))",
+    border: "1px solid rgba(148,163,184,0.28)",
+    borderRadius: "28px",
+    padding: "22px",
+    boxShadow: "0 24px 70px rgba(15, 23, 42, 0.095)",
   },
   coachHeader: {
     display: "flex",
@@ -2550,14 +2603,14 @@ const styles = {
     cursor: "pointer",
   },
   coachMessagesBox: {
-    maxHeight: "340px",
+    maxHeight: "380px",
     overflowY: "auto",
-    background: "#f9fafb",
-    border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    padding: "14px",
+    background: "linear-gradient(180deg, #f8fafc, #eef2f7)",
+    border: "1px solid rgba(148,163,184,0.28)",
+    borderRadius: "22px",
+    padding: "16px",
     display: "grid",
-    gap: "12px",
+    gap: "14px",
   },
   coachEmpty: {
     color: "#6b7280",
@@ -2582,14 +2635,15 @@ const styles = {
   },
   coachBubble: {
     maxWidth: "88%",
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    padding: "12px 14px",
+    background: "rgba(255,255,255,0.96)",
+    border: "1px solid rgba(148,163,184,0.28)",
+    borderRadius: "18px",
+    padding: "14px 16px",
     fontSize: "14px",
     lineHeight: 1.75,
-    color: "#374151",
+    color: "#334155",
     whiteSpace: "pre-wrap",
+    boxShadow: "0 12px 30px rgba(15, 23, 42, 0.06)",
   },
   coachComposer: {
     marginTop: "12px",
@@ -2599,13 +2653,14 @@ const styles = {
   coachTextarea: {
     width: "100%",
     boxSizing: "border-box",
-    padding: "12px 14px",
-    borderRadius: "14px",
-    border: "1px solid #d1d5db",
+    padding: "15px 16px",
+    borderRadius: "20px",
+    border: "1px solid rgba(148,163,184,0.36)",
     fontSize: "14px",
     outline: "none",
     resize: "vertical",
-    background: "#ffffff",
+    background: "rgba(255,255,255,0.95)",
+    lineHeight: 1.7,
   },
   message: {
     marginTop: "14px",
@@ -2640,6 +2695,76 @@ const styles = {
     cursor: "pointer",
     marginBottom: "16px",
     boxShadow: "0 6px 18px rgba(15, 23, 42, 0.06)",
+  },
+  workspaceEyebrow: {
+    margin: "0 0 10px",
+    color: "#2563eb",
+    fontSize: "12px",
+    fontWeight: 950,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+  },
+  commandCenter: {
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: "32px",
+    marginBottom: "20px",
+    background: "linear-gradient(135deg, #0f172a 0%, #111827 48%, #334155 100%)",
+    color: "#ffffff",
+    boxShadow: "0 32px 90px rgba(15, 23, 42, 0.24)",
+  },
+  commandGlow: {
+    position: "absolute",
+    width: "340px",
+    height: "340px",
+    right: "-120px",
+    top: "-150px",
+    borderRadius: "999px",
+    background: "radial-gradient(circle, rgba(125,211,252,0.42), transparent 62%)",
+    pointerEvents: "none",
+  },
+  commandContent: {
+    position: "relative",
+    zIndex: 1,
+    padding: "28px",
+    display: "grid",
+    gridTemplateColumns: "1.1fr 0.9fr",
+    gap: "22px",
+    alignItems: "center",
+  },
+  commandLabel: {
+    margin: 0,
+    color: "#bfdbfe",
+    fontSize: "12px",
+    fontWeight: 950,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+  },
+  commandTitle: {
+    margin: "10px 0 0",
+    fontSize: "clamp(26px, 4vw, 42px)",
+    lineHeight: 1.08,
+    letterSpacing: "-0.05em",
+    fontWeight: 950,
+  },
+  commandText: {
+    margin: "12px 0 0",
+    color: "#dbeafe",
+    fontSize: "15px",
+    lineHeight: 1.75,
+    maxWidth: "560px",
+  },
+  commandStats: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "10px",
+  },
+  commandStatCard: {
+    background: "rgba(255,255,255,0.1)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    borderRadius: "22px",
+    padding: "16px",
+    backdropFilter: "blur(14px)",
   },
   communityContainer: {
     maxWidth: "980px",
@@ -2679,12 +2804,14 @@ const styles = {
     maxWidth: "620px",
   },
   communityHeroCard: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "24px",
-    padding: "26px",
-    boxShadow: "0 18px 50px rgba(15, 23, 42, 0.08)",
-    marginBottom: "16px",
+    background:
+      "radial-gradient(circle at top right, rgba(37,99,235,0.14), transparent 32%), linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.92))",
+    border: "1px solid rgba(148,163,184,0.28)",
+    borderRadius: "32px",
+    padding: "30px",
+    boxShadow: "0 26px 80px rgba(15, 23, 42, 0.10)",
+    marginBottom: "18px",
+    backdropFilter: "blur(16px)",
   },
   communityEyebrow: {
     margin: 0,
@@ -2726,20 +2853,22 @@ const styles = {
     objectFit: "cover",
   },
   communityChatCard: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "24px",
+    background: "rgba(255,255,255,0.92)",
+    border: "1px solid rgba(148,163,184,0.28)",
+    borderRadius: "32px",
     overflow: "hidden",
-    boxShadow: "0 18px 50px rgba(15, 23, 42, 0.08)",
+    boxShadow: "0 28px 90px rgba(15, 23, 42, 0.12)",
+    backdropFilter: "blur(16px)",
   },
   communityMessagesBox: {
-    height: "560px",
+    height: "590px",
     overflowY: "auto",
-    padding: "20px",
-    background: "#f9fafb",
+    padding: "22px",
+    background:
+      "radial-gradient(circle at top left, rgba(148,163,184,0.22), transparent 34%), linear-gradient(180deg, #f8fafc, #eef2f7)",
     display: "grid",
     alignContent: "start",
-    gap: "14px",
+    gap: "16px",
   },
   communityEmptyBox: {
     minHeight: "220px",
@@ -2792,11 +2921,11 @@ const styles = {
     fontSize: "12px",
   },
   communityBubble: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "12px",
-    boxShadow: "0 8px 20px rgba(15, 23, 42, 0.05)",
+    background: "rgba(255,255,255,0.96)",
+    border: "1px solid rgba(148,163,184,0.28)",
+    borderRadius: "20px",
+    padding: "14px",
+    boxShadow: "0 14px 34px rgba(15, 23, 42, 0.07)",
   },
   communityBubbleText: {
     margin: 0,
