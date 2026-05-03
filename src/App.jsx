@@ -2018,31 +2018,55 @@ export default function App() {
               아직 분석 결과가 없어. 내용을 적고 "AI 분석하기"를 눌러봐.
             </div>
           ) : hasStructuredAnalysis ? (
-            <div style={styles.analysisCards}>
-              <div style={styles.resultCard}>
-                <div style={styles.resultCardHeader}>
-                  <span style={styles.resultBadge}>01</span>
-                  <h3 style={styles.resultTitle}>현재 상태 분석</h3>
+            <div style={styles.analysisLayout}>
+              <div style={styles.analysisSummaryColumn}>
+                <div style={styles.resultCard}>
+                  <div style={styles.resultCardHeader}>
+                    <span style={styles.resultBadge}>01</span>
+                    <div>
+                      <p style={styles.resultKicker}>CURRENT</p>
+                      <h3 style={styles.resultTitle}>현재 상태 분석</h3>
+                    </div>
+                  </div>
+                  <p style={styles.resultText}>
+                    {parsedAnalysis.current || "분석 내용이 아직 없어."}
+                  </p>
                 </div>
-                <p style={styles.resultText}>
-                  {parsedAnalysis.current || "분석 내용이 아직 없어."}
-                </p>
+
+                <div style={styles.resultCard}>
+                  <div style={styles.resultCardHeader}>
+                    <span style={styles.resultBadge}>02</span>
+                    <div>
+                      <p style={styles.resultKicker}>FOCUS</p>
+                      <h3 style={styles.resultTitle}>가장 중요한 핵심 문제</h3>
+                    </div>
+                  </div>
+                  <p style={styles.resultText}>
+                    {parsedAnalysis.core || "핵심 문제 내용이 아직 없어."}
+                  </p>
+                </div>
+
+                <div style={styles.resultCard}>
+                  <div style={styles.resultCardHeader}>
+                    <span style={styles.resultBadge}>04</span>
+                    <div>
+                      <p style={styles.resultKicker}>MESSAGE</p>
+                      <h3 style={styles.resultTitle}>짧은 응원 한마디</h3>
+                    </div>
+                  </div>
+                  <p style={styles.cheerText}>
+                    {parsedAnalysis.cheer || "응원 메시지가 아직 없어."}
+                  </p>
+                </div>
               </div>
 
-              <div style={styles.resultCard}>
-                <div style={styles.resultCardHeader}>
-                  <span style={styles.resultBadge}>02</span>
-                  <h3 style={styles.resultTitle}>가장 중요한 핵심 문제</h3>
-                </div>
-                <p style={styles.resultText}>
-                  {parsedAnalysis.core || "핵심 문제 내용이 아직 없어."}
-                </p>
-              </div>
-
-              <div style={styles.resultCard}>
+              <div style={styles.planResultCard}>
                 <div style={styles.resultCardHeader}>
                   <span style={styles.resultBadge}>03</span>
-                  <h3 style={styles.resultTitle}>7일 행동 계획</h3>
+                  <div>
+                    <p style={styles.resultKicker}>ACTION PLAN</p>
+                    <h3 style={styles.resultTitle}>7일 행동 계획</h3>
+                  </div>
                 </div>
 
                 {parsedAnalysis.plan.length > 0 ? (
@@ -2057,16 +2081,6 @@ export default function App() {
                 ) : (
                   <p style={styles.resultText}>행동 계획이 아직 없어.</p>
                 )}
-              </div>
-
-              <div style={styles.resultCard}>
-                <div style={styles.resultCardHeader}>
-                  <span style={styles.resultBadge}>04</span>
-                  <h3 style={styles.resultTitle}>짧은 응원 한마디</h3>
-                </div>
-                <p style={styles.cheerText}>
-                  {parsedAnalysis.cheer || "응원 메시지가 아직 없어."}
-                </p>
               </div>
             </div>
           ) : (
@@ -2457,15 +2471,32 @@ const styles = {
   analysisCards: {
     marginTop: "18px",
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+    gap: "16px",
+  },
+  analysisLayout: {
+    marginTop: "18px",
+    display: "grid",
+    gridTemplateColumns: "0.9fr 1.1fr",
+    gap: "18px",
+    alignItems: "start",
+  },
+  analysisSummaryColumn: {
+    display: "grid",
     gap: "16px",
   },
   resultCard: {
-    background: "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
-    border: "1px solid rgba(148,163,184,0.28)",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.92) 100%)",
+    border: "1px solid rgba(148,163,184,0.26)",
     borderRadius: "24px",
     padding: "20px",
-    boxShadow: "0 18px 44px rgba(15, 23, 42, 0.065)",
+    boxShadow: "0 16px 40px rgba(15, 23, 42, 0.06)",
+  },
+  planResultCard: {
+    background: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.94) 100%)",
+    border: "1px solid rgba(148,163,184,0.26)",
+    borderRadius: "26px",
+    padding: "20px",
+    boxShadow: "0 20px 54px rgba(15, 23, 42, 0.075)",
   },
   resultCardHeader: {
     display: "flex",
@@ -2490,14 +2521,22 @@ const styles = {
   resultTitle: {
     margin: 0,
     fontSize: "18px",
-    fontWeight: 700,
-    color: "#111827",
+    fontWeight: 900,
+    color: "#0f172a",
+    letterSpacing: "-0.03em",
+  },
+  resultKicker: {
+    margin: "0 0 3px",
+    color: "#64748b",
+    fontSize: "10px",
+    fontWeight: 950,
+    letterSpacing: "0.14em",
   },
   resultText: {
     margin: 0,
     fontSize: "15px",
-    lineHeight: 1.8,
-    color: "#374151",
+    lineHeight: 1.85,
+    color: "#334155",
     whiteSpace: "pre-wrap",
   },
   planList: {
@@ -2506,13 +2545,14 @@ const styles = {
   },
   planItem: {
     display: "grid",
-    gridTemplateColumns: "88px 1fr",
-    gap: "10px",
+    gridTemplateColumns: "82px 1fr",
+    gap: "12px",
     alignItems: "start",
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "12px",
-    padding: "12px",
+    background: "rgba(255,255,255,0.86)",
+    border: "1px solid rgba(148,163,184,0.24)",
+    borderRadius: "16px",
+    padding: "13px",
+    boxShadow: "0 8px 20px rgba(15, 23, 42, 0.035)",
   },
   planDayBadge: {
     display: "inline-flex",
@@ -2535,12 +2575,12 @@ const styles = {
   cheerText: {
     margin: 0,
     fontSize: "15px",
-    lineHeight: 1.8,
+    lineHeight: 1.85,
     color: "#047857",
-    background: "#ecfdf5",
+    background: "linear-gradient(180deg, #ecfdf5, #dcfce7)",
     border: "1px solid #a7f3d0",
-    borderRadius: "12px",
-    padding: "14px",
+    borderRadius: "18px",
+    padding: "16px",
     whiteSpace: "pre-wrap",
   },
   coachBox: {
