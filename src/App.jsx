@@ -49,6 +49,15 @@ const initialChecks = [false, false, false, false, false, false, false];
 const initialPlan = ["", "", "", "", "", "", ""];
 const initialDayImages = [null, null, null, null, null, null, null];
 
+function cleanSectionText(text) {
+  return String(text || "")
+    .replace(/^#+\s*/gm, "")
+    .replace(/^\d+\.\s*/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/^[\-–]\s*/gm, "")
+    .trim();
+}
+
 function cleanAnalysisText(value) {
   return String(value || "")
     .replace(/\r/g, "")
@@ -1131,10 +1140,14 @@ export default function App() {
   const [messageType, setMessageType] = useState("info");
   const [showExperience, setShowExperience] = useState(false);
   const [showCommunity, setShowCommunity] = useState(false);
+  const [coachMessages, setCoachMessages] = useState([]);
+  const [coachQuestion, setCoachQuestion] = useState("");
+  const [coachLoading, setCoachLoading] = useState(false);
 
   const skipAutoSaveRef = useRef(true);
   const galleryInputRefs = useRef([]);
   const cameraInputRefs = useRef([]);
+  const coachBottomRef = useRef(null);
 
   const progress = useMemo(() => {
     const done = checks.filter(Boolean).length;
@@ -1147,6 +1160,10 @@ export default function App() {
     const nextPlan = extractSevenDayPlan(parsedAnalysis.plan);
     setDailyPlan(nextPlan);
   }, [parsedAnalysis.plan]);
+
+  useEffect(() => {
+    coachBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [coachMessages.length]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -1196,6 +1213,18 @@ export default function App() {
                   path: item.path || "",
                 };
               })
+            );
+          }
+
+          if (Array.isArray(data.aiCoachMessages)) {
+            setCoachMessages(
+              data.aiCoachMessages
+                .filter((item) => item && typeof item === "object")
+                .map((item) => ({
+                  role: item.role === "assistant" ? "assistant" : "user",
+                  content: String(item.content || ""),
+                  createdAt: item.createdAt || new Date().toISOString(),
+                }))
             );
           }
         }
@@ -1302,6 +1331,8 @@ export default function App() {
       setDailyPlan(initialPlan);
       setLastCheckedAt(null);
       setDayImages(initialDayImages);
+      setCoachMessages([]);
+      setCoachQuestion("");
       setMessage("로그아웃 완료.");
       setMessageType("info");
     } catch (error) {
@@ -1493,6 +1524,105 @@ export default function App() {
     setMessageType("success");
 
     await saveToFirestore(form, updatedChecks, analysis, nowIso, dayImages, "");
+  };
+
+  const saveCoachMessagesToFirestore = async (nextMessages) => {
+    if (!user) return;
+
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          aiCoachMessages: nextMessages.slice(-40),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("AI COACH SAVE ERROR:", error);
+    }
+  };
+
+  const handleCoachAsk = async () => {
+    const cleanQuestion = coachQuestion.trim();
+
+    if (!user) {
+      setMessage("AI 실행 피드백을 사용하려면 먼저 로그인해줘.");
+      setMessageType("error");
+      return;
+    }
+
+    if (!analysis) {
+      setMessage("먼저 AI 분석을 완료한 뒤 추가 질문을 할 수 있어.");
+      setMessageType("info");
+      return;
+    }
+
+    if (!cleanQuestion) {
+      setMessage("AI에게 물어볼 질문을 적어줘.");
+      setMessageType("error");
+      return;
+    }
+
+    const userMessage = {
+      role: "user",
+      content: cleanQuestion,
+      createdAt: new Date().toISOString(),
+    };
+
+    const optimisticMessages = [...coachMessages, userMessage];
+    setCoachMessages(optimisticMessages);
+    setCoachQuestion("");
+
+    try {
+      setCoachLoading(true);
+      setMessage("");
+
+      const res = await fetch("/api/coach", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          question: cleanQuestion,
+          name: form.name,
+          concern: form.concern,
+          goal: form.goal,
+          analysis,
+          dailyPlan,
+          checks,
+          progress,
+          lastCheckedAt,
+          completedDays: checks.filter(Boolean).length,
+          coachMessages: coachMessages.slice(-8),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "AI 실행 피드백 실패");
+      }
+
+      const assistantMessage = {
+        role: "assistant",
+        content: data.result || "답변을 만들지 못했어. 다시 질문해줘.",
+        createdAt: new Date().toISOString(),
+      };
+
+      const nextMessages = [...optimisticMessages, assistantMessage].slice(-40);
+      setCoachMessages(nextMessages);
+      await saveCoachMessagesToFirestore(nextMessages);
+      setMessage("AI 실행 피드백 완료!");
+      setMessageType("success");
+    } catch (error) {
+      console.error("AI COACH ERROR:", error);
+      setCoachMessages(coachMessages);
+      setMessage(`AI 실행 피드백 실패: ${error.message}`);
+      setMessageType("error");
+    } finally {
+      setCoachLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -1912,6 +2042,82 @@ export default function App() {
             <div style={styles.analysisBox}>{analysis}</div>
           )}
 
+          <div style={styles.coachBox}>
+            <div style={styles.coachHeader}>
+              <div>
+                <p style={styles.coachEyebrow}>AI EXECUTION COACH</p>
+                <h3 style={styles.coachTitle}>AI 실행 피드백</h3>
+              </div>
+              <span style={styles.coachStatus}>{checks.filter(Boolean).length}/7 Day 진행 중</span>
+            </div>
+
+            <p style={styles.coachDescription}>
+              분석이 끝난 뒤에도 AI에게 계속 질문할 수 있어. 무엇이 부족한지, 어떻게 더 효율적으로 실행할지, 오늘 막힌 부분을 바로 피드백 받아봐.
+            </p>
+
+            <div style={styles.coachQuickRow}>
+              {[
+                "내 계획에서 부족한 점 알려줘",
+                "오늘 실행을 더 쉽게 쪼개줘",
+                "더 효율적으로 실행하는 방법 알려줘",
+              ].map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  style={styles.coachQuickButton}
+                  onClick={() => setCoachQuestion(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+
+            <div style={styles.coachMessagesBox}>
+              {coachMessages.length === 0 ? (
+                <div style={styles.coachEmpty}>
+                  아직 추가 피드백이 없어. AI 분석 후 궁금한 점을 질문해봐.
+                </div>
+              ) : (
+                coachMessages.map((item, index) => (
+                  <div
+                    key={`${item.createdAt}-${index}`}
+                    style={{
+                      ...styles.coachMessageRow,
+                      ...(item.role === "user" ? styles.coachMessageUser : styles.coachMessageAssistant),
+                    }}
+                  >
+                    <div style={styles.coachMessageLabel}>
+                      {item.role === "user" ? "나" : "VELAXION AI"}
+                    </div>
+                    <div style={styles.coachBubble}>{item.content}</div>
+                  </div>
+                ))
+              )}
+              <div ref={coachBottomRef} />
+            </div>
+
+            <div style={styles.coachComposer}>
+              <textarea
+                style={styles.coachTextarea}
+                placeholder="예: 지금 내 실행 방식에서 가장 부족한 점이 뭐야?"
+                value={coachQuestion}
+                onChange={(e) => setCoachQuestion(e.target.value)}
+                rows={3}
+              />
+              <button
+                type="button"
+                style={{
+                  ...styles.primaryButton,
+                  ...(coachLoading ? styles.disabledButton : null),
+                }}
+                onClick={handleCoachAsk}
+                disabled={coachLoading}
+              >
+                {coachLoading ? "피드백 받는 중..." : "AI에게 추가 질문하기"}
+              </button>
+            </div>
+          </div>
+
           {message ? (
             <p
               style={{
@@ -2283,6 +2489,123 @@ const styles = {
     borderRadius: "12px",
     padding: "14px",
     whiteSpace: "pre-wrap",
+  },
+  coachBox: {
+    marginTop: "18px",
+    background: "linear-gradient(180deg, #ffffff, #f8fafc)",
+    border: "1px solid #e5e7eb",
+    borderRadius: "18px",
+    padding: "18px",
+  },
+  coachHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "12px",
+    marginBottom: "10px",
+  },
+  coachEyebrow: {
+    margin: 0,
+    fontSize: "12px",
+    fontWeight: 900,
+    letterSpacing: "0.12em",
+    color: "#6b7280",
+  },
+  coachTitle: {
+    margin: "6px 0 0",
+    fontSize: "22px",
+    fontWeight: 850,
+    color: "#111827",
+  },
+  coachStatus: {
+    background: "#eff6ff",
+    color: "#1d4ed8",
+    border: "1px solid #bfdbfe",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    fontSize: "13px",
+    fontWeight: 800,
+    whiteSpace: "nowrap",
+  },
+  coachDescription: {
+    margin: "0 0 14px",
+    color: "#4b5563",
+    fontSize: "14px",
+    lineHeight: 1.7,
+  },
+  coachQuickRow: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+    marginBottom: "14px",
+  },
+  coachQuickButton: {
+    border: "1px solid #d1d5db",
+    background: "#ffffff",
+    color: "#111827",
+    borderRadius: "999px",
+    padding: "9px 12px",
+    fontSize: "13px",
+    fontWeight: 750,
+    cursor: "pointer",
+  },
+  coachMessagesBox: {
+    maxHeight: "340px",
+    overflowY: "auto",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    padding: "14px",
+    display: "grid",
+    gap: "12px",
+  },
+  coachEmpty: {
+    color: "#6b7280",
+    fontSize: "14px",
+    textAlign: "center",
+    padding: "20px 10px",
+  },
+  coachMessageRow: {
+    display: "grid",
+    gap: "6px",
+  },
+  coachMessageUser: {
+    justifyItems: "end",
+  },
+  coachMessageAssistant: {
+    justifyItems: "start",
+  },
+  coachMessageLabel: {
+    fontSize: "12px",
+    fontWeight: 800,
+    color: "#6b7280",
+  },
+  coachBubble: {
+    maxWidth: "88%",
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    padding: "12px 14px",
+    fontSize: "14px",
+    lineHeight: 1.75,
+    color: "#374151",
+    whiteSpace: "pre-wrap",
+  },
+  coachComposer: {
+    marginTop: "12px",
+    display: "grid",
+    gap: "10px",
+  },
+  coachTextarea: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "12px 14px",
+    borderRadius: "14px",
+    border: "1px solid #d1d5db",
+    fontSize: "14px",
+    outline: "none",
+    resize: "vertical",
+    background: "#ffffff",
   },
   message: {
     marginTop: "14px",
