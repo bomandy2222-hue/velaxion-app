@@ -335,7 +335,7 @@ function DetailPage({ type, onBack, onStart }) {
       cards: [
         { title: "상상이 현실로", desc: "VELAXION은 AI를 통해 더욱더 정교하고 체계적인 넓은 정보를 바탕으로 매번 상상하고 생각만 하던 꿈을 행동으로 실행시켜 조금씩 성장시켜줍니다." },
         { title: "함께 노력하면서 경험", desc: "어떤 일들은 자신만의 힘으로는 힘들거나 부족할 수 있습니다. VELAXION에서는 타인과 같이 노력하고 경험하면 혼자로선 깨달을 수 없는 값진 경험을 하게 됩니다." },
-        { title: "서로가 서로를돕는", desc: "먼저 도움을 줍니다. 그러면 반드시 당신이 어렵고 힘들 때 도움은 꼭 돌아옵니다.언제든지 VELAXION에서 도울 수 있습니다." },
+        { title: "서로가 서로를 돕는", desc: "먼저 도움을 줍니다. 그러면 반드시 당신이 어렵고 힘들 때 도움은 꼭 돌아옵니다. 언제든지 VELAXION에서 도울 수 있습니다." },
         { title: "이끄는 힘", desc: "계속 나아가다 보면 힘들고 지치고 눈앞에 거대한 벽이 있는 것처럼 느껴집니다. VELAXION에서는 당신을 아무 대가 없이 돕는 이들과, 넓은 정보와 행동을 실현해주는 당신의 의지와 생각인 AI가 함께합니다. 당신은 그저 VELAXION과 같이 나아가면 됩니다." },
       ],
     },
@@ -361,8 +361,8 @@ function DetailPage({ type, onBack, onStart }) {
       },
       {
         label: "03 · 서로가 서로를 돕는",
-        title: "서로가 서로를돕는",
-        text: "먼저 도움을 줍니다. 그러면 반드시 당신이 어렵고 힘들 때 도움은 꼭 돌아옵니다.언제든지 VELAXION에서 도울 수 있습니다.",
+        title: "서로가 서로를 돕는",
+        text: "먼저 도움을 줍니다. 그러면 반드시 당신이 어렵고 힘들 때 도움은 꼭 돌아옵니다. 언제든지 VELAXION에서 도울 수 있습니다.",
         media: "/videos/intro3.mp4",
         poster: "/videos/intro3.jpg",
       },
@@ -375,9 +375,27 @@ function DetailPage({ type, onBack, onStart }) {
       },
     ],
     principle: [
-      { label: "01", title: "상상이 현실로", text: "AI가 방향을 잡고, 행동이 결과를 만듭니다.", media: "/videos/future1.mp4", poster: "/videos/future1.jpg" },
-      { label: "02", title: "함께 노력하면서 경험", text: "작은 실행이 쌓이면 삶의 방향이 바뀝니다.", media: "/videos/future2.mp4", poster: "/videos/future2.jpg" },
-      { label: "03", title: "서로가 서로를돕는", text: "사진과 기록으로 나의 성장을 확인합니다.", media: "/videos/future3.mp4", poster: "/videos/future3.jpg" },
+      {
+        label: "01",
+        title: "미래는 실행입니다",
+        text: "미래는 누군가 정해주는 것이 아니라, 지금 당신이 움직이는 방향으로 만들어집니다. 수많은 생각과 불안도 결국 행동이 없으면 현실이 되지 못합니다. VELAXION은 막연한 꿈을 오늘 당장 실행 가능한 행동으로 바꿔줍니다. 작은 시작 하나가 쌓여, 결국 당신만의 미래를 현실로 증명하게 됩니다.",
+        media: "/videos/future1.mp4",
+        poster: "/videos/future1.jpg",
+      },
+      {
+        label: "02",
+        title: "하루 하나면 충분합니다",
+        text: "거대한 목표를 한 번에 이루려 하면 쉽게 지치고 멈추게 됩니다. 하지만 하루에 단 하나의 행동만 실천해도 사람은 분명히 변하기 시작합니다. VELAXION은 부담스러운 완벽함보다, 꾸준히 이어지는 작은 행동을 더 중요하게 생각합니다. 오늘의 작은 1걸음이 내일의 큰 변화가 됩니다.",
+        media: "/videos/future2.mp4",
+        poster: "/videos/future2.jpg",
+      },
+      {
+        label: "03",
+        title: "변화는 증명됩니다",
+        text: "진짜 변화는 말이 아니라 반복된 행동에서 만들어집니다. 생각만 했던 시간은 사라지지만, 직접 행동한 기록은 남게 됩니다. VELAXION은 당신의 실행과 성장 과정을 직접 확인하고 증명할 수 있도록 함께합니다. 계속 쌓인 행동은 결국 스스로도 놀랄 만큼 큰 변화를 만들어냅니다.",
+        media: "/videos/future3.mp4",
+        poster: "/videos/future3.jpg",
+      },
     ],
     reviews: [
       { label: "01 · 사용자 변화", title: "처음으로 며칠을 이어간 경험", text: "사용자들은 사진 인증과 하루 1개 구조 때문에 행동을 미루기 어려웠다고 말합니다.", media: "/videos/review1.mp4", poster: "/videos/review1.jpg" },
