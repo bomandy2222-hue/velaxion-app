@@ -32,6 +32,7 @@ import app from "../firebase.js";
 
 
 
+
 const mobileCss = `
   * { box-sizing: border-box; }
   html, body, #root { width: 100%; min-height: 100%; overflow-x: hidden; }
@@ -47,11 +48,10 @@ const mobileCss = `
     input, textarea { font-size: 16px !important; }
 
     #root > div {
-      padding-left: 12px !important;
-      padding-right: 12px !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
 
-    /* 모바일에서 상단 메뉴는 앱 헤더처럼 */
     header {
       position: sticky !important;
       top: 0 !important;
@@ -60,8 +60,8 @@ const mobileCss = `
       width: 100% !important;
       max-width: 100% !important;
       border-radius: 0 0 22px 22px !important;
-      padding: 14px 16px !important;
-      background: rgba(5, 10, 20, 0.94) !important;
+      padding: 13px 15px !important;
+      background: rgba(5, 10, 20, 0.96) !important;
       backdrop-filter: blur(16px) !important;
       display: flex !important;
       align-items: center !important;
@@ -99,45 +99,81 @@ const mobileCss = `
       line-height: 1.1 !important;
     }
 
-    /* 모바일 첫 영상 카드 영역 */
+    /* 모바일 첫 영상 영역: 영상이 잘 보이도록 카드 비율을 고정 */
     section:first-of-type {
-      padding: 16px 0 26px !important;
+      padding: 18px 14px 30px !important;
       min-height: auto !important;
-      background: #05070d !important;
+      background: linear-gradient(180deg, #05070d 0%, #070b14 68%, #141a22 100%) !important;
     }
 
     section:first-of-type > div {
       display: grid !important;
       grid-template-columns: 1fr !important;
-      gap: 12px !important;
-      padding: 0 12px !important;
+      gap: 14px !important;
+      padding: 0 !important;
     }
 
     section:first-of-type > div > div {
-      min-height: 138px !important;
+      position: relative !important;
       height: auto !important;
+      min-height: 0 !important;
+      aspect-ratio: 16 / 9 !important;
       border-radius: 22px !important;
       overflow: hidden !important;
+      box-shadow: 0 18px 44px rgba(0,0,0,0.32) !important;
+    }
+
+    section:first-of-type video {
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      opacity: 0.72 !important;
     }
 
     section:first-of-type h2 {
-      font-size: clamp(28px, 9vw, 40px) !important;
+      font-size: clamp(23px, 7vw, 34px) !important;
       line-height: 1.08 !important;
       letter-spacing: -0.055em !important;
       margin: 0 !important;
+      max-width: 88% !important;
     }
 
     section:first-of-type p {
+      font-size: 13px !important;
+      line-height: 1.45 !important;
+      margin-top: 8px !important;
+      max-width: 88% !important;
+    }
+
+    section:first-of-type div {
+      word-break: keep-all !important;
+    }
+
+    /* 첫 영상 카드 내부 텍스트를 하단 배치 */
+    section:first-of-type > div > div > div:last-child {
+      padding: 18px !important;
+      justify-content: flex-end !important;
+    }
+
+    /* 커뮤니티 소개 섹션 연결부 */
+    section#community {
+      margin-top: 0 !important;
+      padding-top: 34px !important;
+      background: linear-gradient(180deg, #141a22 0%, #dfe8f2 18%, #e8eef6 100%) !important;
+    }
+
+    section#community h2 {
+      font-size: clamp(30px, 9vw, 42px) !important;
+      line-height: 1.08 !important;
+    }
+
+    section#community p {
       font-size: 15px !important;
-      line-height: 1.5 !important;
-      margin-top: 10px !important;
+      line-height: 1.75 !important;
     }
 
-    section:first-of-type div[style*="panelText"] {
-      padding: 22px !important;
-    }
-
-    /* 전체 섹션은 1열 */
+    /* 전체 섹션은 모바일 1열 */
     section, main, article, div {
       max-width: 100% !important;
     }
@@ -151,8 +187,8 @@ const mobileCss = `
 
     section {
       min-height: auto !important;
-      padding-left: 12px !important;
-      padding-right: 12px !important;
+      padding-left: 14px !important;
+      padding-right: 14px !important;
     }
 
     button {
@@ -190,10 +226,15 @@ const mobileCss = `
     }
 
     section:first-of-type > div > div {
-      min-height: 126px !important;
+      aspect-ratio: 1.75 / 1 !important;
+    }
+
+    section:first-of-type h2 {
+      font-size: clamp(22px, 7vw, 31px) !important;
     }
   }
 `;
+
 
 
 
@@ -3438,7 +3479,7 @@ const landingStyles = {
   },
   communityIntroSection: {
     minHeight: "100vh",
-    background: "#f5f7fb",
+    background: "linear-gradient(180deg, #edf3fa 0%, #f5f7fb 100%)",
     color: "#111827",
     display: "flex",
     alignItems: "center",
