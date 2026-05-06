@@ -33,6 +33,7 @@ import app from "../firebase.js";
 
 
 
+
 const mobileCss = `
   * { box-sizing: border-box; }
   html, body, #root { width: 100%; min-height: 100%; overflow-x: hidden; }
@@ -99,7 +100,7 @@ const mobileCss = `
       line-height: 1.1 !important;
     }
 
-    /* 모바일 첫 영상 영역: 영상이 잘 보이도록 카드 비율을 고정 */
+    /* 모바일 첫 영상 영역 */
     section:first-of-type {
       padding: 18px 14px 30px !important;
       min-height: auto !important;
@@ -111,13 +112,15 @@ const mobileCss = `
       grid-template-columns: 1fr !important;
       gap: 14px !important;
       padding: 0 !important;
+      height: auto !important;
+      min-height: 0 !important;
     }
 
     section:first-of-type > div > div {
       position: relative !important;
-      height: auto !important;
-      min-height: 0 !important;
-      aspect-ratio: 16 / 9 !important;
+      height: 178px !important;
+      min-height: 178px !important;
+      aspect-ratio: auto !important;
       border-radius: 22px !important;
       overflow: hidden !important;
       box-shadow: 0 18px 44px rgba(0,0,0,0.32) !important;
@@ -131,32 +134,41 @@ const mobileCss = `
       opacity: 0.72 !important;
     }
 
+    section:first-of-type > div > div > div:last-child {
+      position: absolute !important;
+      left: 18px !important;
+      right: 18px !important;
+      bottom: 18px !important;
+      top: auto !important;
+      z-index: 5 !important;
+      padding: 0 !important;
+      display: block !important;
+      overflow: visible !important;
+    }
+
     section:first-of-type h2 {
-      font-size: clamp(23px, 7vw, 34px) !important;
-      line-height: 1.08 !important;
-      letter-spacing: -0.055em !important;
+      display: block !important;
+      font-size: clamp(24px, 7.2vw, 34px) !important;
+      line-height: 1.15 !important;
+      letter-spacing: -0.05em !important;
       margin: 0 !important;
-      max-width: 88% !important;
-    }
-
-    section:first-of-type p {
-      font-size: 13px !important;
-      line-height: 1.45 !important;
-      margin-top: 8px !important;
-      max-width: 88% !important;
-    }
-
-    section:first-of-type div {
+      max-width: 100% !important;
+      white-space: normal !important;
+      overflow: visible !important;
       word-break: keep-all !important;
     }
 
-    /* 첫 영상 카드 내부 텍스트를 하단 배치 */
-    section:first-of-type > div > div > div:last-child {
-      padding: 18px !important;
-      justify-content: flex-end !important;
+    section:first-of-type p {
+      display: block !important;
+      font-size: 13px !important;
+      line-height: 1.45 !important;
+      margin: 8px 0 0 !important;
+      max-width: 100% !important;
+      white-space: normal !important;
+      overflow: visible !important;
+      word-break: keep-all !important;
     }
 
-    /* 커뮤니티 소개 섹션 연결부 */
     section#community {
       margin-top: 0 !important;
       padding-top: 34px !important;
@@ -173,7 +185,6 @@ const mobileCss = `
       line-height: 1.75 !important;
     }
 
-    /* 전체 섹션은 모바일 1열 */
     section, main, article, div {
       max-width: 100% !important;
     }
@@ -191,9 +202,7 @@ const mobileCss = `
       padding-right: 14px !important;
     }
 
-    button {
-      max-width: 100% !important;
-    }
+    button { max-width: 100% !important; }
 
     h1 {
       font-size: clamp(30px, 10vw, 44px) !important;
@@ -212,28 +221,24 @@ const mobileCss = `
   }
 
   @media (max-width: 420px) {
-    header > div:first-child {
-      font-size: 18px !important;
-    }
-
-    header > div:last-child {
-      max-width: 54vw !important;
-    }
-
+    header > div:first-child { font-size: 18px !important; }
+    header > div:last-child { max-width: 54vw !important; }
     header button {
       font-size: 11px !important;
       padding: 7px 9px !important;
     }
 
     section:first-of-type > div > div {
-      aspect-ratio: 1.75 / 1 !important;
+      height: 166px !important;
+      min-height: 166px !important;
     }
 
     section:first-of-type h2 {
-      font-size: clamp(22px, 7vw, 31px) !important;
+      font-size: clamp(23px, 7vw, 31px) !important;
     }
   }
 `;
+
 
 
 
