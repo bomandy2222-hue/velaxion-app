@@ -28,6 +28,17 @@ import {
 } from "firebase/storage";
 import app from "../firebase.js";
 
+
+const mobileCss = `
+  * { box-sizing: border-box; }
+  html, body, #root { width: 100%; overflow-x: hidden; }
+  @media (max-width: 720px) {
+    button { max-width: 100%; }
+    input, textarea { font-size: 16px !important; }
+    video, img { max-width: 100%; }
+  }
+`;
+
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -667,6 +678,7 @@ function LandingPage({ onStart, onCommunity }) {
 
   return (
     <div style={landingStyles.page}>
+      <style>{mobileCss}</style>
       <header style={landingStyles.nav} onMouseLeave={closeMegaMenuSoon}>
         <div style={landingStyles.brand}>VELAXION</div>
         <div style={landingStyles.navLinks}>
@@ -1017,6 +1029,7 @@ function CommunityChat({ user, form, onBack, onLogin }) {
 
   return (
     <div style={styles.page}>
+      <style>{mobileCss}</style>
       <div style={styles.communityContainer}>
         <button style={styles.backToLandingButton} onClick={onBack}>
           ← 컨설팅 화면으로 돌아가기
@@ -1746,6 +1759,7 @@ export default function App() {
 
   return (
     <div style={styles.page}>
+      <style>{mobileCss}</style>
       <div style={styles.container}>
         <button style={styles.backToLandingButton} onClick={() => setShowExperience(false)}>
           ← 소개 화면으로 돌아가기
@@ -2212,7 +2226,7 @@ const styles = {
     color: "#0f172a",
   },
   container: {
-    maxWidth: "1120px",
+    width: "min(1120px, 100%)",
     margin: "0 auto",
   },
   header: {
@@ -2344,7 +2358,7 @@ const styles = {
   },
   dayPlanGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
     gap: "14px",
   },
   dayPlanCard: {
@@ -2368,7 +2382,7 @@ const styles = {
   },
   dayContentRow: {
     display: "grid",
-    gridTemplateColumns: "1fr 150px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 210px), 1fr))",
     gap: "14px",
     alignItems: "start",
   },
@@ -2376,7 +2390,7 @@ const styles = {
     minWidth: 0,
   },
   dayRightPreview: {
-    width: "150px",
+    width: "100%",
   },
   dayTaskText: {
     fontSize: "14px",
@@ -2406,7 +2420,7 @@ const styles = {
     display: "block",
   },
   dayInlinePreviewEmpty: {
-    width: "150px",
+    width: "100%",
     height: "118px",
     borderRadius: "16px",
     border: "1px dashed rgba(100,116,139,0.34)",
@@ -2494,7 +2508,7 @@ const styles = {
   analysisLayout: {
     marginTop: "18px",
     display: "grid",
-    gridTemplateColumns: "0.9fr 1.1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 330px), 1fr))",
     gap: "18px",
     alignItems: "start",
   },
@@ -2563,7 +2577,7 @@ const styles = {
   },
   planItem: {
     display: "grid",
-    gridTemplateColumns: "82px 1fr",
+    gridTemplateColumns: "minmax(74px, 82px) 1fr",
     gap: "12px",
     alignItems: "start",
     background: "rgba(255,255,255,0.86)",
@@ -2790,9 +2804,9 @@ const styles = {
   commandContent: {
     position: "relative",
     zIndex: 1,
-    padding: "28px",
+    padding: "clamp(20px, 5vw, 28px)",
     display: "grid",
-    gridTemplateColumns: "1.1fr 0.9fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
     gap: "22px",
     alignItems: "center",
   },
@@ -2820,7 +2834,7 @@ const styles = {
   },
   commandStats: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))",
     gap: "10px",
   },
   commandStatCard: {
@@ -2831,7 +2845,7 @@ const styles = {
     backdropFilter: "blur(14px)",
   },
   communityContainer: {
-    maxWidth: "1120px",
+    width: "min(1120px, 100%)",
     margin: "0 auto",
   },
   communityEntryCard: {
@@ -2975,7 +2989,8 @@ const styles = {
     objectFit: "cover",
   },
   communityBubbleWrap: {
-    maxWidth: "min(620px, 78%)",
+    maxWidth: "min(620px, calc(100% - 54px))",
+    minWidth: 0,
   },
   communityMetaRow: {
     display: "flex",
