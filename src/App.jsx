@@ -31,41 +31,113 @@ import app from "../firebase.js";
 
 
 
+
 const mobileCss = `
   * { box-sizing: border-box; }
   html, body, #root { width: 100%; min-height: 100%; overflow-x: hidden; }
   body { margin: 0; }
   video, img { max-width: 100%; }
 
-  /* PC 전용: 넓고 고급스러운 레이아웃 유지 */
   @media (min-width: 1025px) {
     body { background: #dfe6ef; }
     input, textarea { font-size: 15px !important; }
   }
 
-  /* 태블릿: 너무 좁아지기 전 2열 유지 */
-  @media (min-width: 761px) and (max-width: 1024px) {
-    #root > div { padding-left: 18px !important; padding-right: 18px !important; }
-    div[style*="grid-template-columns"] {
-      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)) !important;
-    }
-    section { min-height: auto !important; }
-  }
-
-  /* 모바일 세로 전용: 완전 1열 UX */
   @media (max-width: 760px) {
     input, textarea { font-size: 16px !important; }
+
     #root > div {
-      padding: 18px 10px !important;
-      background:
-        radial-gradient(circle at 12% 0%, rgba(59,130,246,0.14), transparent 32%),
-        linear-gradient(180deg, #e8eef6 0%, #dce5ef 100%) !important;
+      padding-left: 12px !important;
+      padding-right: 12px !important;
     }
 
+    /* 모바일에서 상단 메뉴는 앱 헤더처럼 */
     header {
-      max-width: calc(100vw - 18px) !important;
+      position: sticky !important;
+      top: 0 !important;
+      left: auto !important;
+      transform: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      border-radius: 0 0 22px 22px !important;
+      padding: 14px 16px !important;
+      background: rgba(5, 10, 20, 0.94) !important;
+      backdrop-filter: blur(16px) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 12px !important;
     }
 
+    header > div:first-child {
+      font-size: 20px !important;
+      letter-spacing: 0.18em !important;
+      white-space: nowrap !important;
+    }
+
+    header > div:last-child {
+      display: flex !important;
+      gap: 6px !important;
+      overflow-x: auto !important;
+      justify-content: flex-start !important;
+      max-width: 58vw !important;
+      padding-bottom: 2px !important;
+      scrollbar-width: none !important;
+    }
+
+    header > div:last-child::-webkit-scrollbar {
+      display: none !important;
+    }
+
+    header button {
+      writing-mode: horizontal-tb !important;
+      white-space: nowrap !important;
+      flex: 0 0 auto !important;
+      font-size: 12px !important;
+      padding: 8px 10px !important;
+      border-radius: 999px !important;
+      line-height: 1.1 !important;
+    }
+
+    /* 모바일 첫 영상 카드 영역 */
+    section:first-of-type {
+      padding: 16px 0 26px !important;
+      min-height: auto !important;
+      background: #05070d !important;
+    }
+
+    section:first-of-type > div {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+      padding: 0 12px !important;
+    }
+
+    section:first-of-type > div > div {
+      min-height: 138px !important;
+      height: auto !important;
+      border-radius: 22px !important;
+      overflow: hidden !important;
+    }
+
+    section:first-of-type h2 {
+      font-size: clamp(28px, 9vw, 40px) !important;
+      line-height: 1.08 !important;
+      letter-spacing: -0.055em !important;
+      margin: 0 !important;
+    }
+
+    section:first-of-type p {
+      font-size: 15px !important;
+      line-height: 1.5 !important;
+      margin-top: 10px !important;
+    }
+
+    section:first-of-type div[style*="panelText"] {
+      padding: 22px !important;
+    }
+
+    /* 전체 섹션은 1열 */
     section, main, article, div {
       max-width: 100% !important;
     }
@@ -85,44 +157,6 @@ const mobileCss = `
 
     button {
       max-width: 100% !important;
-      white-space: normal !important;
-    }
-
-    /* 앱 내부 카드 */
-    div[style*="border-radius: 30px"],
-    div[style*="border-radius: clamp"] {
-      border-radius: 22px !important;
-    }
-
-    /* 7일 체크 모바일 */
-    div[style*="dayPlanGrid"] {
-      grid-template-columns: 1fr !important;
-    }
-
-    /* 채팅방 모바일 */
-    textarea {
-      min-height: 96px;
-    }
-  }
-
-  @media (max-width: 520px) {
-    /* 랜딩 네비게이션 모바일 전용 */
-    header {
-      top: 8px !important;
-      padding: 10px 12px !important;
-      border-radius: 18px !important;
-      gap: 8px !important;
-    }
-
-    header button:not(:last-child) {
-      font-size: 12px !important;
-      padding: 6px 4px !important;
-    }
-
-    header button:last-child {
-      padding: 9px 11px !important;
-      font-size: 12px !important;
-      border-radius: 999px !important;
     }
 
     h1 {
@@ -132,15 +166,35 @@ const mobileCss = `
     }
 
     h2 {
-      font-size: clamp(24px, 8vw, 36px) !important;
+      font-size: clamp(26px, 8vw, 38px) !important;
       line-height: 1.12 !important;
     }
 
-    p {
-      word-break: keep-all;
+    p { word-break: keep-all; }
+
+    textarea { min-height: 96px; }
+  }
+
+  @media (max-width: 420px) {
+    header > div:first-child {
+      font-size: 18px !important;
+    }
+
+    header > div:last-child {
+      max-width: 54vw !important;
+    }
+
+    header button {
+      font-size: 11px !important;
+      padding: 7px 9px !important;
+    }
+
+    section:first-of-type > div > div {
+      min-height: 126px !important;
     }
   }
 `;
+
 
 
 
