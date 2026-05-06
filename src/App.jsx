@@ -29,15 +29,120 @@ import {
 import app from "../firebase.js";
 
 
+
+
 const mobileCss = `
   * { box-sizing: border-box; }
-  html, body, #root { width: 100%; overflow-x: hidden; }
-  @media (max-width: 720px) {
-    button { max-width: 100%; }
+  html, body, #root { width: 100%; min-height: 100%; overflow-x: hidden; }
+  body { margin: 0; }
+  video, img { max-width: 100%; }
+
+  /* PC 전용: 넓고 고급스러운 레이아웃 유지 */
+  @media (min-width: 1025px) {
+    body { background: #dfe6ef; }
+    input, textarea { font-size: 15px !important; }
+  }
+
+  /* 태블릿: 너무 좁아지기 전 2열 유지 */
+  @media (min-width: 761px) and (max-width: 1024px) {
+    #root > div { padding-left: 18px !important; padding-right: 18px !important; }
+    div[style*="grid-template-columns"] {
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)) !important;
+    }
+    section { min-height: auto !important; }
+  }
+
+  /* 모바일 세로 전용: 완전 1열 UX */
+  @media (max-width: 760px) {
     input, textarea { font-size: 16px !important; }
-    video, img { max-width: 100%; }
+    #root > div {
+      padding: 18px 10px !important;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(59,130,246,0.14), transparent 32%),
+        linear-gradient(180deg, #e8eef6 0%, #dce5ef 100%) !important;
+    }
+
+    header {
+      max-width: calc(100vw - 18px) !important;
+    }
+
+    section, main, article, div {
+      max-width: 100% !important;
+    }
+
+    div[style*="grid-template-columns"],
+    section > div,
+    main > section,
+    main > section > div {
+      grid-template-columns: 1fr !important;
+    }
+
+    section {
+      min-height: auto !important;
+      padding-left: 12px !important;
+      padding-right: 12px !important;
+    }
+
+    button {
+      max-width: 100% !important;
+      white-space: normal !important;
+    }
+
+    /* 앱 내부 카드 */
+    div[style*="border-radius: 30px"],
+    div[style*="border-radius: clamp"] {
+      border-radius: 22px !important;
+    }
+
+    /* 7일 체크 모바일 */
+    div[style*="dayPlanGrid"] {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* 채팅방 모바일 */
+    textarea {
+      min-height: 96px;
+    }
+  }
+
+  @media (max-width: 520px) {
+    /* 랜딩 네비게이션 모바일 전용 */
+    header {
+      top: 8px !important;
+      padding: 10px 12px !important;
+      border-radius: 18px !important;
+      gap: 8px !important;
+    }
+
+    header button:not(:last-child) {
+      font-size: 12px !important;
+      padding: 6px 4px !important;
+    }
+
+    header button:last-child {
+      padding: 9px 11px !important;
+      font-size: 12px !important;
+      border-radius: 999px !important;
+    }
+
+    h1 {
+      font-size: clamp(30px, 10vw, 44px) !important;
+      line-height: 1.08 !important;
+      letter-spacing: -0.05em !important;
+    }
+
+    h2 {
+      font-size: clamp(24px, 8vw, 36px) !important;
+      line-height: 1.12 !important;
+    }
+
+    p {
+      word-break: keep-all;
+    }
   }
 `;
+
+
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -2220,7 +2325,7 @@ const styles = {
     minHeight: "100vh",
     background:
       "radial-gradient(circle at 18% 0%, rgba(59,130,246,0.16), transparent 34%), radial-gradient(circle at 82% 12%, rgba(15,23,42,0.18), transparent 30%), linear-gradient(180deg, #e8edf5 0%, #dfe6ef 42%, #d7e0eb 100%)",
-    padding: "36px 16px",
+    padding: "clamp(18px, 5vw, 36px) clamp(10px, 4vw, 16px)",
     fontFamily:
       'Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     color: "#0f172a",
@@ -2255,8 +2360,8 @@ const styles = {
   card: {
     background: "linear-gradient(180deg, rgba(255,255,255,0.88), rgba(245,248,252,0.82))",
     border: "1px solid rgba(100,116,139,0.22)",
-    borderRadius: "30px",
-    padding: "26px",
+    borderRadius: "clamp(22px, 7vw, 30px)",
+    padding: "clamp(18px, 5vw, 26px)",
     boxShadow: "0 26px 76px rgba(15, 23, 42, 0.13)",
     marginBottom: "20px",
     backdropFilter: "blur(18px)",
@@ -2358,7 +2463,7 @@ const styles = {
   },
   dayPlanGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
     gap: "14px",
   },
   dayPlanCard: {
@@ -2508,7 +2613,7 @@ const styles = {
   analysisLayout: {
     marginTop: "18px",
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 330px), 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
     gap: "18px",
     alignItems: "start",
   },
@@ -2577,13 +2682,13 @@ const styles = {
   },
   planItem: {
     display: "grid",
-    gridTemplateColumns: "minmax(74px, 82px) 1fr",
-    gap: "12px",
+    gridTemplateColumns: "minmax(68px, 82px) 1fr",
+    gap: "10px",
     alignItems: "start",
     background: "rgba(255,255,255,0.86)",
     border: "1px solid rgba(148,163,184,0.24)",
     borderRadius: "16px",
-    padding: "13px",
+    padding: "12px",
     boxShadow: "0 8px 20px rgba(15, 23, 42, 0.035)",
   },
   planDayBadge: {
@@ -2785,7 +2890,7 @@ const styles = {
   commandCenter: {
     position: "relative",
     overflow: "hidden",
-    borderRadius: "32px",
+    borderRadius: "clamp(22px, 7vw, 32px)",
     marginBottom: "20px",
     background: "linear-gradient(135deg, #0f172a 0%, #111827 48%, #334155 100%)",
     color: "#ffffff",
@@ -2806,7 +2911,7 @@ const styles = {
     zIndex: 1,
     padding: "clamp(20px, 5vw, 28px)",
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
     gap: "22px",
     alignItems: "center",
   },
@@ -2834,7 +2939,7 @@ const styles = {
   },
   commandStats: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 96px), 1fr))",
     gap: "10px",
   },
   commandStatCard: {
@@ -2939,10 +3044,10 @@ const styles = {
     backdropFilter: "blur(18px)",
   },
   communityMessagesBox: {
-    minHeight: "480px",
+    minHeight: "min(62vh, 480px)",
     maxHeight: "620px",
     overflowY: "auto",
-    padding: "24px",
+    padding: "clamp(14px, 4vw, 24px)",
     background:
       "radial-gradient(circle at 18% 0%, rgba(59,130,246,0.13), transparent 32%), radial-gradient(circle at 88% 8%, rgba(15,23,42,0.11), transparent 26%), linear-gradient(180deg, #edf3fa, #dfe8f2)",
     display: "grid",
