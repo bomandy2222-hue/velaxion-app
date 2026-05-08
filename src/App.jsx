@@ -28,248 +28,6 @@ import {
 } from "firebase/storage";
 import app from "../firebase.js";
 
-
-
-
-
-
-
-
-const mobileCss = `
-  * { box-sizing: border-box; }
-  html, body, #root { width: 100%; min-height: 100%; overflow-x: hidden; }
-  body { margin: 0; }
-  video, img { max-width: 100%; }
-
-  @media (min-width: 1025px) {
-    body { background: #dfe6ef; }
-    input, textarea { font-size: 15px !important; }
-  }
-
-  @media (max-width: 760px) {
-    input, textarea { font-size: 16px !important; }
-
-    #root > div {
-      padding-left: 0 !important;
-      padding-right: 0 !important;
-    }
-
-    header {
-      position: sticky !important;
-      top: 0 !important;
-      left: auto !important;
-      transform: none !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      border-radius: 0 !important;
-      padding: 14px 16px !important;
-      background: rgba(5, 7, 12, 0.96) !important;
-      backdrop-filter: blur(16px) !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-      gap: 12px !important;
-      border-left: none !important;
-      border-right: none !important;
-    }
-
-    header > div:first-child {
-      font-size: 20px !important;
-      letter-spacing: 0.18em !important;
-      white-space: nowrap !important;
-    }
-
-    header > div:last-child {
-      display: flex !important;
-      gap: 8px !important;
-      overflow-x: auto !important;
-      justify-content: flex-start !important;
-      max-width: 58vw !important;
-      padding-bottom: 2px !important;
-      scrollbar-width: none !important;
-    }
-
-    header > div:last-child::-webkit-scrollbar {
-      display: none !important;
-    }
-
-    header button {
-      writing-mode: horizontal-tb !important;
-      white-space: nowrap !important;
-      flex: 0 0 auto !important;
-      font-size: 12px !important;
-      padding: 8px 10px !important;
-      border-radius: 999px !important;
-      line-height: 1.1 !important;
-    }
-
-    section:first-of-type {
-      padding: 0 !important;
-      min-height: auto !important;
-      background: #05070d !important;
-    }
-
-    section:first-of-type > div {
-      display: block !important;
-      height: auto !important;
-      min-height: 0 !important;
-      padding: 0 !important;
-    }
-
-    section:first-of-type > div > div {
-      position: relative !important;
-      height: auto !important;
-      min-height: 0 !important;
-      aspect-ratio: auto !important;
-      border-radius: 0 !important;
-      overflow: visible !important;
-      background: #05070d !important;
-      box-shadow: none !important;
-      border: none !important;
-      margin: 0 !important;
-    }
-
-    section:first-of-type video {
-      position: relative !important;
-      display: block !important;
-      width: 100% !important;
-      height: 58vw !important;
-      max-height: 300px !important;
-      min-height: 210px !important;
-      object-fit: cover !important;
-      opacity: 0.95 !important;
-      inset: auto !important;
-    }
-
-    section:first-of-type > div > div > div:last-child {
-      position: relative !important;
-      left: auto !important;
-      right: auto !important;
-      bottom: auto !important;
-      top: auto !important;
-      padding: 26px 22px 38px !important;
-      display: block !important;
-      background: #05070d !important;
-      color: #fff !important;
-      overflow: visible !important;
-      border-bottom: 1px solid rgba(255,255,255,0.08) !important;
-    }
-
-    section:first-of-type h2 {
-      display: block !important;
-      font-size: clamp(28px, 8.4vw, 40px) !important;
-      line-height: 1.12 !important;
-      letter-spacing: -0.055em !important;
-      margin: 10px 0 0 !important;
-      max-width: 100% !important;
-      white-space: normal !important;
-      overflow: visible !important;
-      word-break: keep-all !important;
-    }
-
-    section:first-of-type p {
-      display: block !important;
-      font-size: 17px !important;
-      line-height: 1.72 !important;
-      margin: 18px 0 0 !important;
-      color: rgba(255,255,255,0.82) !important;
-      max-width: 100% !important;
-      white-space: normal !important;
-      overflow: visible !important;
-      word-break: keep-all !important;
-    }
-
-    section:first-of-type > div > div > div:last-child > div:first-child {
-      font-size: 15px !important;
-      letter-spacing: 0.08em !important;
-      opacity: 0.7 !important;
-      margin-bottom: 0 !important;
-    }
-
-    section#community {
-      margin-top: 0 !important;
-      padding-top: 42px !important;
-      background: linear-gradient(180deg, #05070d 0%, #141a22 4%, #dfe8f2 24%, #e8eef6 100%) !important;
-    }
-
-    section#community h2 {
-      font-size: clamp(32px, 9vw, 44px) !important;
-      line-height: 1.08 !important;
-    }
-
-    section#community p {
-      font-size: 16px !important;
-      line-height: 1.78 !important;
-    }
-
-    section, main, article, div {
-      max-width: 100% !important;
-    }
-
-    div[style*="grid-template-columns"],
-    section > div,
-    main > section,
-    main > section > div {
-      grid-template-columns: 1fr !important;
-    }
-
-    section {
-      min-height: auto !important;
-      padding-left: 0 !important;
-      padding-right: 0 !important;
-    }
-
-    button { max-width: 100% !important; }
-
-    h1 {
-      font-size: clamp(30px, 10vw, 44px) !important;
-      line-height: 1.08 !important;
-      letter-spacing: -0.05em !important;
-    }
-
-    h2 {
-      font-size: clamp(28px, 8vw, 40px) !important;
-      line-height: 1.12 !important;
-    }
-
-    p { word-break: keep-all; }
-
-    textarea { min-height: 96px; }
-  }
-
-  @media (max-width: 420px) {
-    header > div:first-child { font-size: 18px !important; }
-    header > div:last-child { max-width: 54vw !important; }
-    header button {
-      font-size: 11px !important;
-      padding: 7px 9px !important;
-    }
-
-    section:first-of-type video {
-      height: 62vw !important;
-      min-height: 190px !important;
-    }
-
-    section:first-of-type > div > div > div:last-child {
-      padding: 24px 20px 34px !important;
-    }
-
-    section:first-of-type h2 {
-      font-size: clamp(27px, 8vw, 37px) !important;
-    }
-
-    section:first-of-type p {
-      font-size: 16px !important;
-    }
-  }
-`;
-
-
-
-
-
-
-
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -909,7 +667,6 @@ function LandingPage({ onStart, onCommunity }) {
 
   return (
     <div style={landingStyles.page}>
-      <style>{mobileCss}</style>
       <header style={landingStyles.nav} onMouseLeave={closeMegaMenuSoon}>
         <div style={landingStyles.brand}>VELAXION</div>
         <div style={landingStyles.navLinks}>
@@ -1260,7 +1017,6 @@ function CommunityChat({ user, form, onBack, onLogin }) {
 
   return (
     <div style={styles.page}>
-      <style>{mobileCss}</style>
       <div style={styles.communityContainer}>
         <button style={styles.backToLandingButton} onClick={onBack}>
           ← 컨설팅 화면으로 돌아가기
@@ -1990,7 +1746,6 @@ export default function App() {
 
   return (
     <div style={styles.page}>
-      <style>{mobileCss}</style>
       <div style={styles.container}>
         <button style={styles.backToLandingButton} onClick={() => setShowExperience(false)}>
           ← 소개 화면으로 돌아가기
@@ -2451,13 +2206,13 @@ const styles = {
     minHeight: "100vh",
     background:
       "radial-gradient(circle at 18% 0%, rgba(59,130,246,0.16), transparent 34%), radial-gradient(circle at 82% 12%, rgba(15,23,42,0.18), transparent 30%), linear-gradient(180deg, #e8edf5 0%, #dfe6ef 42%, #d7e0eb 100%)",
-    padding: "clamp(18px, 5vw, 36px) clamp(10px, 4vw, 16px)",
+    padding: "36px 16px",
     fontFamily:
       'Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     color: "#0f172a",
   },
   container: {
-    width: "min(1120px, 100%)",
+    maxWidth: "1120px",
     margin: "0 auto",
   },
   header: {
@@ -2486,8 +2241,8 @@ const styles = {
   card: {
     background: "linear-gradient(180deg, rgba(255,255,255,0.88), rgba(245,248,252,0.82))",
     border: "1px solid rgba(100,116,139,0.22)",
-    borderRadius: "clamp(22px, 7vw, 30px)",
-    padding: "clamp(18px, 5vw, 26px)",
+    borderRadius: "30px",
+    padding: "26px",
     boxShadow: "0 26px 76px rgba(15, 23, 42, 0.13)",
     marginBottom: "20px",
     backdropFilter: "blur(18px)",
@@ -2589,7 +2344,7 @@ const styles = {
   },
   dayPlanGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
     gap: "14px",
   },
   dayPlanCard: {
@@ -2613,7 +2368,7 @@ const styles = {
   },
   dayContentRow: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 210px), 1fr))",
+    gridTemplateColumns: "1fr 150px",
     gap: "14px",
     alignItems: "start",
   },
@@ -2621,7 +2376,7 @@ const styles = {
     minWidth: 0,
   },
   dayRightPreview: {
-    width: "100%",
+    width: "150px",
   },
   dayTaskText: {
     fontSize: "14px",
@@ -2651,7 +2406,7 @@ const styles = {
     display: "block",
   },
   dayInlinePreviewEmpty: {
-    width: "100%",
+    width: "150px",
     height: "118px",
     borderRadius: "16px",
     border: "1px dashed rgba(100,116,139,0.34)",
@@ -2739,7 +2494,7 @@ const styles = {
   analysisLayout: {
     marginTop: "18px",
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+    gridTemplateColumns: "0.9fr 1.1fr",
     gap: "18px",
     alignItems: "start",
   },
@@ -2808,13 +2563,13 @@ const styles = {
   },
   planItem: {
     display: "grid",
-    gridTemplateColumns: "minmax(68px, 82px) 1fr",
-    gap: "10px",
+    gridTemplateColumns: "82px 1fr",
+    gap: "12px",
     alignItems: "start",
     background: "rgba(255,255,255,0.86)",
     border: "1px solid rgba(148,163,184,0.24)",
     borderRadius: "16px",
-    padding: "12px",
+    padding: "13px",
     boxShadow: "0 8px 20px rgba(15, 23, 42, 0.035)",
   },
   planDayBadge: {
@@ -3016,7 +2771,7 @@ const styles = {
   commandCenter: {
     position: "relative",
     overflow: "hidden",
-    borderRadius: "clamp(22px, 7vw, 32px)",
+    borderRadius: "32px",
     marginBottom: "20px",
     background: "linear-gradient(135deg, #0f172a 0%, #111827 48%, #334155 100%)",
     color: "#ffffff",
@@ -3035,9 +2790,9 @@ const styles = {
   commandContent: {
     position: "relative",
     zIndex: 1,
-    padding: "clamp(20px, 5vw, 28px)",
+    padding: "28px",
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+    gridTemplateColumns: "1.1fr 0.9fr",
     gap: "22px",
     alignItems: "center",
   },
@@ -3065,7 +2820,7 @@ const styles = {
   },
   commandStats: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 96px), 1fr))",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: "10px",
   },
   commandStatCard: {
@@ -3076,7 +2831,7 @@ const styles = {
     backdropFilter: "blur(14px)",
   },
   communityContainer: {
-    width: "min(1120px, 100%)",
+    maxWidth: "1120px",
     margin: "0 auto",
   },
   communityEntryCard: {
@@ -3170,10 +2925,10 @@ const styles = {
     backdropFilter: "blur(18px)",
   },
   communityMessagesBox: {
-    minHeight: "min(62vh, 480px)",
+    minHeight: "480px",
     maxHeight: "620px",
     overflowY: "auto",
-    padding: "clamp(14px, 4vw, 24px)",
+    padding: "24px",
     background:
       "radial-gradient(circle at 18% 0%, rgba(59,130,246,0.13), transparent 32%), radial-gradient(circle at 88% 8%, rgba(15,23,42,0.11), transparent 26%), linear-gradient(180deg, #edf3fa, #dfe8f2)",
     display: "grid",
@@ -3220,8 +2975,7 @@ const styles = {
     objectFit: "cover",
   },
   communityBubbleWrap: {
-    maxWidth: "min(620px, calc(100% - 54px))",
-    minWidth: 0,
+    maxWidth: "min(620px, 78%)",
   },
   communityMetaRow: {
     display: "flex",
@@ -3510,7 +3264,7 @@ const landingStyles = {
   },
   communityIntroSection: {
     minHeight: "100vh",
-    background: "linear-gradient(180deg, #edf3fa 0%, #f5f7fb 100%)",
+    background: "#f5f7fb",
     color: "#111827",
     display: "flex",
     alignItems: "center",
