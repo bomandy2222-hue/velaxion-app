@@ -34,6 +34,7 @@ import app from "../firebase.js";
 
 
 
+
 const mobileCss = `
   * { box-sizing: border-box; }
   html, body, #root { width: 100%; min-height: 100%; overflow-x: hidden; }
@@ -60,14 +61,16 @@ const mobileCss = `
       transform: none !important;
       width: 100% !important;
       max-width: 100% !important;
-      border-radius: 0 0 22px 22px !important;
-      padding: 13px 15px !important;
-      background: rgba(5, 10, 20, 0.96) !important;
+      border-radius: 0 !important;
+      padding: 14px 16px !important;
+      background: rgba(5, 7, 12, 0.96) !important;
       backdrop-filter: blur(16px) !important;
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
       gap: 12px !important;
+      border-left: none !important;
+      border-right: none !important;
     }
 
     header > div:first-child {
@@ -78,7 +81,7 @@ const mobileCss = `
 
     header > div:last-child {
       display: flex !important;
-      gap: 6px !important;
+      gap: 8px !important;
       overflow-x: auto !important;
       justify-content: flex-start !important;
       max-width: 58vw !important;
@@ -100,58 +103,64 @@ const mobileCss = `
       line-height: 1.1 !important;
     }
 
-    /* 모바일 첫 영상 영역 */
     section:first-of-type {
-      padding: 18px 14px 30px !important;
+      padding: 0 !important;
       min-height: auto !important;
-      background: linear-gradient(180deg, #05070d 0%, #070b14 68%, #141a22 100%) !important;
+      background: #05070d !important;
     }
 
     section:first-of-type > div {
-      display: grid !important;
-      grid-template-columns: 1fr !important;
-      gap: 14px !important;
-      padding: 0 !important;
+      display: block !important;
       height: auto !important;
       min-height: 0 !important;
+      padding: 0 !important;
     }
 
     section:first-of-type > div > div {
       position: relative !important;
-      height: 178px !important;
-      min-height: 178px !important;
+      height: auto !important;
+      min-height: 0 !important;
       aspect-ratio: auto !important;
-      border-radius: 22px !important;
-      overflow: hidden !important;
-      box-shadow: 0 18px 44px rgba(0,0,0,0.32) !important;
+      border-radius: 0 !important;
+      overflow: visible !important;
+      background: #05070d !important;
+      box-shadow: none !important;
+      border: none !important;
+      margin: 0 !important;
     }
 
     section:first-of-type video {
+      position: relative !important;
       display: block !important;
       width: 100% !important;
-      height: 100% !important;
+      height: 58vw !important;
+      max-height: 300px !important;
+      min-height: 210px !important;
       object-fit: cover !important;
-      opacity: 0.72 !important;
+      opacity: 0.95 !important;
+      inset: auto !important;
     }
 
     section:first-of-type > div > div > div:last-child {
-      position: absolute !important;
-      left: 18px !important;
-      right: 18px !important;
-      bottom: 18px !important;
+      position: relative !important;
+      left: auto !important;
+      right: auto !important;
+      bottom: auto !important;
       top: auto !important;
-      z-index: 5 !important;
-      padding: 0 !important;
+      padding: 26px 22px 38px !important;
       display: block !important;
+      background: #05070d !important;
+      color: #fff !important;
       overflow: visible !important;
+      border-bottom: 1px solid rgba(255,255,255,0.08) !important;
     }
 
     section:first-of-type h2 {
       display: block !important;
-      font-size: clamp(24px, 7.2vw, 34px) !important;
-      line-height: 1.15 !important;
-      letter-spacing: -0.05em !important;
-      margin: 0 !important;
+      font-size: clamp(28px, 8.4vw, 40px) !important;
+      line-height: 1.12 !important;
+      letter-spacing: -0.055em !important;
+      margin: 10px 0 0 !important;
       max-width: 100% !important;
       white-space: normal !important;
       overflow: visible !important;
@@ -160,29 +169,37 @@ const mobileCss = `
 
     section:first-of-type p {
       display: block !important;
-      font-size: 13px !important;
-      line-height: 1.45 !important;
-      margin: 8px 0 0 !important;
+      font-size: 17px !important;
+      line-height: 1.72 !important;
+      margin: 18px 0 0 !important;
+      color: rgba(255,255,255,0.82) !important;
       max-width: 100% !important;
       white-space: normal !important;
       overflow: visible !important;
       word-break: keep-all !important;
     }
 
+    section:first-of-type > div > div > div:last-child > div:first-child {
+      font-size: 15px !important;
+      letter-spacing: 0.08em !important;
+      opacity: 0.7 !important;
+      margin-bottom: 0 !important;
+    }
+
     section#community {
       margin-top: 0 !important;
-      padding-top: 34px !important;
-      background: linear-gradient(180deg, #141a22 0%, #dfe8f2 18%, #e8eef6 100%) !important;
+      padding-top: 42px !important;
+      background: linear-gradient(180deg, #05070d 0%, #141a22 4%, #dfe8f2 24%, #e8eef6 100%) !important;
     }
 
     section#community h2 {
-      font-size: clamp(30px, 9vw, 42px) !important;
+      font-size: clamp(32px, 9vw, 44px) !important;
       line-height: 1.08 !important;
     }
 
     section#community p {
-      font-size: 15px !important;
-      line-height: 1.75 !important;
+      font-size: 16px !important;
+      line-height: 1.78 !important;
     }
 
     section, main, article, div {
@@ -198,8 +215,8 @@ const mobileCss = `
 
     section {
       min-height: auto !important;
-      padding-left: 14px !important;
-      padding-right: 14px !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
 
     button { max-width: 100% !important; }
@@ -211,7 +228,7 @@ const mobileCss = `
     }
 
     h2 {
-      font-size: clamp(26px, 8vw, 38px) !important;
+      font-size: clamp(28px, 8vw, 40px) !important;
       line-height: 1.12 !important;
     }
 
@@ -228,16 +245,25 @@ const mobileCss = `
       padding: 7px 9px !important;
     }
 
-    section:first-of-type > div > div {
-      height: 166px !important;
-      min-height: 166px !important;
+    section:first-of-type video {
+      height: 62vw !important;
+      min-height: 190px !important;
+    }
+
+    section:first-of-type > div > div > div:last-child {
+      padding: 24px 20px 34px !important;
     }
 
     section:first-of-type h2 {
-      font-size: clamp(23px, 7vw, 31px) !important;
+      font-size: clamp(27px, 8vw, 37px) !important;
+    }
+
+    section:first-of-type p {
+      font-size: 16px !important;
     }
   }
 `;
+
 
 
 
