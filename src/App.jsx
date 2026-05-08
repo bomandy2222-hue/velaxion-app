@@ -2094,7 +2094,7 @@ export default function App() {
           </div>
         </div>
 
-        <Reveal><div style={styles.commandCenter}>
+        <div style={styles.commandCenter}>
           <div style={styles.commandGlow} />
           <div style={styles.commandContent}>
             <div>
@@ -2122,9 +2122,9 @@ export default function App() {
               </div>
             </div>
           </div>
-        </div></Reveal>
+        </div>
 
-        <Reveal><div style={styles.card}>
+        <div style={styles.card}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>계정</h2>
           </div>
@@ -2152,9 +2152,9 @@ export default function App() {
               {loginLoading ? "로그인 중..." : "Google 로그인"}
             </button>
           )}
-        </div></Reveal>
+        </div>
 
-        <Reveal><div style={styles.communityEntryCard}>
+        <div style={styles.communityEntryCard}>
           <div>
             <p style={styles.communityEntryEyebrow}>COMMUNITY</p>
             <h2 style={styles.communityEntryTitle}>함께 성장하기</h2>
@@ -2165,9 +2165,9 @@ export default function App() {
           <button style={styles.primaryButton} onClick={() => setShowCommunity(true)}>
             경험 공유방 들어가기
           </button>
-        </div></Reveal>
+        </div>
 
-        <Reveal><div style={styles.card}>
+        <div style={styles.card}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>기본 정보</h2>
           </div>
@@ -2205,9 +2205,9 @@ export default function App() {
           </div>
 
           <div style={styles.autoSaveHint}>글을 쓰면 자동 저장돼.</div>
-        </div></Reveal>
+        </div>
 
-        <Reveal><div style={styles.card}>
+        <div style={styles.card}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>7일 실행 체크</h2>
             <span style={styles.progressText}>{progress}%</span>
@@ -2340,9 +2340,9 @@ export default function App() {
               );
             })}
           </div>
-        </div></Reveal>
+        </div>
 
-        <Reveal><div style={styles.card}>
+        <div style={styles.card}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>AI 분석</h2>
           </div>
@@ -2529,7 +2529,7 @@ export default function App() {
               {message}
             </p>
           ) : null}
-        </div></Reveal>
+        </div>
       </div>
     </div>
   );
