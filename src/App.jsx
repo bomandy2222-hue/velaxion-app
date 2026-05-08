@@ -678,27 +678,14 @@ function DetailPage({ type, onBack, onStart }) {
   };
 
   const page = detailMap[type] || detailMap.intro;
-  const isMobile = useIsMobile();
+  const detailHeroStyle =
+    type === "intro" ? landingStyles.detailHeroIntroOnly : landingStyles.detailHero;
 
-  const detailHeroStyle = isMobile
-    ? landingStyles.mobileDetailHero
-    : type === "intro"
-      ? landingStyles.detailHeroIntroOnly
-      : landingStyles.detailHero;
+  const detailTitleStyle =
+    type === "intro" ? landingStyles.detailTitleIntroOnly : landingStyles.detailTitle;
 
-  const detailTitleStyle = isMobile
-    ? landingStyles.mobileDetailTitle
-    : type === "intro"
-      ? landingStyles.detailTitleIntroOnly
-      : landingStyles.detailTitle;
-
-  const reviewHeaderStyle = isMobile
-    ? landingStyles.mobileReviewDetailHeader
-    : landingStyles.reviewDetailHeader;
-
-  const reviewTitleStyle = isMobile
-    ? landingStyles.mobileReviewDetailTitle
-    : landingStyles.reviewDetailTitle;
+  const reviewHeaderStyle = landingStyles.reviewDetailHeader;
+  const reviewTitleStyle = landingStyles.reviewDetailTitle;
 
   const mediaSections = {
     intro: [
@@ -790,87 +777,6 @@ function DetailPage({ type, onBack, onStart }) {
     },
   ];
 
-  if (isMobile) {
-    if (type === "reviews") {
-      return (
-        <div style={landingStyles.mobileDetailPage}>
-          <style>{mobileCss}</style>
-          <header style={landingStyles.mobileDetailNav}>
-            <button style={landingStyles.mobileBackButton} onClick={onBack}>← 홈으로</button>
-            <div style={landingStyles.mobileBrand}>VELAXION</div>
-            <button style={landingStyles.mobileStartButton} onClick={onStart}>체험하기</button>
-          </header>
-
-          <main style={landingStyles.mobileDetailMain}>
-            <section style={landingStyles.mobileDetailHeroClean}>
-              <p style={landingStyles.mobileKicker}>CUSTOMER STORIES</p>
-              <h1 style={landingStyles.mobileHeroTitle}>고객 경험담</h1>
-            </section>
-
-            <section style={landingStyles.mobileReviewListClean}>
-              {reviewStories.map((story) => (
-                <article key={story.title} style={landingStyles.mobileReviewCardClean}>
-                  <div style={landingStyles.mobileReviewImageClean}>
-                    <img src={story.image} alt={story.title} style={landingStyles.mobileReviewImgTag} />
-                    <div style={landingStyles.mobileFallbackText}>후기 사진 영역</div>
-                  </div>
-                  <h2 style={landingStyles.mobileReviewTitleClean}>{story.title}</h2>
-                  <p style={landingStyles.mobileReviewTextClean}>{story.text}</p>
-                  <p style={landingStyles.mobileReviewMetaClean}>{story.meta}</p>
-                </article>
-              ))}
-            </section>
-          </main>
-        </div>
-      );
-    }
-
-    return (
-      <div style={landingStyles.mobileDetailPage}>
-        <style>{mobileCss}</style>
-        <header style={landingStyles.mobileDetailNav}>
-          <button style={landingStyles.mobileBackButton} onClick={onBack}>← 홈으로</button>
-          <div style={landingStyles.mobileBrand}>VELAXION</div>
-          <button style={landingStyles.mobileStartButton} onClick={onStart}>체험하기</button>
-        </header>
-
-        <main style={landingStyles.mobileDetailMain}>
-          <section style={landingStyles.mobileDetailHeroClean}>
-            <p style={landingStyles.mobileKicker}>{page.eyebrow}</p>
-            <h1 style={landingStyles.mobileHeroTitle}>{page.title}</h1>
-            {page.subtitle ? <p style={landingStyles.mobileHeroSubtitle}>{page.subtitle}</p> : null}
-          </section>
-
-          <section style={landingStyles.mobileStoryListClean}>
-            {currentMediaSections.map((item) => (
-              <article key={item.title} style={landingStyles.mobileStoryCardClean}>
-                <div style={landingStyles.mobileStoryTextClean}>
-                  <p style={landingStyles.mobileStoryLabelClean}>{item.label}</p>
-                  <h2 style={landingStyles.mobileStoryTitleClean}>{item.title}</h2>
-                  <p style={landingStyles.mobileStoryParagraphClean}>{item.text}</p>
-                </div>
-
-                <div style={landingStyles.mobileStoryVideoClean}>
-                  <video
-                    style={landingStyles.mobileStoryVideoTag}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="auto"
-                    poster={item.poster}
-                  >
-                    <source src={item.media} type="video/mp4" />
-                  </video>
-                  <div style={landingStyles.mobileFallbackText}>영상 / 사진 영역</div>
-                </div>
-              </article>
-            ))}
-          </section>
-        </main>
-      </div>
-    );
-  }
 
   if (type === "reviews") {
     return (
@@ -888,15 +794,15 @@ function DetailPage({ type, onBack, onStart }) {
             <h1 style={reviewTitleStyle}>고객 경험담</h1>
           </section>
 
-          <section style={isMobile ? landingStyles.mobileReviewStoryGrid : landingStyles.reviewStoryGrid}>
+          <section style={landingStyles.reviewStoryGrid}>
             {reviewStories.map((story) => (
-              <article key={story.title} style={isMobile ? landingStyles.mobileReviewStoryCard : landingStyles.reviewStoryCard}>
-                <div style={isMobile ? landingStyles.mobileReviewStoryImageWrap : landingStyles.reviewStoryImageWrap}>
+              <article key={story.title} style={landingStyles.reviewStoryCard}>
+                <div style={landingStyles.reviewStoryImageWrap}>
                   <img src={story.image} alt={story.title} style={landingStyles.reviewStoryImage} />
                   <div style={landingStyles.reviewStoryImageFallback}>후기 사진 영역</div>
                 </div>
-                <h2 style={isMobile ? landingStyles.mobileReviewStoryTitle : landingStyles.reviewStoryTitle}>{story.title}</h2>
-                <p style={isMobile ? landingStyles.mobileReviewStoryMeta : landingStyles.reviewStoryMeta}>{story.meta}</p>
+                <h2 style={landingStyles.reviewStoryTitle}>{story.title}</h2>
+                <p style={landingStyles.reviewStoryMeta}>{story.meta}</p>
               </article>
             ))}
           </section>
@@ -907,7 +813,6 @@ function DetailPage({ type, onBack, onStart }) {
 
   return (
     <div style={landingStyles.detailPage}>
-      <style>{mobileCss}</style>
       <style>{mobileCss}</style>
       <header style={landingStyles.detailNav}>
         <button style={landingStyles.detailBackButton} onClick={onBack}>← 홈으로</button>
@@ -923,7 +828,7 @@ function DetailPage({ type, onBack, onStart }) {
             {page.subtitle ? <p style={landingStyles.detailSubtitle}>{page.subtitle}</p> : null}
           </div>
           {type !== "intro" ? (
-            <div style={isMobile ? landingStyles.mobileDetailVideoHero : landingStyles.detailVideoHero}>
+            <div style={landingStyles.detailVideoHero}>
               <video
                 style={landingStyles.detailVideo}
                 autoPlay
@@ -943,8 +848,8 @@ function DetailPage({ type, onBack, onStart }) {
 
 
         {type === "intro" ? (
-          <section style={isMobile ? landingStyles.mobileIntroVideoBelowSection : landingStyles.introVideoBelowSection}>
-            <div style={isMobile ? landingStyles.mobileIntroVideoBelowHero : landingStyles.introVideoBelowHero}>
+          <section style={landingStyles.introVideoBelowSection}>
+            <div style={landingStyles.introVideoBelowHero}>
               <video
                 style={landingStyles.detailVideo}
                 autoPlay
@@ -967,20 +872,18 @@ function DetailPage({ type, onBack, onStart }) {
                 <Reveal key={item.title} delay={index * 90}>
                 <div
                   style={{
-                    ...(isMobile
-                      ? landingStyles.mobileStorySection
-                      : type === "principle"
-                        ? landingStyles.futureStorySection
-                        : landingStyles.detailStorySection),
+                    ...(type === "principle"
+                      ? landingStyles.futureStorySection
+                      : landingStyles.detailStorySection),
                     ...(type !== "principle" && index % 2 === 1 ? landingStyles.detailStoryReverse : null),
                   }}
                 >
-                  <div style={isMobile ? landingStyles.mobileStoryTextBox : type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
-                    <p style={isMobile ? landingStyles.mobileStoryLabel : type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
-                    <h2 style={isMobile ? landingStyles.mobileStoryTitle : type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
-                    <p style={isMobile ? landingStyles.mobileStoryText : type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
+                  <div style={type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
+                    <p style={type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
+                    <h2 style={type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
+                    <p style={type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
                   </div>
-                  <div style={isMobile ? landingStyles.mobileStoryMedia : type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
+                  <div style={type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
                     <video
                       style={landingStyles.detailStoryVideo}
                       autoPlay
