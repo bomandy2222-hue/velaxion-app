@@ -368,6 +368,23 @@ const initialChecks = [false, false, false, false, false, false, false];
 const initialPlan = ["", "", "", "", "", "", ""];
 const initialDayImages = [null, null, null, null, null, null, null];
 
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth <= 760 : false
+  );
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 760);
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return isMobile;
+}
+
+
 function cleanSectionText(text) {
   return String(text || "")
     .replace(/^#+\s*/gm, "")
@@ -661,6 +678,27 @@ function DetailPage({ type, onBack, onStart }) {
   };
 
   const page = detailMap[type] || detailMap.intro;
+  const isMobile = useIsMobile();
+
+  const detailHeroStyle = isMobile
+    ? landingStyles.mobileDetailHero
+    : type === "intro"
+      ? landingStyles.detailHeroIntroOnly
+      : landingStyles.detailHero;
+
+  const detailTitleStyle = isMobile
+    ? landingStyles.mobileDetailTitle
+    : type === "intro"
+      ? landingStyles.detailTitleIntroOnly
+      : landingStyles.detailTitle;
+
+  const reviewHeaderStyle = isMobile
+    ? landingStyles.mobileReviewDetailHeader
+    : landingStyles.reviewDetailHeader;
+
+  const reviewTitleStyle = isMobile
+    ? landingStyles.mobileReviewDetailTitle
+    : landingStyles.reviewDetailTitle;
 
   const mediaSections = {
     intro: [
@@ -763,20 +801,20 @@ function DetailPage({ type, onBack, onStart }) {
         </header>
 
         <main style={landingStyles.reviewDetailMain}>
-          <section style={landingStyles.reviewDetailHeader}>
+          <section style={reviewHeaderStyle}>
             <p style={landingStyles.detailEyebrow}>CUSTOMER STORIES</p>
-            <h1 style={landingStyles.reviewDetailTitle}>고객 경험담</h1>
+            <h1 style={reviewTitleStyle}>고객 경험담</h1>
           </section>
 
-          <section style={landingStyles.reviewStoryGrid}>
+          <section style={isMobile ? landingStyles.mobileReviewStoryGrid : landingStyles.reviewStoryGrid}>
             {reviewStories.map((story) => (
-              <article key={story.title} style={landingStyles.reviewStoryCard}>
-                <div style={landingStyles.reviewStoryImageWrap}>
+              <article key={story.title} style={isMobile ? landingStyles.mobileReviewStoryCard : landingStyles.reviewStoryCard}>
+                <div style={isMobile ? landingStyles.mobileReviewStoryImageWrap : landingStyles.reviewStoryImageWrap}>
                   <img src={story.image} alt={story.title} style={landingStyles.reviewStoryImage} />
                   <div style={landingStyles.reviewStoryImageFallback}>후기 사진 영역</div>
                 </div>
-                <h2 style={landingStyles.reviewStoryTitle}>{story.title}</h2>
-                <p style={landingStyles.reviewStoryMeta}>{story.meta}</p>
+                <h2 style={isMobile ? landingStyles.mobileReviewStoryTitle : landingStyles.reviewStoryTitle}>{story.title}</h2>
+                <p style={isMobile ? landingStyles.mobileReviewStoryMeta : landingStyles.reviewStoryMeta}>{story.meta}</p>
               </article>
             ))}
           </section>
@@ -796,14 +834,14 @@ function DetailPage({ type, onBack, onStart }) {
       </header>
 
       <main style={landingStyles.detailMain}>
-        <section style={type === "intro" ? landingStyles.detailHeroIntroOnly : landingStyles.detailHero}>
+        <section style={detailHeroStyle}>
           <div>
             <p style={landingStyles.detailEyebrow}>{page.eyebrow}</p>
-            <h1 style={type === "intro" ? landingStyles.detailTitleIntroOnly : landingStyles.detailTitle}>{page.title}</h1>
+            <h1 style={detailTitleStyle}>{page.title}</h1>
             {page.subtitle ? <p style={landingStyles.detailSubtitle}>{page.subtitle}</p> : null}
           </div>
           {type !== "intro" ? (
-            <div style={landingStyles.detailVideoHero}>
+            <div style={isMobile ? landingStyles.mobileDetailVideoHero : landingStyles.detailVideoHero}>
               <video
                 style={landingStyles.detailVideo}
                 autoPlay
@@ -823,8 +861,8 @@ function DetailPage({ type, onBack, onStart }) {
 
 
         {type === "intro" ? (
-          <section style={landingStyles.introVideoBelowSection}>
-            <div style={landingStyles.introVideoBelowHero}>
+          <section style={isMobile ? landingStyles.mobileIntroVideoBelowSection : landingStyles.introVideoBelowSection}>
+            <div style={isMobile ? landingStyles.mobileIntroVideoBelowHero : landingStyles.introVideoBelowHero}>
               <video
                 style={landingStyles.detailVideo}
                 autoPlay
@@ -847,18 +885,20 @@ function DetailPage({ type, onBack, onStart }) {
                 <Reveal key={item.title} delay={index * 90}>
                 <div
                   style={{
-                    ...(type === "principle"
-                      ? landingStyles.futureStorySection
-                      : landingStyles.detailStorySection),
+                    ...(isMobile
+                      ? landingStyles.mobileStorySection
+                      : type === "principle"
+                        ? landingStyles.futureStorySection
+                        : landingStyles.detailStorySection),
                     ...(type !== "principle" && index % 2 === 1 ? landingStyles.detailStoryReverse : null),
                   }}
                 >
-                  <div style={type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
-                    <p style={type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
-                    <h2 style={type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
-                    <p style={type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
+                  <div style={isMobile ? landingStyles.mobileStoryTextBox : type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
+                    <p style={isMobile ? landingStyles.mobileStoryLabel : type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
+                    <h2 style={isMobile ? landingStyles.mobileStoryTitle : type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
+                    <p style={isMobile ? landingStyles.mobileStoryText : type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
                   </div>
-                  <div style={type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
+                  <div style={isMobile ? landingStyles.mobileStoryMedia : type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
                     <video
                       style={landingStyles.detailStoryVideo}
                       autoPlay
