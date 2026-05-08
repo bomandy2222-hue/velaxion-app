@@ -790,6 +790,88 @@ function DetailPage({ type, onBack, onStart }) {
     },
   ];
 
+  if (isMobile) {
+    if (type === "reviews") {
+      return (
+        <div style={landingStyles.mobileDetailPage}>
+          <style>{mobileCss}</style>
+          <header style={landingStyles.mobileDetailNav}>
+            <button style={landingStyles.mobileBackButton} onClick={onBack}>← 홈으로</button>
+            <div style={landingStyles.mobileBrand}>VELAXION</div>
+            <button style={landingStyles.mobileStartButton} onClick={onStart}>체험하기</button>
+          </header>
+
+          <main style={landingStyles.mobileDetailMain}>
+            <section style={landingStyles.mobileDetailHeroClean}>
+              <p style={landingStyles.mobileKicker}>CUSTOMER STORIES</p>
+              <h1 style={landingStyles.mobileHeroTitle}>고객 경험담</h1>
+            </section>
+
+            <section style={landingStyles.mobileReviewListClean}>
+              {reviewStories.map((story) => (
+                <article key={story.title} style={landingStyles.mobileReviewCardClean}>
+                  <div style={landingStyles.mobileReviewImageClean}>
+                    <img src={story.image} alt={story.title} style={landingStyles.mobileReviewImgTag} />
+                    <div style={landingStyles.mobileFallbackText}>후기 사진 영역</div>
+                  </div>
+                  <h2 style={landingStyles.mobileReviewTitleClean}>{story.title}</h2>
+                  <p style={landingStyles.mobileReviewTextClean}>{story.text}</p>
+                  <p style={landingStyles.mobileReviewMetaClean}>{story.meta}</p>
+                </article>
+              ))}
+            </section>
+          </main>
+        </div>
+      );
+    }
+
+    return (
+      <div style={landingStyles.mobileDetailPage}>
+        <style>{mobileCss}</style>
+        <header style={landingStyles.mobileDetailNav}>
+          <button style={landingStyles.mobileBackButton} onClick={onBack}>← 홈으로</button>
+          <div style={landingStyles.mobileBrand}>VELAXION</div>
+          <button style={landingStyles.mobileStartButton} onClick={onStart}>체험하기</button>
+        </header>
+
+        <main style={landingStyles.mobileDetailMain}>
+          <section style={landingStyles.mobileDetailHeroClean}>
+            <p style={landingStyles.mobileKicker}>{page.eyebrow}</p>
+            <h1 style={landingStyles.mobileHeroTitle}>{page.title}</h1>
+            {page.subtitle ? <p style={landingStyles.mobileHeroSubtitle}>{page.subtitle}</p> : null}
+          </section>
+
+          <section style={landingStyles.mobileStoryListClean}>
+            {currentMediaSections.map((item) => (
+              <article key={item.title} style={landingStyles.mobileStoryCardClean}>
+                <div style={landingStyles.mobileStoryTextClean}>
+                  <p style={landingStyles.mobileStoryLabelClean}>{item.label}</p>
+                  <h2 style={landingStyles.mobileStoryTitleClean}>{item.title}</h2>
+                  <p style={landingStyles.mobileStoryParagraphClean}>{item.text}</p>
+                </div>
+
+                <div style={landingStyles.mobileStoryVideoClean}>
+                  <video
+                    style={landingStyles.mobileStoryVideoTag}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="auto"
+                    poster={item.poster}
+                  >
+                    <source src={item.media} type="video/mp4" />
+                  </video>
+                  <div style={landingStyles.mobileFallbackText}>영상 / 사진 영역</div>
+                </div>
+              </article>
+            ))}
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   if (type === "reviews") {
     return (
       <div style={landingStyles.reviewDetailPage}>
