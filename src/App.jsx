@@ -28,6 +28,287 @@ import {
 } from "firebase/storage";
 import app from "../firebase.js";
 
+
+const mobileCss = `
+  * { box-sizing: border-box; }
+  html, body, #root { width: 100%; min-height: 100%; overflow-x: hidden; scroll-behavior: smooth; }
+  body { margin: 0; }
+  video, img { max-width: 100%; }
+
+  .velaxion-reveal {
+    opacity: 0;
+    transform: translateY(34px) scale(0.985);
+    filter: blur(10px);
+    transition:
+      opacity 900ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 900ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 900ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform, filter;
+  }
+
+  .velaxion-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+
+  .velaxion-mega-menu {
+    animation: velaxionMenuIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: top center;
+  }
+
+  @keyframes velaxionMenuIn {
+    from {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.975);
+      filter: blur(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .velaxion-reveal,
+    .velaxion-mega-menu {
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+      filter: none !important;
+      opacity: 1 !important;
+    }
+  }
+
+  @media (min-width: 1025px) {
+    body { background: #dfe6ef; }
+    input, textarea { font-size: 15px !important; }
+  }
+
+  @media (max-width: 760px) {
+    input, textarea { font-size: 16px !important; }
+
+    .velaxion-reveal {
+      transform: translateY(22px);
+      filter: blur(6px);
+    }
+
+    #root > div {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+
+    header {
+      position: sticky !important;
+      top: 0 !important;
+      left: auto !important;
+      transform: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      border-radius: 0 !important;
+      padding: 14px 16px !important;
+      background: rgba(5, 7, 12, 0.96) !important;
+      backdrop-filter: blur(16px) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 12px !important;
+      border-left: none !important;
+      border-right: none !important;
+    }
+
+    header > div:first-child {
+      font-size: 20px !important;
+      letter-spacing: 0.18em !important;
+      white-space: nowrap !important;
+    }
+
+    header > div:last-child {
+      display: flex !important;
+      gap: 8px !important;
+      overflow-x: auto !important;
+      justify-content: flex-start !important;
+      max-width: 58vw !important;
+      padding-bottom: 2px !important;
+      scrollbar-width: none !important;
+    }
+
+    header > div:last-child::-webkit-scrollbar {
+      display: none !important;
+    }
+
+    header button {
+      writing-mode: horizontal-tb !important;
+      white-space: nowrap !important;
+      flex: 0 0 auto !important;
+      font-size: 12px !important;
+      padding: 8px 10px !important;
+      border-radius: 999px !important;
+      line-height: 1.1 !important;
+    }
+
+    section:first-of-type {
+      padding: 0 !important;
+      min-height: auto !important;
+      background: #05070d !important;
+    }
+
+    section:first-of-type > div {
+      display: block !important;
+      height: auto !important;
+      min-height: 0 !important;
+      padding: 0 !important;
+    }
+
+    section:first-of-type > div > div {
+      position: relative !important;
+      height: auto !important;
+      min-height: 0 !important;
+      aspect-ratio: auto !important;
+      border-radius: 0 !important;
+      overflow: visible !important;
+      background: #05070d !important;
+      box-shadow: none !important;
+      border: none !important;
+      margin: 0 !important;
+    }
+
+    section:first-of-type video {
+      position: relative !important;
+      display: block !important;
+      width: 100% !important;
+      height: 58vw !important;
+      max-height: 300px !important;
+      min-height: 210px !important;
+      object-fit: cover !important;
+      opacity: 0.95 !important;
+      inset: auto !important;
+    }
+
+    section:first-of-type > div > div > div:last-child {
+      position: relative !important;
+      left: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      top: auto !important;
+      padding: 26px 22px 38px !important;
+      display: block !important;
+      background: #05070d !important;
+      color: #fff !important;
+      overflow: visible !important;
+      border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    }
+
+    section:first-of-type h2 {
+      display: block !important;
+      font-size: clamp(28px, 8.4vw, 40px) !important;
+      line-height: 1.12 !important;
+      letter-spacing: -0.055em !important;
+      margin: 10px 0 0 !important;
+      max-width: 100% !important;
+      white-space: normal !important;
+      overflow: visible !important;
+      word-break: keep-all !important;
+    }
+
+    section:first-of-type p {
+      display: block !important;
+      font-size: 17px !important;
+      line-height: 1.72 !important;
+      margin: 18px 0 0 !important;
+      color: rgba(255,255,255,0.82) !important;
+      max-width: 100% !important;
+      white-space: normal !important;
+      overflow: visible !important;
+      word-break: keep-all !important;
+    }
+
+    section:first-of-type > div > div > div:last-child > div:first-child {
+      font-size: 15px !important;
+      letter-spacing: 0.08em !important;
+      opacity: 0.7 !important;
+      margin-bottom: 0 !important;
+    }
+
+    section#community {
+      margin-top: 0 !important;
+      padding-top: 42px !important;
+      background: linear-gradient(180deg, #05070d 0%, #141a22 4%, #dfe8f2 24%, #e8eef6 100%) !important;
+    }
+
+    section#community h2 {
+      font-size: clamp(32px, 9vw, 44px) !important;
+      line-height: 1.08 !important;
+    }
+
+    section#community p {
+      font-size: 16px !important;
+      line-height: 1.78 !important;
+    }
+
+    section, main, article, div {
+      max-width: 100% !important;
+    }
+
+    div[style*="grid-template-columns"],
+    section > div,
+    main > section,
+    main > section > div {
+      grid-template-columns: 1fr !important;
+    }
+
+    section {
+      min-height: auto !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+
+    button { max-width: 100% !important; }
+
+    h1 {
+      font-size: clamp(30px, 10vw, 44px) !important;
+      line-height: 1.08 !important;
+      letter-spacing: -0.05em !important;
+    }
+
+    h2 {
+      font-size: clamp(28px, 8vw, 40px) !important;
+      line-height: 1.12 !important;
+    }
+
+    p { word-break: keep-all; }
+
+    textarea { min-height: 96px; }
+  }
+
+  @media (max-width: 420px) {
+    header > div:first-child { font-size: 18px !important; }
+    header > div:last-child { max-width: 54vw !important; }
+    header button {
+      font-size: 11px !important;
+      padding: 7px 9px !important;
+    }
+
+    section:first-of-type video {
+      height: 62vw !important;
+      min-height: 190px !important;
+    }
+
+    section:first-of-type > div > div > div:last-child {
+      padding: 24px 20px 34px !important;
+    }
+
+    section:first-of-type h2 {
+      font-size: clamp(27px, 8vw, 37px) !important;
+    }
+
+    section:first-of-type p {
+      font-size: 16px !important;
+    }
+  }
+`;
+
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -37,6 +318,44 @@ const provider = new GoogleAuthProvider();
 // 네가 원하는 동영상으로 바꾸려면 아래 URL만 교체하면 돼.
 // 예: Firebase Storage, Vercel public 파일, YouTube가 아닌 직접 mp4 링크
 const COMMUNITY_VIDEO_URL = "/videos/community.mp4";
+
+
+function Reveal({ children, delay = 0, style = {}, className = "" }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const target = ref.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.unobserve(target);
+        }
+      },
+      { threshold: 0.16, rootMargin: "0px 0px -70px 0px" }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`velaxion-reveal ${visible ? "is-visible" : ""} ${className}`}
+      style={{
+        transitionDelay: `${delay}ms`,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 
 
 const initialForm = {
@@ -436,6 +755,7 @@ function DetailPage({ type, onBack, onStart }) {
   if (type === "reviews") {
     return (
       <div style={landingStyles.reviewDetailPage}>
+        <style>{mobileCss}</style>
         <header style={landingStyles.detailNav}>
           <button style={landingStyles.detailBackButton} onClick={onBack}>← 홈으로</button>
           <div style={landingStyles.brandDark}>VELAXION</div>
@@ -467,6 +787,7 @@ function DetailPage({ type, onBack, onStart }) {
 
   return (
     <div style={landingStyles.detailPage}>
+      <style>{mobileCss}</style>
       <header style={landingStyles.detailNav}>
         <button style={landingStyles.detailBackButton} onClick={onBack}>← 홈으로</button>
         <div style={landingStyles.brandDark}>VELAXION</div>
@@ -522,8 +843,8 @@ function DetailPage({ type, onBack, onStart }) {
 
             <section style={landingStyles.detailStoryWrap}>
               {currentMediaSections.map((item, index) => (
+                <Reveal key={item.title} delay={index * 90}>
                 <div
-                  key={item.title}
                   style={{
                     ...(type === "principle"
                       ? landingStyles.futureStorySection
@@ -551,6 +872,7 @@ function DetailPage({ type, onBack, onStart }) {
                     <div style={landingStyles.detailStoryFallback}>영상 / 사진 영역</div>
                   </div>
                 </div>
+                </Reveal>
               ))}
             </section>
       </main>
@@ -667,6 +989,7 @@ function LandingPage({ onStart, onCommunity }) {
 
   return (
     <div style={landingStyles.page}>
+      <style>{mobileCss}</style>
       <header style={landingStyles.nav} onMouseLeave={closeMegaMenuSoon}>
         <div style={landingStyles.brand}>VELAXION</div>
         <div style={landingStyles.navLinks}>
@@ -696,6 +1019,7 @@ function LandingPage({ onStart, onCommunity }) {
 
       {menuOpen ? (
         <div
+          className="velaxion-mega-menu"
           style={landingStyles.megaMenu}
           onMouseEnter={openMegaMenu}
           onMouseLeave={() => setMenuOpen(false)}
@@ -716,7 +1040,8 @@ function LandingPage({ onStart, onCommunity }) {
         </div>
       ) : null}
 
-      <section style={landingStyles.videoWallSection}>
+      <Reveal>
+        <section style={landingStyles.videoWallSection}>
         <div style={landingStyles.videoWallGrid}>
           {resultVideos.map((item) => (
             <div key={item.number} style={landingStyles.videoPanel}>
@@ -742,8 +1067,10 @@ function LandingPage({ onStart, onCommunity }) {
           ))}
         </div>
       </section>
+      </Reveal>
 
 
+      <Reveal>
       <section id="community" style={landingStyles.communityIntroSection}>
         <div style={landingStyles.communityIntroInner}>
           <div style={landingStyles.communityIntroTextBox}>
@@ -810,7 +1137,9 @@ function LandingPage({ onStart, onCommunity }) {
           </div>
         </div>
       </section>
+      </Reveal>
 
+      <Reveal>
       <section id="reviews" style={landingStyles.reviewSection}>
         <div style={landingStyles.sectionInner}>
           <div style={landingStyles.sectionTopRow}>
@@ -834,7 +1163,9 @@ function LandingPage({ onStart, onCommunity }) {
           </div>
         </div>
       </section>
+      </Reveal>
 
+      <Reveal>
       <section id="intro" style={landingStyles.introSection}>
         <div style={landingStyles.introOverlay} />
         <div style={landingStyles.introContent}>
@@ -869,6 +1200,7 @@ function LandingPage({ onStart, onCommunity }) {
           </button>
         </div>
       </section>
+      </Reveal>
     </div>
   );
 }
@@ -1017,6 +1349,7 @@ function CommunityChat({ user, form, onBack, onLogin }) {
 
   return (
     <div style={styles.page}>
+      <style>{mobileCss}</style>
       <div style={styles.communityContainer}>
         <button style={styles.backToLandingButton} onClick={onBack}>
           ← 컨설팅 화면으로 돌아가기
@@ -1746,6 +2079,7 @@ export default function App() {
 
   return (
     <div style={styles.page}>
+      <style>{mobileCss}</style>
       <div style={styles.container}>
         <button style={styles.backToLandingButton} onClick={() => setShowExperience(false)}>
           ← 소개 화면으로 돌아가기
@@ -1760,7 +2094,7 @@ export default function App() {
           </div>
         </div>
 
-        <div style={styles.commandCenter}>
+        <Reveal><div style={styles.commandCenter}>
           <div style={styles.commandGlow} />
           <div style={styles.commandContent}>
             <div>
@@ -1788,9 +2122,9 @@ export default function App() {
               </div>
             </div>
           </div>
-        </div>
+        </div></Reveal>
 
-        <div style={styles.card}>
+        <Reveal><div style={styles.card}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>계정</h2>
           </div>
@@ -1818,9 +2152,9 @@ export default function App() {
               {loginLoading ? "로그인 중..." : "Google 로그인"}
             </button>
           )}
-        </div>
+        </div></Reveal>
 
-        <div style={styles.communityEntryCard}>
+        <Reveal><div style={styles.communityEntryCard}>
           <div>
             <p style={styles.communityEntryEyebrow}>COMMUNITY</p>
             <h2 style={styles.communityEntryTitle}>함께 성장하기</h2>
@@ -1831,9 +2165,9 @@ export default function App() {
           <button style={styles.primaryButton} onClick={() => setShowCommunity(true)}>
             경험 공유방 들어가기
           </button>
-        </div>
+        </div></Reveal>
 
-        <div style={styles.card}>
+        <Reveal><div style={styles.card}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>기본 정보</h2>
           </div>
@@ -1871,9 +2205,9 @@ export default function App() {
           </div>
 
           <div style={styles.autoSaveHint}>글을 쓰면 자동 저장돼.</div>
-        </div>
+        </div></Reveal>
 
-        <div style={styles.card}>
+        <Reveal><div style={styles.card}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>7일 실행 체크</h2>
             <span style={styles.progressText}>{progress}%</span>
@@ -2006,9 +2340,9 @@ export default function App() {
               );
             })}
           </div>
-        </div>
+        </div></Reveal>
 
-        <div style={styles.card}>
+        <Reveal><div style={styles.card}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>AI 분석</h2>
           </div>
