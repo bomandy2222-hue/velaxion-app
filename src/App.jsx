@@ -2529,7 +2529,7 @@ export default function App() {
               {message}
             </p>
           ) : null}
-        </div>
+        </div></Reveal>
       </div>
     </div>
   );
