@@ -29,42 +29,45 @@ import {
 import app from "../firebase.js";
 
 
-
 const mobileCss = `
   * { box-sizing: border-box; }
-  html, body, #root {
-    width: 100%;
-    min-height: 100%;
-    overflow-x: hidden;
-    scroll-behavior: smooth;
-  }
+  html, body, #root { width: 100%; min-height: 100%; overflow-x: hidden; scroll-behavior: smooth; }
   body { margin: 0; }
   video, img { max-width: 100%; }
 
   .velaxion-reveal {
     opacity: 0;
-    transform: translateY(28px);
-    filter: blur(8px);
+    transform: translateY(34px) scale(0.985);
+    filter: blur(10px);
     transition:
-      opacity 760ms cubic-bezier(0.22, 1, 0.36, 1),
-      transform 760ms cubic-bezier(0.22, 1, 0.36, 1),
-      filter 760ms cubic-bezier(0.22, 1, 0.36, 1);
+      opacity 900ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 900ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 900ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform, filter;
   }
 
   .velaxion-reveal.is-visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
     filter: blur(0);
   }
 
   .velaxion-mega-menu {
-    animation: velaxionMenuIn 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: velaxionMenuIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
     transform-origin: top center;
   }
 
   @keyframes velaxionMenuIn {
-    from { opacity: 0; transform: translateY(-10px) scale(0.98); filter: blur(8px); }
-    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+    from {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.975);
+      filter: blur(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -78,92 +81,97 @@ const mobileCss = `
     }
   }
 
-  @media (min-width: 761px) {
+  @media (min-width: 1025px) {
+    body { background: #dfe6ef; }
     input, textarea { font-size: 15px !important; }
   }
 
   @media (max-width: 760px) {
     input, textarea { font-size: 16px !important; }
 
-    /* 전체 모바일 홈 안전 폭 */
-    #root > div {
-      width: 100% !important;
-      overflow-x: hidden !important;
+    .velaxion-reveal {
+      transform: translateY(22px);
+      filter: blur(6px);
     }
 
-    /* 홈 상단 네비 */
+    #root > div {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+
     header {
       position: sticky !important;
       top: 0 !important;
-      left: 0 !important;
+      left: auto !important;
       transform: none !important;
       width: 100% !important;
       max-width: 100% !important;
       border-radius: 0 !important;
-      padding: 12px 14px !important;
+      padding: 14px 16px !important;
       background: rgba(5, 7, 12, 0.96) !important;
+      backdrop-filter: blur(16px) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 12px !important;
       border-left: none !important;
       border-right: none !important;
-      z-index: 50 !important;
-      overflow: hidden !important;
     }
 
     header > div:first-child {
-      font-size: 18px !important;
+      font-size: 20px !important;
       letter-spacing: 0.18em !important;
       white-space: nowrap !important;
     }
 
     header > div:last-child {
-      max-width: 56vw !important;
       display: flex !important;
-      gap: 6px !important;
+      gap: 8px !important;
       overflow-x: auto !important;
       justify-content: flex-start !important;
+      max-width: 58vw !important;
+      padding-bottom: 2px !important;
       scrollbar-width: none !important;
     }
 
-    header > div:last-child::-webkit-scrollbar { display: none !important; }
+    header > div:last-child::-webkit-scrollbar {
+      display: none !important;
+    }
 
     header button {
+      writing-mode: horizontal-tb !important;
       white-space: nowrap !important;
       flex: 0 0 auto !important;
-      font-size: 11px !important;
-      padding: 7px 9px !important;
+      font-size: 12px !important;
+      padding: 8px 10px !important;
       border-radius: 999px !important;
       line-height: 1.1 !important;
     }
 
-    /* 1번 영상 스토리 섹션: 영상/텍스트 분리, 겹침 제거 */
     section:first-of-type {
-      min-height: auto !important;
       padding: 0 !important;
+      min-height: auto !important;
       background: #05070d !important;
-      overflow: hidden !important;
     }
 
     section:first-of-type > div {
       display: block !important;
-      width: 100% !important;
-      padding: 0 !important;
-      margin: 0 !important;
       height: auto !important;
       min-height: 0 !important;
+      padding: 0 !important;
     }
 
     section:first-of-type > div > div {
-      display: block !important;
       position: relative !important;
-      width: 100% !important;
       height: auto !important;
       min-height: 0 !important;
       aspect-ratio: auto !important;
       border-radius: 0 !important;
-      overflow: hidden !important;
-      margin: 0 !important;
-      border: none !important;
-      box-shadow: none !important;
+      overflow: visible !important;
       background: #05070d !important;
+      box-shadow: none !important;
+      border: none !important;
+      margin: 0 !important;
     }
 
     section:first-of-type video {
@@ -171,35 +179,33 @@ const mobileCss = `
       display: block !important;
       width: 100% !important;
       height: 58vw !important;
-      min-height: 190px !important;
       max-height: 300px !important;
+      min-height: 210px !important;
       object-fit: cover !important;
-      opacity: 0.92 !important;
+      opacity: 0.95 !important;
       inset: auto !important;
-      z-index: 1 !important;
     }
 
     section:first-of-type > div > div > div:last-child {
       position: relative !important;
       left: auto !important;
       right: auto !important;
-      top: auto !important;
       bottom: auto !important;
-      width: 100% !important;
-      padding: 22px 20px 34px !important;
+      top: auto !important;
+      padding: 26px 22px 38px !important;
       display: block !important;
       background: #05070d !important;
-      color: #eaf1ff !important;
-      z-index: 2 !important;
+      color: #fff !important;
+      overflow: visible !important;
       border-bottom: 1px solid rgba(255,255,255,0.08) !important;
     }
 
     section:first-of-type h2 {
       display: block !important;
-      font-size: clamp(27px, 8vw, 40px) !important;
+      font-size: clamp(28px, 8.4vw, 40px) !important;
       line-height: 1.12 !important;
       letter-spacing: -0.055em !important;
-      margin: 8px 0 0 !important;
+      margin: 10px 0 0 !important;
       max-width: 100% !important;
       white-space: normal !important;
       overflow: visible !important;
@@ -208,10 +214,10 @@ const mobileCss = `
 
     section:first-of-type p {
       display: block !important;
-      font-size: 15px !important;
-      line-height: 1.7 !important;
-      margin: 14px 0 0 !important;
-      color: rgba(234,241,255,0.72) !important;
+      font-size: 17px !important;
+      line-height: 1.72 !important;
+      margin: 18px 0 0 !important;
+      color: rgba(255,255,255,0.82) !important;
       max-width: 100% !important;
       white-space: normal !important;
       overflow: visible !important;
@@ -219,56 +225,30 @@ const mobileCss = `
     }
 
     section:first-of-type > div > div > div:last-child > div:first-child {
-      font-size: 14px !important;
+      font-size: 15px !important;
+      letter-spacing: 0.08em !important;
       opacity: 0.7 !important;
-      letter-spacing: 0.1em !important;
+      margin-bottom: 0 !important;
     }
 
-    /* 커뮤니티 섹션: 이전 영상 섹션과 겹치지 않고 새 섹션으로 분리 */
     section#community {
-      margin: 0 !important;
-      padding: 48px 20px 60px !important;
-      min-height: auto !important;
-      background: #05070d !important;
-      overflow: hidden !important;
-    }
-
-    section#community > div {
-      display: block !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      margin: 0 !important;
-      padding: 0 !important;
+      margin-top: 0 !important;
+      padding-top: 42px !important;
+      background: linear-gradient(180deg, #05070d 0%, #141a22 4%, #dfe8f2 24%, #e8eef6 100%) !important;
     }
 
     section#community h2 {
-      font-size: clamp(34px, 10vw, 48px) !important;
+      font-size: clamp(32px, 9vw, 44px) !important;
       line-height: 1.08 !important;
-      letter-spacing: -0.065em !important;
-      margin: 12px 0 0 !important;
-      max-width: 100% !important;
-      white-space: normal !important;
-      word-break: keep-all !important;
-      overflow: visible !important;
     }
 
     section#community p {
       font-size: 16px !important;
       line-height: 1.78 !important;
-      max-width: 100% !important;
-      white-space: normal !important;
-      word-break: keep-all !important;
-      overflow: visible !important;
     }
 
-    /* 리뷰/소개/기능 섹션도 모바일에서 화면 밖으로 밀리지 않게 */
-    section {
+    section, main, article, div {
       max-width: 100% !important;
-      overflow-x: hidden !important;
-    }
-
-    main, article, div {
-      max-width: 100%;
     }
 
     div[style*="grid-template-columns"],
@@ -278,12 +258,56 @@ const mobileCss = `
       grid-template-columns: 1fr !important;
     }
 
+    section {
+      min-height: auto !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+
     button { max-width: 100% !important; }
-    h1, h2, h3, p { word-break: keep-all; }
+
+    h1 {
+      font-size: clamp(30px, 10vw, 44px) !important;
+      line-height: 1.08 !important;
+      letter-spacing: -0.05em !important;
+    }
+
+    h2 {
+      font-size: clamp(28px, 8vw, 40px) !important;
+      line-height: 1.12 !important;
+    }
+
+    p { word-break: keep-all; }
+
     textarea { min-height: 96px; }
   }
-`;
 
+  @media (max-width: 420px) {
+    header > div:first-child { font-size: 18px !important; }
+    header > div:last-child { max-width: 54vw !important; }
+    header button {
+      font-size: 11px !important;
+      padding: 7px 9px !important;
+    }
+
+    section:first-of-type video {
+      height: 62vw !important;
+      min-height: 190px !important;
+    }
+
+    section:first-of-type > div > div > div:last-child {
+      padding: 24px 20px 34px !important;
+    }
+
+    section:first-of-type h2 {
+      font-size: clamp(27px, 8vw, 37px) !important;
+    }
+
+    section:first-of-type p {
+      font-size: 16px !important;
+    }
+  }
+`;
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -343,23 +367,6 @@ const initialForm = {
 const initialChecks = [false, false, false, false, false, false, false];
 const initialPlan = ["", "", "", "", "", "", ""];
 const initialDayImages = [null, null, null, null, null, null, null];
-
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.innerWidth <= 760 : false
-  );
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 760);
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  return isMobile;
-}
-
 
 function cleanSectionText(text) {
   return String(text || "")
@@ -654,18 +661,6 @@ function DetailPage({ type, onBack, onStart }) {
   };
 
   const page = detailMap[type] || detailMap.intro;
-  const isMobile = useIsMobile();
-
-  const detailHeroStyle = isMobile
-    ? (type === "intro" ? landingStyles.mobileDetailHeroIntroOnlySame : landingStyles.mobileDetailHeroSame)
-    : (type === "intro" ? landingStyles.detailHeroIntroOnly : landingStyles.detailHero);
-
-  const detailTitleStyle = isMobile
-    ? (type === "intro" ? landingStyles.mobileDetailTitleIntroOnlySame : landingStyles.mobileDetailTitleSame)
-    : (type === "intro" ? landingStyles.detailTitleIntroOnly : landingStyles.detailTitle);
-
-  const reviewHeaderStyle = isMobile ? landingStyles.mobileReviewDetailHeaderSame : landingStyles.reviewDetailHeader;
-  const reviewTitleStyle = isMobile ? landingStyles.mobileReviewDetailTitleSame : landingStyles.reviewDetailTitle;
 
   const mediaSections = {
     intro: [
@@ -757,7 +752,6 @@ function DetailPage({ type, onBack, onStart }) {
     },
   ];
 
-
   if (type === "reviews") {
     return (
       <div style={landingStyles.reviewDetailPage}>
@@ -769,20 +763,20 @@ function DetailPage({ type, onBack, onStart }) {
         </header>
 
         <main style={landingStyles.reviewDetailMain}>
-          <section style={reviewHeaderStyle}>
+          <section style={landingStyles.reviewDetailHeader}>
             <p style={landingStyles.detailEyebrow}>CUSTOMER STORIES</p>
-            <h1 style={reviewTitleStyle}>고객 경험담</h1>
+            <h1 style={landingStyles.reviewDetailTitle}>고객 경험담</h1>
           </section>
 
-          <section style={isMobile ? landingStyles.mobileReviewStoryGridSame : landingStyles.reviewStoryGrid}>
+          <section style={landingStyles.reviewStoryGrid}>
             {reviewStories.map((story) => (
-              <article key={story.title} style={isMobile ? landingStyles.mobileReviewStoryCardSame : landingStyles.reviewStoryCard}>
-                <div style={isMobile ? landingStyles.mobileReviewStoryImageWrapSame : landingStyles.reviewStoryImageWrap}>
+              <article key={story.title} style={landingStyles.reviewStoryCard}>
+                <div style={landingStyles.reviewStoryImageWrap}>
                   <img src={story.image} alt={story.title} style={landingStyles.reviewStoryImage} />
                   <div style={landingStyles.reviewStoryImageFallback}>후기 사진 영역</div>
                 </div>
-                <h2 style={isMobile ? landingStyles.mobileReviewStoryTitleSame : landingStyles.reviewStoryTitle}>{story.title}</h2>
-                <p style={isMobile ? landingStyles.mobileReviewStoryMetaSame : landingStyles.reviewStoryMeta}>{story.meta}</p>
+                <h2 style={landingStyles.reviewStoryTitle}>{story.title}</h2>
+                <p style={landingStyles.reviewStoryMeta}>{story.meta}</p>
               </article>
             ))}
           </section>
@@ -793,6 +787,7 @@ function DetailPage({ type, onBack, onStart }) {
 
   return (
     <div style={landingStyles.detailPage}>
+      <style>{mobileCss}</style>
       <header style={landingStyles.detailNav}>
         <button style={landingStyles.detailBackButton} onClick={onBack}>← 홈으로</button>
         <div style={landingStyles.brandDark}>VELAXION</div>
@@ -800,14 +795,14 @@ function DetailPage({ type, onBack, onStart }) {
       </header>
 
       <main style={landingStyles.detailMain}>
-        <section style={detailHeroStyle}>
+        <section style={type === "intro" ? landingStyles.detailHeroIntroOnly : landingStyles.detailHero}>
           <div>
             <p style={landingStyles.detailEyebrow}>{page.eyebrow}</p>
-            <h1 style={detailTitleStyle}>{page.title}</h1>
+            <h1 style={type === "intro" ? landingStyles.detailTitleIntroOnly : landingStyles.detailTitle}>{page.title}</h1>
             {page.subtitle ? <p style={landingStyles.detailSubtitle}>{page.subtitle}</p> : null}
           </div>
           {type !== "intro" ? (
-            <div style={isMobile ? landingStyles.mobileDetailVideoHeroSame : landingStyles.detailVideoHero}>
+            <div style={landingStyles.detailVideoHero}>
               <video
                 style={landingStyles.detailVideo}
                 autoPlay
@@ -827,8 +822,8 @@ function DetailPage({ type, onBack, onStart }) {
 
 
         {type === "intro" ? (
-          <section style={isMobile ? landingStyles.mobileIntroVideoBelowSectionSame : landingStyles.introVideoBelowSection}>
-            <div style={isMobile ? landingStyles.mobileIntroVideoBelowHeroSame : landingStyles.introVideoBelowHero}>
+          <section style={landingStyles.introVideoBelowSection}>
+            <div style={landingStyles.introVideoBelowHero}>
               <video
                 style={landingStyles.detailVideo}
                 autoPlay
@@ -851,20 +846,18 @@ function DetailPage({ type, onBack, onStart }) {
                 <Reveal key={item.title} delay={index * 90}>
                 <div
                   style={{
-                    ...(isMobile
-                      ? landingStyles.mobileDetailStorySectionSame
-                      : type === "principle"
-                        ? landingStyles.futureStorySection
-                        : landingStyles.detailStorySection),
+                    ...(type === "principle"
+                      ? landingStyles.futureStorySection
+                      : landingStyles.detailStorySection),
                     ...(type !== "principle" && index % 2 === 1 ? landingStyles.detailStoryReverse : null),
                   }}
                 >
-                  <div style={isMobile ? landingStyles.mobileDetailStoryTextBoxSame : type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
-                    <p style={isMobile ? landingStyles.mobileDetailStoryLabelSame : type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
-                    <h2 style={isMobile ? landingStyles.mobileDetailStoryTitleSame : type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
-                    <p style={isMobile ? landingStyles.mobileDetailStoryTextSame : type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
+                  <div style={type === "principle" ? landingStyles.futureStoryTextBox : landingStyles.detailStoryTextBox}>
+                    <p style={type === "principle" ? landingStyles.futureStoryLabel : landingStyles.detailStoryLabel}>{item.label}</p>
+                    <h2 style={type === "principle" ? landingStyles.futureStoryTitle : landingStyles.detailStoryTitle}>{item.title}</h2>
+                    <p style={type === "principle" ? landingStyles.futureStoryText : landingStyles.detailStoryText}>{item.text}</p>
                   </div>
-                  <div style={isMobile ? landingStyles.mobileDetailStoryMediaSame : type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
+                  <div style={type === "principle" ? landingStyles.futureStoryMedia : landingStyles.detailStoryMedia}>
                     <video
                       style={landingStyles.detailStoryVideo}
                       autoPlay
