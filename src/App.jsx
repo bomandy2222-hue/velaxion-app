@@ -788,6 +788,7 @@ function DetailPage({ type, onBack, onStart }) {
   return (
     <div style={landingStyles.detailPage}>
       <style>{mobileCss}</style>
+      <style>{mobileCss}</style>
       <header style={landingStyles.detailNav}>
         <button style={landingStyles.detailBackButton} onClick={onBack}>← 홈으로</button>
         <div style={landingStyles.brandDark}>VELAXION</div>
