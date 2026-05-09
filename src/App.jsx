@@ -674,11 +674,13 @@ function getStallCoachInsight({ checks, dailyPlan, lastCheckedAt, planStartedAt 
   const currentIndex = Array.isArray(checks) ? getCurrentDayIndex(checks) : 0;
   const currentAction = Array.isArray(dailyPlan) ? dailyPlan[currentIndex] : "";
 
+  // 이 카드는 오직 실행이 멈췄을 때만 보여준다.
+  // AI 분석 전 안내, 오늘 행동 표시, 일반 실행 미션 기능은 이 카드에서 제거했다.
   if (stoppedDays >= 5) {
     return {
       level: "fiveDay",
       stoppedDays,
-      title: "계획을 현실에 맞게 줄였어요",
+      title: "계획을 현실에 맞게 줄일 시간이에요",
       message: "현재 계획이 현실과 맞지 않는 것 같아요. 오늘부터 다시 시작할 수 있도록 5분 행동으로 줄여볼게요.",
       adjustedAction: makeMicroAction(currentAction, "fiveMinute"),
     };
@@ -694,23 +696,7 @@ function getStallCoachInsight({ checks, dailyPlan, lastCheckedAt, planStartedAt 
     };
   }
 
-  if (!currentAction) {
-    return {
-      level: "waitingAnalysis",
-      stoppedDays,
-      title: "아직 오늘 행동이 없어요",
-      message: "기본 정보와 목표를 적고 AI 분석을 누르면 오늘 실행할 행동이 정확한 시간과 함께 표시돼요.",
-      adjustedAction: "AI 분석을 먼저 시작해 주세요.",
-    };
-  }
-
-  return {
-    level: "active",
-    stoppedDays,
-    title: "오늘의 실행 미션",
-    message: "오늘 할 행동 하나만 완료하면 실행 흐름이 이어져요.",
-    adjustedAction: addDefaultActionTime(stripAdaptivePrefix(currentAction), currentIndex + 1),
-  };
+  return null;
 }
 
 function cleanSectionText(text) {
@@ -2962,34 +2948,26 @@ export default function App() {
           {adaptiveCoachInsight ? (
             <div style={styles.adaptiveCoachCard}>
               <div>
-                <p style={styles.adaptiveCoachEyebrow}>TODAY EXECUTION COACH</p>
+                <p style={styles.adaptiveCoachEyebrow}>AI MEMORY COACH</p>
                 <h3 style={styles.adaptiveCoachTitle}>{adaptiveCoachInsight.title}</h3>
                 <p style={styles.adaptiveCoachText}>{adaptiveCoachInsight.message}</p>
                 <div style={styles.adaptiveActionBox}>
-                  {adaptiveCoachInsight.level === "waitingAnalysis" ? (
-                    <span>AI 분석을 먼저 시작해 주세요.</span>
-                  ) : (
-                    <>
-                      <strong>오늘 행동</strong>
-                      <br />
-                      {adaptiveCoachInsight.adjustedAction}
-                    </>
-                  )}
+                  <strong>조정 제안</strong>
+                  <br />
+                  {adaptiveCoachInsight.adjustedAction || "오늘은 5분 행동 1개만 다시 시작하기"}
                 </div>
               </div>
 
-              {adaptiveCoachInsight.level !== "active" && adaptiveCoachInsight.level !== "waitingAnalysis" ? (
-                <button
-                  type="button"
-                  style={styles.primaryButton}
-                  onClick={applyAdaptiveCoachAction}
-                  disabled={lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`}
-                >
-                  {lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`
-                    ? "조정 완료"
-                    : "오늘 행동 줄이기"}
-                </button>
-              ) : null}
+              <button
+                type="button"
+                style={styles.primaryButton}
+                onClick={applyAdaptiveCoachAction}
+                disabled={lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`}
+              >
+                {lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`
+                  ? "조정 완료"
+                  : "오늘 행동 줄이기"}
+              </button>
             </div>
           ) : null}
 
