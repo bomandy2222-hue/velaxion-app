@@ -368,6 +368,123 @@ const initialChecks = [false, false, false, false, false, false, false];
 const initialPlan = ["", "", "", "", "", "", ""];
 const initialDayImages = [null, null, null, null, null, null, null];
 
+// ✅ VELAXION 지속력 시스템: 7일 → 30일 → 90일 확장
+const EXECUTION_STAGES = {
+  SEVEN: 7,
+  THIRTY: 30,
+  NINETY: 90,
+};
+
+function makeEmptyArray(length, value = false) {
+  return Array.from({ length }, () => value);
+}
+
+function normalizeArrayLength(items, length, fallback = false) {
+  const source = Array.isArray(items) ? items : [];
+  return Array.from({ length }, (_, index) =>
+    index < source.length ? source[index] : fallback
+  );
+}
+
+function getStageLabel(stage) {
+  if (stage === EXECUTION_STAGES.NINETY) return "90일 성장";
+  if (stage === EXECUTION_STAGES.THIRTY) return "30일 습관";
+  return "7일 실행";
+}
+
+function getNextStage(stage) {
+  if (stage === EXECUTION_STAGES.SEVEN) return EXECUTION_STAGES.THIRTY;
+  if (stage === EXECUTION_STAGES.THIRTY) return EXECUTION_STAGES.NINETY;
+  return null;
+}
+
+function getStageIntroMessage(stage) {
+  if (stage === EXECUTION_STAGES.THIRTY) {
+    return "7일 동안 행동을 증명했어요. 이제 진짜 변화를 만들기 위해 30일 습관 모드로 확장했어요.";
+  }
+
+  if (stage === EXECUTION_STAGES.NINETY) {
+    return "30일 동안 이어온 행동이 습관이 되기 시작했어요. 이제 90일 성장 모드로 더 깊게 확장했어요.";
+  }
+
+  return "오늘의 작은 행동부터 시작해요.";
+}
+
+function getDaysSince(value) {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) return 0;
+  return Math.max(0, Math.floor((Date.now() - time) / (24 * 60 * 60 * 1000)));
+}
+
+function makeMicroAction(originalAction, level = "small") {
+  const action = String(originalAction || "오늘 해야 할 행동을 아주 작게 시작하기").trim();
+
+  if (level === "fiveMinute") {
+    return `5분만 하기: ${action}`;
+  }
+
+  return `더 작은 행동 1개: ${action}`;
+}
+
+function buildExtendedPlan(previousPlan, nextStage, goal) {
+  const baseGoal = String(goal || "나의 목표").trim() || "나의 목표";
+  const previous = Array.isArray(previousPlan) ? previousPlan.filter(Boolean) : [];
+
+  return Array.from({ length: nextStage }, (_, index) => {
+    if (index < previous.length) return previous[index];
+
+    const day = index + 1;
+
+    if (nextStage === EXECUTION_STAGES.THIRTY) {
+      const week = Math.ceil(day / 7);
+      return `Week ${week} · Day ${day}: ${baseGoal}을 위해 오늘 실행할 작은 행동 1개를 정하고 사진으로 증명하기`;
+    }
+
+    const month = Math.ceil(day / 30);
+    return `${month}단계 · Day ${day}: ${baseGoal}을 유지하기 위한 5분 행동 1개 실행하고 기록하기`;
+  });
+}
+
+function getStallCoachInsight({ checks, dailyPlan, lastCheckedAt, planStartedAt }) {
+  const completed = Array.isArray(checks) ? checks.filter(Boolean).length : 0;
+  const allDone = Array.isArray(checks) && checks.length > 0 && completed === checks.length;
+  if (allDone) return null;
+
+  const baseDate = lastCheckedAt || planStartedAt;
+  const stoppedDays = getDaysSince(baseDate);
+  const currentIndex = Array.isArray(checks) ? getCurrentDayIndex(checks) : 0;
+  const currentAction = Array.isArray(dailyPlan) ? dailyPlan[currentIndex] : "";
+
+  if (stoppedDays >= 5) {
+    return {
+      level: "fiveDay",
+      stoppedDays,
+      title: "계획을 현실에 맞게 줄였어요",
+      message: "현재 계획이 현실과 맞지 않는 것 같아요. 오늘부터 다시 시작할 수 있도록 5분 행동으로 줄여볼게요.",
+      adjustedAction: makeMicroAction(currentAction, "fiveMinute"),
+    };
+  }
+
+  if (stoppedDays >= 2) {
+    return {
+      level: "twoDay",
+      stoppedDays,
+      title: "오늘은 더 작게 다시 시작해요",
+      message: "괜찮아요. 멈춘 건 실패가 아니에요. 지금 계획이 조금 부담스러웠던 것 같아요. 오늘은 더 작은 행동 1개로 조정해볼게요.",
+      adjustedAction: makeMicroAction(currentAction, "small"),
+    };
+  }
+
+  return {
+    level: "active",
+    stoppedDays,
+    title: "실행 흐름 유지 중",
+    message: "오늘 할 행동 하나만 완료하면 흐름이 이어져요.",
+    adjustedAction: currentAction || "AI 분석 후 오늘의 행동이 표시돼요.",
+  };
+}
+
 function cleanSectionText(text) {
   return String(text || "")
     .replace(/^#+\s*/gm, "")
@@ -1480,6 +1597,9 @@ export default function App() {
   const [dailyPlan, setDailyPlan] = useState(initialPlan);
   const [lastCheckedAt, setLastCheckedAt] = useState(null);
   const [dayImages, setDayImages] = useState(initialDayImages);
+  const [executionStage, setExecutionStage] = useState(EXECUTION_STAGES.SEVEN);
+  const [planStartedAt, setPlanStartedAt] = useState(new Date().toISOString());
+  const [lastAdaptiveCoachKey, setLastAdaptiveCoachKey] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -1505,12 +1625,20 @@ export default function App() {
     return Math.round((done / checks.length) * 100);
   }, [checks]);
 
+  const currentStageLabel = useMemo(() => getStageLabel(executionStage), [executionStage]);
+
+  const adaptiveCoachInsight = useMemo(
+    () => getStallCoachInsight({ checks, dailyPlan, lastCheckedAt, planStartedAt }),
+    [checks, dailyPlan, lastCheckedAt, planStartedAt]
+  );
+
   const parsedAnalysis = useMemo(() => parseAnalysisSections(analysis), [analysis]);
 
   useEffect(() => {
+    if (executionStage !== EXECUTION_STAGES.SEVEN) return;
     const nextPlan = extractSevenDayPlan(parsedAnalysis.plan);
     setDailyPlan(nextPlan);
-  }, [parsedAnalysis.plan]);
+  }, [parsedAnalysis.plan, executionStage]);
 
   useEffect(() => {
     coachBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1553,9 +1681,31 @@ export default function App() {
             setLastCheckedAt(data.lastCheckedAt);
           }
 
-          if (Array.isArray(data.dayImages) && data.dayImages.length === 7) {
+          const savedStage = [EXECUTION_STAGES.SEVEN, EXECUTION_STAGES.THIRTY, EXECUTION_STAGES.NINETY].includes(Number(data.executionStage))
+            ? Number(data.executionStage)
+            : EXECUTION_STAGES.SEVEN;
+
+          setExecutionStage(savedStage);
+
+          if (typeof data.planStartedAt === "string") {
+            setPlanStartedAt(data.planStartedAt);
+          }
+
+          if (typeof data.lastAdaptiveCoachKey === "string") {
+            setLastAdaptiveCoachKey(data.lastAdaptiveCoachKey);
+          }
+
+          if (Array.isArray(data.checks)) {
+            setChecks(normalizeArrayLength(data.checks, savedStage, false));
+          }
+
+          if (Array.isArray(data.dailyPlan)) {
+            setDailyPlan(normalizeArrayLength(data.dailyPlan, savedStage, ""));
+          }
+
+          if (Array.isArray(data.dayImages)) {
             setDayImages(
-              data.dayImages.map((item) => {
+              normalizeArrayLength(data.dayImages, savedStage, null).map((item) => {
                 if (!item || typeof item !== "object") return null;
                 return {
                   name: item.name || "",
@@ -1613,6 +1763,10 @@ export default function App() {
           form: nextForm,
           checks: nextChecks,
           analysis: nextAnalysis,
+          dailyPlan,
+          executionStage,
+          planStartedAt,
+          lastAdaptiveCoachKey,
           lastCheckedAt: nextLastCheckedAt,
           dayImages: nextDayImages.map((item) =>
             item
@@ -1652,7 +1806,7 @@ export default function App() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [form, checks, analysis, lastCheckedAt, dayImages, user, loading]);
+  }, [form, checks, analysis, lastCheckedAt, dayImages, dailyPlan, executionStage, planStartedAt, lastAdaptiveCoachKey, user, loading]);
 
   const handleLogin = async () => {
     try {
@@ -1682,6 +1836,9 @@ export default function App() {
       setDailyPlan(initialPlan);
       setLastCheckedAt(null);
       setDayImages(initialDayImages);
+      setExecutionStage(EXECUTION_STAGES.SEVEN);
+      setPlanStartedAt(new Date().toISOString());
+      setLastAdaptiveCoachKey("");
       setCoachMessages([]);
       setCoachQuestion("");
       setMessage("로그아웃 완료.");
@@ -1833,6 +1990,80 @@ export default function App() {
     }
   };
 
+  const applyAdaptiveCoachAction = async () => {
+    if (!adaptiveCoachInsight || !user) return;
+
+    const currentIndex = getCurrentDayIndex(checks);
+    if (currentIndex < 0) return;
+
+    const coachKey = `${adaptiveCoachInsight.level}-${currentIndex}-${adaptiveCoachInsight.stoppedDays}`;
+    const nextPlan = normalizeArrayLength(dailyPlan, checks.length, "");
+    nextPlan[currentIndex] = adaptiveCoachInsight.adjustedAction;
+
+    setDailyPlan(nextPlan);
+    setLastAdaptiveCoachKey(coachKey);
+    setMessage("AI 기억 코치가 오늘 행동을 더 작게 조정했어.");
+    setMessageType("success");
+
+    await setDoc(
+      doc(db, "users", user.uid),
+      {
+        dailyPlan: nextPlan,
+        lastAdaptiveCoachKey: coachKey,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  };
+
+  const expandExecutionStage = async (completedChecks, completedDayImages, completedAt) => {
+    const nextStage = getNextStage(executionStage);
+
+    if (!nextStage) {
+      setMessage("90일 성장까지 완료했어. 이제 너만의 장기 루틴을 만들 수 있어.");
+      setMessageType("success");
+      return;
+    }
+
+    const nextChecks = normalizeArrayLength(completedChecks, nextStage, false);
+    const nextImages = normalizeArrayLength(completedDayImages, nextStage, null);
+    const nextPlan = buildExtendedPlan(dailyPlan, nextStage, form.goal);
+    const nowIso = new Date().toISOString();
+
+    setExecutionStage(nextStage);
+    setChecks(nextChecks);
+    setDayImages(nextImages);
+    setDailyPlan(nextPlan);
+    setPlanStartedAt(nowIso);
+    setLastAdaptiveCoachKey("");
+    setMessage(getStageIntroMessage(nextStage));
+    setMessageType("success");
+
+    await setDoc(
+      doc(db, "users", user.uid),
+      {
+        checks: nextChecks,
+        dayImages: nextImages.map((item) =>
+          item
+            ? {
+                name: item.name || "",
+                url: item.url || item.preview || "",
+                preview: item.preview || item.url || "",
+                path: item.path || "",
+              }
+            : null
+        ),
+        dailyPlan: nextPlan,
+        executionStage: nextStage,
+        planStartedAt: nowIso,
+        lastAdaptiveCoachKey: "",
+        lastCheckedAt: completedAt,
+        updatedAt: nowIso,
+      },
+      { merge: true }
+    );
+  };
+
   const toggleCheck = async (index) => {
     if (!user) {
       setMessage("먼저 로그인해줘.");
@@ -1871,10 +2102,16 @@ export default function App() {
 
     setChecks(updatedChecks);
     setLastCheckedAt(nowIso);
+    const isStageComplete = updatedChecks.every(Boolean);
+
     setMessage(`Day ${index + 1} 완료!`);
     setMessageType("success");
 
     await saveToFirestore(form, updatedChecks, analysis, nowIso, dayImages, "");
+
+    if (isStageComplete) {
+      await expandExecutionStage(updatedChecks, dayImages, nowIso);
+    }
   };
 
   const saveCoachMessagesToFirestore = async (nextMessages) => {
@@ -2017,7 +2254,10 @@ export default function App() {
       }
 
       const resultText = data.result || "분석 결과가 없어.";
+      const nowIso = new Date().toISOString();
       setAnalysis(resultText);
+      setPlanStartedAt(nowIso);
+      setLastAdaptiveCoachKey("");
       setMessage("AI 분석 완료!");
       setMessageType("success");
 
@@ -2100,7 +2340,7 @@ export default function App() {
             <div>
               <p style={styles.commandLabel}>오늘의 실행 상태</p>
               <h2 style={styles.commandTitle}>
-                {currentDayIndex === -1 ? "7일 실행 완료" : `Day ${currentDayIndex + 1} 실행 준비`}
+                {currentDayIndex === -1 ? `${currentStageLabel} 완료` : `Day ${currentDayIndex + 1} 실행 준비`}
               </h2>
               <p style={styles.commandText}>
                 컨설팅은 방향을 만들고, 코칭은 실행을 계속 이어가게 합니다.
@@ -2114,7 +2354,7 @@ export default function App() {
               </div>
               <div style={styles.commandStatCard}>
                 <span>완료</span>
-                <strong>{checks.filter(Boolean).length}/7</strong>
+                <strong>{checks.filter(Boolean).length}/{checks.length}</strong>
               </div>
               <div style={styles.commandStatCard}>
                 <span>인증 사진</span>
@@ -2209,7 +2449,7 @@ export default function App() {
 
         <div style={styles.card}>
           <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>7일 실행 체크</h2>
+            <h2 style={styles.sectionTitle}>{currentStageLabel} 실행 체크</h2>
             <span style={styles.progressText}>{progress}%</span>
           </div>
 
@@ -2223,7 +2463,48 @@ export default function App() {
           </div>
 
           <div style={styles.autoSaveHint}>
-            AI가 만든 7일 계획과 연결돼. 체크하려면 사진 촬영 또는 갤러리 이미지를 먼저 등록해야 해.
+            AI가 만든 실행 계획과 연결돼. 7일을 끝내면 30일로, 30일을 끝내면 90일로 자동 확장돼. 체크하려면 사진 촬영 또는 갤러리 이미지를 먼저 등록해야 해.
+          </div>
+
+          {adaptiveCoachInsight ? (
+            <div style={styles.adaptiveCoachCard}>
+              <div>
+                <p style={styles.adaptiveCoachEyebrow}>AI MEMORY COACH</p>
+                <h3 style={styles.adaptiveCoachTitle}>{adaptiveCoachInsight.title}</h3>
+                <p style={styles.adaptiveCoachText}>{adaptiveCoachInsight.message}</p>
+                <div style={styles.adaptiveActionBox}>
+                  {adaptiveCoachInsight.adjustedAction}
+                </div>
+              </div>
+
+              {adaptiveCoachInsight.level !== "active" ? (
+                <button
+                  type="button"
+                  style={styles.primaryButton}
+                  onClick={applyAdaptiveCoachAction}
+                  disabled={lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`}
+                >
+                  {lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`
+                    ? "조정 완료"
+                    : "오늘 행동 줄이기"}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div style={styles.stageSystemGrid}>
+            <div style={styles.stageSystemCard}>
+              <strong>7일</strong>
+              <span>처음 실행을 증명</span>
+            </div>
+            <div style={styles.stageSystemCard}>
+              <strong>30일</strong>
+              <span>행동을 습관으로 확장</span>
+            </div>
+            <div style={styles.stageSystemCard}>
+              <strong>90일</strong>
+              <span>성장 패턴으로 고정</span>
+            </div>
           </div>
 
           <div style={styles.dayPlanGrid}>
@@ -2417,7 +2698,7 @@ export default function App() {
                   <span style={styles.resultBadge}>03</span>
                   <div>
                     <p style={styles.resultKicker}>ACTION PLAN</p>
-                    <h3 style={styles.resultTitle}>7일 행동 계획</h3>
+                    <h3 style={styles.resultTitle}>{currentStageLabel} 행동 계획</h3>
                   </div>
                 </div>
 
@@ -2571,6 +2852,63 @@ const styles = {
   subtleText: {
     color: "#6b7280",
     fontSize: "15px",
+  },
+  adaptiveCoachCard: {
+    marginTop: "18px",
+    marginBottom: "18px",
+    padding: "20px",
+    borderRadius: "26px",
+    background: "linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,41,59,0.94))",
+    color: "#ffffff",
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: "18px",
+    alignItems: "center",
+    boxShadow: "0 20px 50px rgba(15,23,42,0.22)",
+    border: "1px solid rgba(255,255,255,0.12)",
+  },
+  adaptiveCoachEyebrow: {
+    margin: 0,
+    fontSize: "12px",
+    letterSpacing: "0.16em",
+    color: "#facc15",
+    fontWeight: 900,
+  },
+  adaptiveCoachTitle: {
+    margin: "8px 0 0",
+    fontSize: "22px",
+    letterSpacing: "-0.035em",
+  },
+  adaptiveCoachText: {
+    margin: "10px 0 0",
+    color: "rgba(255,255,255,0.78)",
+    lineHeight: 1.7,
+    fontSize: "15px",
+  },
+  adaptiveActionBox: {
+    marginTop: "14px",
+    padding: "14px 16px",
+    borderRadius: "18px",
+    background: "rgba(255,255,255,0.1)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    color: "#fff7ed",
+    lineHeight: 1.65,
+    fontWeight: 800,
+  },
+  stageSystemGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "12px",
+    margin: "0 0 18px",
+  },
+  stageSystemCard: {
+    padding: "16px",
+    borderRadius: "20px",
+    background: "rgba(248,250,252,0.9)",
+    border: "1px solid rgba(148,163,184,0.22)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
   },
   card: {
     background: "linear-gradient(180deg, rgba(255,255,255,0.88), rgba(245,248,252,0.82))",
