@@ -367,6 +367,8 @@ const initialForm = {
 const initialChecks = [false, false, false, false, false, false, false];
 const initialPlan = ["", "", "", "", "", "", ""];
 const initialDayImages = [null, null, null, null, null, null, null];
+const initialDayJournals = ["", "", "", "", "", "", ""];
+const initialDayCoachings = ["", "", "", "", "", "", ""];
 
 // ✅ VELAXION 지속력 시스템: 7일 → 30일 → 90일 확장
 const EXECUTION_STAGES = {
@@ -620,6 +622,27 @@ function replaceDayActionInAnalysis(analysisText, dayNumber, nextAction) {
   }
 
   return `${text}\n\nAI MEMORY COACH 조정 계획\n${replacement}`;
+}
+
+
+function buildDayJournalCoaching({ journal, action, emotionId, dayNumber, goal }) {
+  const profile = getEmotionProfile(emotionId);
+  const cleanJournal = String(journal || "").trim();
+  const cleanAction = String(action || "오늘 행동").trim();
+  const cleanGoal = String(goal || "목표").trim();
+  const emotionLine = profile ? `${profile.emoji} ${profile.label}` : "감정 미선택";
+
+  return [
+    `Day ${dayNumber} AI 코칭`,
+    `오늘 기록: ${cleanJournal || "기록 없음"}`,
+    `감정 상태: ${emotionLine}`,
+    `실행한 행동: ${cleanAction}`,
+    "",
+    "1. 오늘 가장 중요한 성과는 완벽하게 한 것이 아니라 실제로 움직였다는 점이에요.",
+    `2. ${cleanGoal}에 가까워지려면 내일도 같은 시간대에 더 작은 행동 1개를 먼저 끝내세요.`,
+    "3. 내일 기준은 크게 잡지 말고, 시작 5분 + 사진 인증 + 한 줄 기록으로 충분해요.",
+    "직설적으로 말하면, 기분이 좋아질 때까지 기다리면 늦어요. 작게라도 움직인 사람이 목표에 가까워져요.",
+  ].join("\n");
 }
 
 function buildExtendedPlan(previousPlan, nextStage, goal) {
@@ -1792,6 +1815,10 @@ export default function App() {
   const [dailyPlan, setDailyPlan] = useState(initialPlan);
   const [lastCheckedAt, setLastCheckedAt] = useState(null);
   const [dayImages, setDayImages] = useState(initialDayImages);
+  const [dayJournals, setDayJournals] = useState(initialDayJournals);
+  const [dayCoachings, setDayCoachings] = useState(initialDayCoachings);
+  const [activeJournalIndex, setActiveJournalIndex] = useState(null);
+  const [journalLoadingIndex, setJournalLoadingIndex] = useState(null);
   const [executionStage, setExecutionStage] = useState(EXECUTION_STAGES.SEVEN);
   const [planStartedAt, setPlanStartedAt] = useState(new Date().toISOString());
   const [lastAdaptiveCoachKey, setLastAdaptiveCoachKey] = useState("");
@@ -1927,6 +1954,14 @@ export default function App() {
             );
           }
 
+          if (Array.isArray(data.dayJournals)) {
+            setDayJournals(normalizeArrayLength(data.dayJournals, savedStage, "").map((item) => String(item || "")));
+          }
+
+          if (Array.isArray(data.dayCoachings)) {
+            setDayCoachings(normalizeArrayLength(data.dayCoachings, savedStage, "").map((item) => String(item || "")));
+          }
+
           if (Array.isArray(data.aiCoachMessages)) {
             setCoachMessages(
               data.aiCoachMessages
@@ -1990,6 +2025,8 @@ export default function App() {
                 }
               : null
           ),
+          dayJournals,
+          dayCoachings,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
@@ -2018,7 +2055,7 @@ export default function App() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [form, checks, analysis, lastCheckedAt, dayImages, dailyPlan, executionStage, planStartedAt, lastAdaptiveCoachKey, selectedEmotion, lastEmotionCoachKey, user, loading]);
+  }, [form, checks, analysis, lastCheckedAt, dayImages, dayJournals, dayCoachings, dailyPlan, executionStage, planStartedAt, lastAdaptiveCoachKey, selectedEmotion, lastEmotionCoachKey, user, loading]);
 
   const handleLogin = async () => {
     try {
@@ -2048,6 +2085,10 @@ export default function App() {
       setDailyPlan(initialPlan);
       setLastCheckedAt(null);
       setDayImages(initialDayImages);
+      setDayJournals(initialDayJournals);
+      setDayCoachings(initialDayCoachings);
+      setActiveJournalIndex(null);
+      setJournalLoadingIndex(null);
       setExecutionStage(EXECUTION_STAGES.SEVEN);
       setPlanStartedAt(new Date().toISOString());
       setLastAdaptiveCoachKey("");
@@ -2284,12 +2325,16 @@ export default function App() {
 
     const nextChecks = normalizeArrayLength(completedChecks, nextStage, false);
     const nextImages = normalizeArrayLength(completedDayImages, nextStage, null);
+    const nextJournals = normalizeArrayLength(dayJournals, nextStage, "");
+    const nextCoachings = normalizeArrayLength(dayCoachings, nextStage, "");
     const nextPlan = buildExtendedPlan(dailyPlan, nextStage, form.goal);
     const nowIso = new Date().toISOString();
 
     setExecutionStage(nextStage);
     setChecks(nextChecks);
     setDayImages(nextImages);
+    setDayJournals(nextJournals);
+    setDayCoachings(nextCoachings);
     setDailyPlan(nextPlan);
     setPlanStartedAt(nowIso);
     setLastAdaptiveCoachKey("");
@@ -2312,6 +2357,8 @@ export default function App() {
             : null
         ),
         dailyPlan: nextPlan,
+        dayJournals: nextJournals,
+        dayCoachings: nextCoachings,
         executionStage: nextStage,
         planStartedAt: nowIso,
         lastAdaptiveCoachKey: "",
@@ -2321,6 +2368,103 @@ export default function App() {
       },
       { merge: true }
     );
+  };
+
+  const handleJournalChange = (index, value) => {
+    const nextJournals = normalizeArrayLength(dayJournals, checks.length, "");
+    nextJournals[index] = value;
+    setDayJournals(nextJournals);
+  };
+
+  const generateDayJournalCoaching = async (index) => {
+    if (!user) {
+      setMessage("AI 일기 코칭을 사용하려면 먼저 로그인해줘.");
+      setMessageType("error");
+      return;
+    }
+
+    const journal = String(dayJournals[index] || "").trim();
+    if (!journal) {
+      setMessage("오늘 무엇을 했는지 짧게라도 적어줘. 그래야 AI가 정확하게 코칭할 수 있어.");
+      setMessageType("error");
+      return;
+    }
+
+    try {
+      setJournalLoadingIndex(index);
+      setMessage("");
+
+      let coachingText = "";
+
+      try {
+        const res = await fetch("/api/coach", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            question: `오늘 Day ${index + 1} 실행 일기를 보고, 세계 최고 수준의 실행 코치처럼 직설적이고 따뜻하게 피드백해줘. 무엇을 잘했고, 무엇을 고쳐야 하고, 내일 정확히 무엇을 해야 하는지 알려줘. 일기: ${journal}`,
+            name: form.name,
+            concern: form.concern,
+            goal: form.goal,
+            analysis,
+            dailyPlan,
+            checks,
+            progress,
+            selectedEmotion,
+            emotionProfile: getEmotionProfile(selectedEmotion),
+            completedDays: checks.filter(Boolean).length,
+            dayJournal: journal,
+            dayNumber: index + 1,
+            coachMessages: coachMessages.slice(-6),
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.result) {
+          coachingText = data.result;
+        }
+      } catch (aiError) {
+        console.error("DAY JOURNAL AI COACH FALLBACK:", aiError);
+      }
+
+      if (!coachingText) {
+        coachingText = buildDayJournalCoaching({
+          journal,
+          action: dailyPlan[index],
+          emotionId: selectedEmotion,
+          dayNumber: index + 1,
+          goal: form.goal,
+        });
+      }
+
+      const nextJournals = normalizeArrayLength(dayJournals, checks.length, "");
+      const nextCoachings = normalizeArrayLength(dayCoachings, checks.length, "");
+      nextJournals[index] = journal;
+      nextCoachings[index] = coachingText;
+
+      setDayJournals(nextJournals);
+      setDayCoachings(nextCoachings);
+      setActiveJournalIndex(index);
+      setMessage(`Day ${index + 1} 일기 기반 AI 코칭이 완료됐어.`);
+      setMessageType("success");
+
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          dayJournals: nextJournals,
+          dayCoachings: nextCoachings,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("DAY JOURNAL COACH ERROR:", error);
+      setMessage(`일기 코칭 실패: ${error.message || "unknown"}`);
+      setMessageType("error");
+    } finally {
+      setJournalLoadingIndex(null);
+    }
   };
 
   const toggleCheck = async (index) => {
@@ -2361,9 +2505,10 @@ export default function App() {
 
     setChecks(updatedChecks);
     setLastCheckedAt(nowIso);
+    setActiveJournalIndex(index);
     const isStageComplete = updatedChecks.every(Boolean);
 
-    setMessage(`Day ${index + 1} 완료!`);
+    setMessage(`Day ${index + 1} 완료! 오늘 무엇을 했는지 일기처럼 적으면 AI가 바로 코칭해줘.`);
     setMessageType("success");
 
     await saveToFirestore(form, updatedChecks, analysis, nowIso, dayImages, "");
@@ -2955,6 +3100,58 @@ export default function App() {
                       )}
                     </div>
                   </div>
+
+                  {checked ? (
+                    <div style={styles.dayJournalBox}>
+                      <div style={styles.dayJournalHeader}>
+                        <div>
+                          <p style={styles.dayJournalKicker}>DAY {index + 1} JOURNAL</p>
+                          <h4 style={styles.dayJournalTitle}>오늘 뭐 했는지 적으면 AI가 바로 코칭해줘</h4>
+                        </div>
+                        <button
+                          type="button"
+                          style={styles.journalToggleButton}
+                          onClick={() => setActiveJournalIndex(activeJournalIndex === index ? null : index)}
+                        >
+                          {activeJournalIndex === index ? "닫기" : "일기 쓰기"}
+                        </button>
+                      </div>
+
+                      {activeJournalIndex === index ? (
+                        <div style={styles.dayJournalContent}>
+                          <textarea
+                            style={styles.dayJournalTextarea}
+                            placeholder="예: 오늘 20:00에 5분만 하려고 했는데 12분 했다. 시작 전에는 귀찮았지만 하고 나니까 조금 자신감이 생겼다."
+                            value={dayJournals[index] || ""}
+                            onChange={(e) => handleJournalChange(index, e.target.value)}
+                            rows={4}
+                          />
+                          <button
+                            type="button"
+                            style={{
+                              ...styles.primaryButton,
+                              ...(journalLoadingIndex === index ? styles.disabledButton : null),
+                            }}
+                            onClick={() => generateDayJournalCoaching(index)}
+                            disabled={journalLoadingIndex === index}
+                          >
+                            {journalLoadingIndex === index ? "AI 코칭 중..." : "일기 저장하고 AI 코칭 받기"}
+                          </button>
+
+                          {dayCoachings[index] ? (
+                            <div style={styles.dayCoachingResultBox}>
+                              <p style={styles.dayJournalKicker}>VELAXION AI COACHING</p>
+                              <div style={styles.dayCoachingText}>{dayCoachings[index]}</div>
+                            </div>
+                          ) : (
+                            <p style={styles.dayJournalHint}>완료한 행동을 적으면 AI가 잘한 점, 부족한 점, 내일 해야 할 행동을 바로 정리해줘.</p>
+                          )}
+                        </div>
+                      ) : dayCoachings[index] ? (
+                        <div style={styles.dayCoachingMiniBox}>AI 코칭 완료 · 눌러서 다시 보기</div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
@@ -3436,6 +3633,89 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
     gap: "14px",
+  },
+  dayJournalBox: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 22,
+    border: "1px solid rgba(15,23,42,0.1)",
+    background: "linear-gradient(135deg, rgba(239,246,255,0.9), rgba(255,255,255,0.96))",
+  },
+  dayJournalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 12,
+  },
+  dayJournalKicker: {
+    margin: 0,
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: "0.16em",
+    color: "#2563eb",
+    textTransform: "uppercase",
+  },
+  dayJournalTitle: {
+    margin: "4px 0 0",
+    fontSize: 16,
+    fontWeight: 900,
+    color: "#0f172a",
+  },
+  journalToggleButton: {
+    border: "none",
+    borderRadius: 999,
+    padding: "10px 14px",
+    background: "#0f172a",
+    color: "#fff",
+    fontWeight: 800,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  dayJournalContent: {
+    display: "grid",
+    gap: 12,
+  },
+  dayJournalTextarea: {
+    width: "100%",
+    border: "1px solid rgba(15,23,42,0.12)",
+    borderRadius: 18,
+    padding: 14,
+    fontSize: 15,
+    lineHeight: 1.6,
+    resize: "vertical",
+    background: "rgba(255,255,255,0.92)",
+    color: "#0f172a",
+    outline: "none",
+  },
+  dayJournalHint: {
+    margin: 0,
+    fontSize: 13,
+    lineHeight: 1.6,
+    color: "#64748b",
+  },
+  dayCoachingResultBox: {
+    padding: 16,
+    borderRadius: 18,
+    background: "#111827",
+    color: "#fff",
+    boxShadow: "0 16px 40px rgba(15,23,42,0.18)",
+  },
+  dayCoachingText: {
+    marginTop: 8,
+    whiteSpace: "pre-wrap",
+    lineHeight: 1.7,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
+  },
+  dayCoachingMiniBox: {
+    marginTop: 10,
+    padding: "10px 12px",
+    borderRadius: 14,
+    background: "rgba(37,99,235,0.08)",
+    color: "#1d4ed8",
+    fontWeight: 800,
+    fontSize: 13,
   },
   dayPlanCard: {
     display: "block",
