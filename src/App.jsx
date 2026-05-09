@@ -597,6 +597,58 @@ function buildEmotionAnalysisNote(emotionId, adjustedAction, dayNumber) {
 코치 기준: ${profile.tone}. 감정이 낮은 날은 완벽함보다 복귀를 우선하고, 컨디션이 좋은 날은 성장 폭을 조금 키웁니다.`;
 }
 
+
+function buildEmotionRebuiltAnalysis({ analysisText, dayNumber, adjustedAction, emotionId, progress, name }) {
+  const profile = getEmotionProfile(emotionId);
+  const parsed = parseAnalysisSections(analysisText);
+  const cleanName = String(name || "사용자").trim() || "사용자";
+  const cleanAction = addDefaultActionTime(stripAdaptivePrefix(adjustedAction), dayNumber);
+
+  const planItems = Array.from({ length: 7 }, (_, index) => {
+    const existing = parsed.plan?.[index]
+      ? getPlanDisplayText(parsed.plan[index])
+      : `20:00: 목표와 연결된 작은 행동 1개 실행하기`;
+    return index === dayNumber - 1 ? cleanAction : existing;
+  });
+
+  const emotionLabel = profile ? `${profile.emoji} ${profile.label}` : "감정 미선택";
+  const emotionMessage = profile ? profile.message : "오늘 상태에 맞게 실행 행동을 다시 조정했어요.";
+  const emotionTone = profile ? profile.tone : "기본 난이도 유지";
+
+  const currentText = [
+    `${cleanName}님은 현재 ${progress}%까지 실행을 이어왔어요.`,
+    `오늘 감정 상태는 ${emotionLabel}이에요.`,
+    `그래서 전체 목표를 바꾸는 게 아니라 현재 진행 중인 Day ${dayNumber} 행동만 현실에 맞게 다시 배치했어요.`,
+    emotionMessage,
+  ].join(" ");
+
+  const coreText = [
+    "지금 핵심은 더 많은 일을 하는 게 아니라 오늘 끝낼 수 있는 크기로 행동을 낮추는 거예요.",
+    `완료한 Day는 그대로 유지하고, Day ${dayNumber}만 '${emotionTone}' 기준으로 바꿨어요.`,
+    "이렇게 해야 흐름이 끊기지 않고 다시 이어져요.",
+  ].join(" ");
+
+  const cheerText = [
+    "좋아. 오늘은 크게 이기려고 하지 말고 딱 하나만 끝내면 돼요.",
+    `오늘 기준은 Day ${dayNumber} · ${cleanAction} 입니다.`,
+    "완벽함보다 다시 움직이는 사람이 결국 목표에 가까워져요.",
+  ].join(" ");
+
+  return [
+    "현재 상태 분석",
+    currentText,
+    "",
+    "가장 중요한 핵심 문제",
+    coreText,
+    "",
+    "바로 실천할 수 있는 7일 행동 계획",
+    ...planItems.map((item, index) => `Day ${index + 1}: ${item}`),
+    "",
+    "짧은 응원 한마디",
+    cheerText,
+  ].join("\n");
+}
+
 function getEmotionCoachInsight({ selectedEmotion, checks, dailyPlan }) {
   const profile = getEmotionProfile(selectedEmotion);
   if (!profile) return null;
@@ -2423,17 +2475,29 @@ export default function App() {
     if (currentIndex < 0) return;
 
     const emotionKey = `${emotionCoachInsight.id}-${currentIndex}-${new Date().toISOString().slice(0, 10)}`;
-    const adjustedAction = emotionCoachInsight.adjustedAction;
+    const adjustedAction = addDefaultActionTime(
+      stripAdaptivePrefix(emotionCoachInsight.adjustedAction),
+      currentIndex + 1
+    );
     const nextPlan = normalizeArrayLength(dailyPlan, checks.length, "");
     nextPlan[currentIndex] = adjustedAction;
 
-    let nextAnalysis = replaceDayActionInAnalysis(analysis, currentIndex + 1, adjustedAction);
-    nextAnalysis = `${nextAnalysis}${buildEmotionAnalysisNote(selectedEmotion, adjustedAction, currentIndex + 1)}`;
+    // ✅ 기존 방식은 짧은 응원 한마디 아래에 감정 재배치 메모가 붙는 문제가 있었음.
+    // ✅ 이제는 분석 문자열을 새로 구성해서 오른쪽 ACTION PLAN의 현재 Day가 즉시 바뀌게 한다.
+    // ✅ 완료한 Day는 유지하고, 현재 진행 중인 Day만 감정에 맞게 변경한다.
+    const nextAnalysis = buildEmotionRebuiltAnalysis({
+      analysisText: analysis,
+      dayNumber: currentIndex + 1,
+      adjustedAction,
+      emotionId: selectedEmotion,
+      progress,
+      name: form.name,
+    });
 
     setDailyPlan(nextPlan);
     setAnalysis(nextAnalysis);
     setLastEmotionCoachKey(emotionKey);
-    setMessage(`${emotionCoachInsight.emoji} ${emotionCoachInsight.label} 상태에 맞게 오늘 AI 분석과 실행 계획을 재배치했어.`);
+    setMessage(`${emotionCoachInsight.emoji} ${emotionCoachInsight.label} 상태에 맞게 오른쪽 Day ${currentIndex + 1} 계획을 바로 재배치했어.`);
     setMessageType("success");
 
     await setDoc(
