@@ -417,14 +417,76 @@ function getDaysSince(value) {
   return Math.max(0, Math.floor((Date.now() - time) / (24 * 60 * 60 * 1000)));
 }
 
+function stripAdaptivePrefix(action) {
+  let cleanAction = String(action || "오늘 해야 할 행동을 아주 작게 시작하기").trim();
+
+  // ✅ 이미 AI MEMORY COACH가 붙인 문구가 다시 붙으면서
+  // "5분만 하기: 5분만 하기:"처럼 반복되는 오류 방지
+  cleanAction = cleanAction
+    .replace(/^오늘\s*\d{1,2}:\d{2}에\s*/g, "")
+    .replace(/^\d{1,2}:\d{2}\s*[:에]?\s*/g, "")
+    .replace(/^(5분만\s*하기\s*[:：]\s*)+/g, "")
+    .replace(/^(더\s*작은\s*행동\s*1개\s*[:：]\s*)+/g, "")
+    .trim();
+
+  return cleanAction || "오늘 해야 할 행동을 아주 작게 시작하기";
+}
+
+function hasSpecificTime(action) {
+  return /(\d{1,2}\s*[:시]\s*\d{0,2}|오전|오후|아침|점심|저녁|밤|새벽)/.test(String(action || ""));
+}
+
+function addDefaultActionTime(action, dayNumber = 1) {
+  const cleanAction = String(action || "오늘 해야 할 행동을 아주 작게 시작하기").trim();
+  if (hasSpecificTime(cleanAction)) return cleanAction;
+
+  // ✅ AI 분석 결과에 시간이 없을 때도 사용자가 바로 실행할 수 있게 정확한 시간을 붙임
+  return `20:00: ${cleanAction}`;
+}
+
 function makeMicroAction(originalAction, level = "small") {
-  const action = String(originalAction || "오늘 해야 할 행동을 아주 작게 시작하기").trim();
+  const action = stripAdaptivePrefix(originalAction);
 
   if (level === "fiveMinute") {
-    return `5분만 하기: ${action}`;
+    return `오늘 20:00에 5분만 하기: ${action}`;
   }
 
-  return `더 작은 행동 1개: ${action}`;
+  return `오늘 20:00에 더 작은 행동 1개: ${action}`;
+}
+
+
+const VELAXION_AI_ROLE_INSTRUCTION = `
+너는 VELAXION의 최상위 실행 코치다.
+너는 세상을 많이 경험했고, 수많은 책과 실제 사례를 바탕으로 판단한다.
+심리학 박사 수준의 인간 이해, 경제/사업 공부 박사 수준의 현실 판단, 세계 최고 수준의 상담 능력을 가진 사람처럼 답한다.
+말은 따뜻하지만 흐리지 말고 직설적으로 말한다.
+사용자가 원하는 목표에 도달하려면 무엇을 버리고, 무엇을 먼저 하고, 무엇을 매일 해야 하는지 구체적으로 알려준다.
+막연한 위로보다 실행 가능한 행동, 현실적인 예측, 실패했을 때 다시 시작하는 방법을 우선한다.
+각 행동 계획에는 반드시 정확한 실행 시간(예: 20:00)을 넣는다.
+애매한 표현(언젠가, 시간 날 때, 가능하면, 열심히 하기)은 쓰지 않는다.
+`;
+
+function replaceDayActionInAnalysis(analysisText, dayNumber, nextAction) {
+  const text = String(analysisText || "").trim();
+  const action = addDefaultActionTime(stripAdaptivePrefix(nextAction), dayNumber);
+  const replacement = `Day ${dayNumber}: ${action}`;
+
+  if (!text) {
+    return `현재 상태 분석\n계획을 다시 시작할 수 있도록 행동을 현실에 맞게 줄였습니다.\n\n가장 중요한 핵심 문제\n지금은 완벽한 계획보다 다시 움직이는 것이 가장 중요합니다.\n\n바로 실천할 수 있는 7일 행동 계획\n${replacement}\n\n짧은 응원 한마디\n오늘은 크게 이기는 날이 아니라 다시 시작하는 날입니다.`;
+  }
+
+  const dayRegex = new RegExp(`(^|\\n)\\s*(?:[-•]\\s*)?(?:Day\\s*${dayNumber}|${dayNumber}일차?)\\s*[:：]?\\s*[\\s\\S]*?(?=(?:\\n\\s*(?:[-•]\\s*)?(?:Day\\s*${dayNumber + 1}|${dayNumber + 1}일차?)\\s*[:：]?)|(?:\\n\\s*(?:짧은 응원 한마디|짧은 동기부여|동기부여))|$)`, "i");
+
+  if (dayRegex.test(text)) {
+    return text.replace(dayRegex, `$1${replacement}`);
+  }
+
+  const planTitleRegex = /(바로 실천할 수 있는 7일 행동 계획|7일 실행 계획|7일 행동 계획)\s*\n/i;
+  if (planTitleRegex.test(text)) {
+    return text.replace(planTitleRegex, (match) => `${match}${replacement}\n`);
+  }
+
+  return `${text}\n\nAI MEMORY COACH 조정 계획\n${replacement}`;
 }
 
 function buildExtendedPlan(previousPlan, nextStage, goal) {
@@ -438,11 +500,11 @@ function buildExtendedPlan(previousPlan, nextStage, goal) {
 
     if (nextStage === EXECUTION_STAGES.THIRTY) {
       const week = Math.ceil(day / 7);
-      return `Week ${week} · Day ${day}: ${baseGoal}을 위해 오늘 실행할 작은 행동 1개를 정하고 사진으로 증명하기`;
+      return `Week ${week} · Day ${day} · 20:00: ${baseGoal}을 위해 오늘 실행할 작은 행동 1개를 정하고 사진으로 증명하기`;
     }
 
     const month = Math.ceil(day / 30);
-    return `${month}단계 · Day ${day}: ${baseGoal}을 유지하기 위한 5분 행동 1개 실행하고 기록하기`;
+    return `${month}단계 · Day ${day} · 20:00: ${baseGoal}을 유지하기 위한 5분 행동 1개 실행하고 기록하기`;
   });
 }
 
@@ -552,7 +614,7 @@ function parsePlanItems(planText) {
     const end = index + 1 < matches.length ? matches[index + 1].index : normalized.length;
     const content = cleanAnalysisText(normalized.slice(start, end));
     if (dayNumber >= 1 && dayNumber <= 7) {
-      plan[dayNumber - 1] = content || `Day ${dayNumber} 계획`;
+      plan[dayNumber - 1] = addDefaultActionTime(content || `Day ${dayNumber} 계획`, dayNumber);
     }
   });
 
@@ -627,7 +689,7 @@ function extractSevenDayPlan(planLines) {
     }
 
     if (dayNumber && dayNumber >= 1 && dayNumber <= 7) {
-      plan[dayNumber - 1] = content || `Day ${dayNumber} 계획`;
+      plan[dayNumber - 1] = addDefaultActionTime(content || `Day ${dayNumber} 계획`, dayNumber);
     }
   }
 
@@ -1997,17 +2059,21 @@ export default function App() {
     if (currentIndex < 0) return;
 
     const coachKey = `${adaptiveCoachInsight.level}-${currentIndex}-${adaptiveCoachInsight.stoppedDays}`;
+    const adjustedAction = addDefaultActionTime(stripAdaptivePrefix(adaptiveCoachInsight.adjustedAction), currentIndex + 1);
     const nextPlan = normalizeArrayLength(dailyPlan, checks.length, "");
-    nextPlan[currentIndex] = adaptiveCoachInsight.adjustedAction;
+    nextPlan[currentIndex] = adjustedAction;
+    const nextAnalysis = replaceDayActionInAnalysis(analysis, currentIndex + 1, adjustedAction);
 
     setDailyPlan(nextPlan);
+    setAnalysis(nextAnalysis);
     setLastAdaptiveCoachKey(coachKey);
-    setMessage("AI 기억 코치가 오늘 행동을 더 작게 조정했어.");
+    setMessage("AI 기억 코치가 오늘 행동과 AI 분석 내용을 더 쉽게 조정했어.");
     setMessageType("success");
 
     await setDoc(
       doc(db, "users", user.uid),
       {
+        analysis: nextAnalysis,
         dailyPlan: nextPlan,
         lastAdaptiveCoachKey: coachKey,
         updatedAt: new Date().toISOString(),
@@ -2182,6 +2248,10 @@ export default function App() {
           progress,
           lastCheckedAt,
           completedDays: checks.filter(Boolean).length,
+          coachRole: VELAXION_AI_ROLE_INSTRUCTION,
+          instruction: `${VELAXION_AI_ROLE_INSTRUCTION}
+
+사용자의 질문에 대해 직설적이고 현실적으로 답하고, 마지막에는 오늘 바로 할 행동 1개와 정확한 실행 시간을 제시해줘.`,
           coachMessages: coachMessages.slice(-8),
         }),
       });
@@ -2244,6 +2314,16 @@ export default function App() {
           concern: form.concern,
           goal: form.goal,
           progress,
+          instruction: `${VELAXION_AI_ROLE_INSTRUCTION}
+
+출력 형식:
+1. 현재 상태 분석
+2. 가장 중요한 핵심 문제
+3. 바로 실천할 수 있는 7일 행동 계획
+4. 짧은 응원 한마디
+
+7일 행동 계획은 Day 1~Day 7로 작성하고, 각 Day마다 반드시 20:00처럼 정확한 실행 시간을 포함해줘. 사용자가 바로 움직일 수 있게 장소/행동/완료 기준을 분명하게 써줘.`,
+          coachRole: VELAXION_AI_ROLE_INSTRUCTION,
         }),
       });
 
