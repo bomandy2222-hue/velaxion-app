@@ -550,9 +550,19 @@ function removeActionTimePrefix(action) {
     .trim();
 }
 
+function stripEmotionAdjustmentPrefix(action) {
+  return String(action || "오늘 해야 할 행동을 아주 작게 시작하기")
+    .replace(/^5분만\s*하기\s*[-:：]\s*/g, "")
+    .replace(/^가장\s*쉬운\s*버전으로\s*3분만\s*하기\s*[-:：]\s*/g, "")
+    .replace(/^딱\s*하나만\s*끝내기\s*[-:：]\s*/g, "")
+    .replace(/^타이머\s*5분\s*켜고\s*시작만\s*하기\s*[-:：]\s*/g, "")
+    .replace(/\s*\+\s*완료\s*후\s*3줄\s*기록\s*남기기$/g, "")
+    .trim();
+}
+
 function buildEmotionAdjustedAction(originalAction, emotionId) {
   const profile = getEmotionProfile(emotionId);
-  const baseAction = stripAdaptivePrefix(removeActionTimePrefix(originalAction));
+  const baseAction = stripEmotionAdjustmentPrefix(stripAdaptivePrefix(removeActionTimePrefix(originalAction)));
   const cleanBase = baseAction || "목표와 연결된 작은 행동 1개 실행하기";
 
   if (!profile) return addDefaultActionTime(cleanBase);
@@ -2474,7 +2484,9 @@ export default function App() {
     const currentIndex = getCurrentDayIndex(checks);
     if (currentIndex < 0) return;
 
-    const emotionKey = `${emotionCoachInsight.id}-${currentIndex}-${new Date().toISOString().slice(0, 10)}`;
+    // ✅ 감정 재배치는 하루 1회 제한하지 않는다.
+    // 사용자가 연속해서 눌러도 매번 즉시 오른쪽 Day 계획과 분석에 다시 반영되게 한다.
+    const emotionKey = `${emotionCoachInsight.id}-${currentIndex}-${Date.now()}`;
     const adjustedAction = addDefaultActionTime(
       stripAdaptivePrefix(emotionCoachInsight.adjustedAction),
       currentIndex + 1
@@ -3117,11 +3129,8 @@ export default function App() {
                 type="button"
                 style={styles.primaryButton}
                 onClick={applyEmotionCoachAction}
-                disabled={lastEmotionCoachKey === `${emotionCoachInsight.id}-${emotionCoachInsight.dayNumber - 1}-${new Date().toISOString().slice(0, 10)}`}
               >
-                {lastEmotionCoachKey === `${emotionCoachInsight.id}-${emotionCoachInsight.dayNumber - 1}-${new Date().toISOString().slice(0, 10)}`
-                  ? "재배치 완료"
-                  : "감정에 맞게 AI 분석 재배치"}
+                감정에 맞게 AI 분석 재배치
               </button>
             </div>
           ) : (
