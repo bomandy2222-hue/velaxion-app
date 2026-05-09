@@ -530,6 +530,19 @@ function getEmotionProfile(emotionId) {
   return EMOTION_OPTIONS.find((item) => item.id === emotionId) || null;
 }
 
+function makePlanDisplayItem(dayNumber, content) {
+  return `__VELAXION_DAY_${dayNumber}__${String(content || "").trim()}`;
+}
+
+function getPlanDisplayDayNumber(item, fallbackIndex) {
+  const match = String(item || "").match(/^__VELAXION_DAY_(\d+)__/);
+  return match ? Number(match[1]) : fallbackIndex + 1;
+}
+
+function getPlanDisplayText(item) {
+  return String(item || "").replace(/^__VELAXION_DAY_\d+__/, "").trim();
+}
+
 function removeActionTimePrefix(action) {
   return String(action || "오늘 해야 할 행동을 아주 작게 시작하기")
     .replace(/^오늘\s*\d{1,2}:\d{2}에\s*/g, "")
@@ -766,7 +779,10 @@ function parsePlanItems(planText) {
     const end = index + 1 < matches.length ? matches[index + 1].index : normalized.length;
     const content = cleanAnalysisText(normalized.slice(start, end));
     if (dayNumber >= 1 && dayNumber <= 7) {
-      plan[dayNumber - 1] = addDefaultActionTime(content || `Day ${dayNumber} 계획`, dayNumber);
+      plan[dayNumber - 1] = makePlanDisplayItem(
+        dayNumber,
+        addDefaultActionTime(content || `Day ${dayNumber} 계획`, dayNumber)
+      );
     }
   });
 
@@ -824,15 +840,19 @@ function extractSevenDayPlan(planLines) {
   const plan = [...initialPlan];
 
   for (const rawLine of planLines) {
-    const line = rawLine.replace(/\*\*/g, "").trim();
+    const line = String(rawLine || "").replace(/\*\*/g, "").trim();
 
     let dayNumber = null;
     let content = line;
 
+    const markerMatch = line.match(/^__VELAXION_DAY_([1-7])__(.*)$/);
     const dayMatch = line.match(/^Day\s*([1-7])\s*[:：]?\s*(.*)$/i);
     const koreanMatch = line.match(/^([1-7])일차?\s*[:：]?\s*(.*)$/);
 
-    if (dayMatch) {
+    if (markerMatch) {
+      dayNumber = Number(markerMatch[1]);
+      content = markerMatch[2].trim();
+    } else if (dayMatch) {
       dayNumber = Number(dayMatch[1]);
       content = dayMatch[2].trim();
     } else if (koreanMatch) {
@@ -3235,12 +3255,16 @@ export default function App() {
 
                 {parsedAnalysis.plan.length > 0 ? (
                   <div style={styles.planList}>
-                    {parsedAnalysis.plan.map((item, index) => (
-                      <div key={index} style={styles.planItem}>
-                        <div style={styles.planDayBadge}>Day {index + 1}</div>
-                        <div style={styles.planText}>{item}</div>
-                      </div>
-                    ))}
+                    {parsedAnalysis.plan.map((item, index) => {
+                      const displayDayNumber = getPlanDisplayDayNumber(item, index);
+                      const displayText = getPlanDisplayText(item);
+                      return (
+                        <div key={`${displayDayNumber}-${index}`} style={styles.planItem}>
+                          <div style={styles.planDayBadge}>Day {displayDayNumber}</div>
+                          <div style={styles.planText}>{displayText}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p style={styles.resultText}>행동 계획이 아직 없어.</p>
