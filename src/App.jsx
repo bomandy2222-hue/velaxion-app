@@ -712,6 +712,97 @@ function getStallCoachInsight({ checks, dailyPlan, lastCheckedAt, planStartedAt 
   return null;
 }
 
+function summarizeRecentJournal(dayJournals) {
+  const journals = Array.isArray(dayJournals) ? dayJournals : [];
+  const recent = [...journals].reverse().find((item) => String(item || "").trim());
+  if (!recent) return "아직 일기 기록이 부족해. Day 완료 후 한 줄만 남겨도 노아가 너의 패턴을 기억할 수 있어.";
+
+  const clean = String(recent).replace(/\s+/g, " ").trim();
+  return clean.length > 72 ? `${clean.slice(0, 72)}...` : clean;
+}
+
+function summarizeRecentCoaching(dayCoachings) {
+  const coachings = Array.isArray(dayCoachings) ? dayCoachings : [];
+  const recent = [...coachings].reverse().find((item) => String(item || "").trim());
+  if (!recent) return "아직 코칭 기록이 부족해. 일기를 쓰면 노아의 다음 회고가 더 정확해져.";
+
+  const firstUsefulLine = String(recent)
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line && !line.startsWith("Day") && !line.startsWith("오늘 기록"));
+
+  const clean = String(firstUsefulLine || recent).replace(/\s+/g, " ").trim();
+  return clean.length > 86 ? `${clean.slice(0, 86)}...` : clean;
+}
+
+function buildMemoryReviewInsight({
+  checks,
+  dailyPlan,
+  dayJournals,
+  dayCoachings,
+  selectedEmotion,
+  lastCheckedAt,
+  planStartedAt,
+  executionStage,
+  goal,
+  adaptiveCoachInsight,
+}) {
+  const safeChecks = Array.isArray(checks) ? checks : [];
+  const total = safeChecks.length || 7;
+  const completed = safeChecks.filter(Boolean).length;
+  const progressRate = total ? Math.round((completed / total) * 100) : 0;
+  const currentIndex = getCurrentDayIndex(safeChecks);
+  const currentDay = currentIndex >= 0 ? currentIndex + 1 : total;
+  const stoppedDays = getDaysSince(lastCheckedAt || planStartedAt);
+  const emotion = getEmotionProfile(selectedEmotion);
+  const stageLabel = getStageLabel(executionStage);
+  const currentAction = currentIndex >= 0
+    ? String((Array.isArray(dailyPlan) ? dailyPlan[currentIndex] : "") || "오늘은 목표와 연결된 가장 작은 행동 1개를 실행하기")
+    : "이번 단계는 완료됐어요. 다음 단계로 확장할 준비가 됐어요.";
+
+  const completedJournals = Array.isArray(dayJournals)
+    ? dayJournals.filter((item) => String(item || "").trim()).length
+    : 0;
+  const completedCoachings = Array.isArray(dayCoachings)
+    ? dayCoachings.filter((item) => String(item || "").trim()).length
+    : 0;
+
+  let rememberedPattern = "아직 너를 기억할 데이터가 많지 않아. 사진 인증, 감정 체크, 일기가 쌓이면 노아가 너의 실행 패턴을 더 정확히 기억할게.";
+
+  if (completed > 0) {
+    rememberedPattern = `지금까지 ${completed}번 행동을 증명했어요. ${completedJournals}번의 일기와 ${completedCoachings}번의 코칭 기록을 기준으로 보면, 당신은 기록이 붙었을 때 실행 흐름이 더 강해지는 타입이에요.`;
+  }
+
+  if (stoppedDays >= 2 && completed > 0) {
+    rememberedPattern = `노아가 기억한 패턴: 너는 완전히 포기한 게 아니라, 계획이 커지거나 현실과 안 맞을 때 멈추는 흐름이 있어. 그래서 지금은 더 작은 행동으로 복귀하는 게 맞아.`;
+  }
+
+  const reviewSummary = stoppedDays >= 2
+    ? `${stoppedDays}일 동안 실행 공백이 생겼어요. 이건 실패가 아니라 계획 강도를 다시 맞추라는 신호예요.`
+    : `${stageLabel} 기준 현재 ${progressRate}% 진행 중이에요. 오늘은 Day ${currentDay} 흐름을 끊지 않는 게 가장 중요해요.`;
+
+  const nextCoachLine = adaptiveCoachInsight
+    ? adaptiveCoachInsight.adjustedAction
+    : `${currentAction}`;
+
+  return {
+    title: adaptiveCoachInsight ? adaptiveCoachInsight.title : "노아가 기억한 실행 패턴과 오늘의 회고",
+    message: adaptiveCoachInsight
+      ? adaptiveCoachInsight.message
+      : "노아가 지금까지의 실행, 감정, 일기 기록을 같이 보고 오늘의 흐름을 정리했어.",
+    rememberedPattern,
+    reviewSummary,
+    recentJournal: summarizeRecentJournal(dayJournals),
+    recentCoaching: summarizeRecentCoaching(dayCoachings),
+    emotionText: emotion ? `${emotion.emoji} ${emotion.label}` : "감정 기록 부족",
+    goalText: String(goal || "목표").trim() || "목표",
+    nextCoachLine,
+    currentDay,
+    stoppedDays,
+    progressRate,
+  };
+}
+
 function cleanSectionText(text) {
   return String(text || "")
     .replace(/^#+\s*/gm, "")
@@ -1872,6 +1963,34 @@ export default function App() {
     [checks, dailyPlan, lastCheckedAt, planStartedAt]
   );
 
+  const memoryReviewInsight = useMemo(
+    () =>
+      buildMemoryReviewInsight({
+        checks,
+        dailyPlan,
+        dayJournals,
+        dayCoachings,
+        selectedEmotion,
+        lastCheckedAt,
+        planStartedAt,
+        executionStage,
+        goal: form.goal,
+        adaptiveCoachInsight,
+      }),
+    [
+      checks,
+      dailyPlan,
+      dayJournals,
+      dayCoachings,
+      selectedEmotion,
+      lastCheckedAt,
+      planStartedAt,
+      executionStage,
+      form.goal,
+      adaptiveCoachInsight,
+    ]
+  );
+
   const emotionCoachInsight = useMemo(
     () => getEmotionCoachInsight({ selectedEmotion, checks, dailyPlan }),
     [selectedEmotion, checks, dailyPlan]
@@ -2276,7 +2395,7 @@ export default function App() {
     setDailyPlan(nextPlan);
     setAnalysis(nextAnalysis);
     setLastAdaptiveCoachKey(coachKey);
-    setMessage("AI 기억 코치가 오늘 행동과 AI 분석 내용을 더 쉽게 조정했어.");
+    setMessage("노아가 오늘 행동과 AI 분석 내용을 더 쉽게 조정했어.");
     setMessageType("success");
 
     await setDoc(
@@ -2965,19 +3084,46 @@ export default function App() {
             AI가 만든 실행 계획과 연결돼. 7일을 끝내면 30일로, 30일을 끝내면 90일로 자동 확장돼. 체크하려면 사진 촬영 또는 갤러리 이미지를 먼저 등록해야 해.
           </div>
 
-          {adaptiveCoachInsight ? (
-            <div style={styles.adaptiveCoachCard}>
-              <div>
-                <p style={styles.adaptiveCoachEyebrow}>AI MEMORY COACH</p>
-                <h3 style={styles.adaptiveCoachTitle}>{adaptiveCoachInsight.title}</h3>
-                <p style={styles.adaptiveCoachText}>{adaptiveCoachInsight.message}</p>
-                <div style={styles.adaptiveActionBox}>
-                  <strong>조정 제안</strong>
-                  <br />
-                  {adaptiveCoachInsight.adjustedAction || "오늘은 5분 행동 1개만 다시 시작하기"}
+          <div style={styles.adaptiveCoachCard}>
+            <div>
+              <p style={styles.adaptiveCoachEyebrow}>노아가 기억한 너</p>
+              <h3 style={styles.adaptiveCoachTitle}>{memoryReviewInsight.title}</h3>
+              <p style={styles.adaptiveCoachText}>{memoryReviewInsight.message}</p>
+
+              <div style={styles.memoryReviewGrid}>
+                <div style={styles.memoryReviewBox}>
+                  <strong>노아가 기억한 너</strong>
+                  <span>{memoryReviewInsight.rememberedPattern}</span>
+                </div>
+                <div style={styles.memoryReviewBox}>
+                  <strong>노아의 회고</strong>
+                  <span>{memoryReviewInsight.reviewSummary}</span>
                 </div>
               </div>
 
+              <div style={styles.memoryMiniGrid}>
+                <div style={styles.memoryMiniItem}>
+                  <strong>감정 기록</strong>
+                  <span>{memoryReviewInsight.emotionText}</span>
+                </div>
+                <div style={styles.memoryMiniItem}>
+                  <strong>최근 일기</strong>
+                  <span>{memoryReviewInsight.recentJournal}</span>
+                </div>
+                <div style={styles.memoryMiniItem}>
+                  <strong>최근 코칭</strong>
+                  <span>{memoryReviewInsight.recentCoaching}</span>
+                </div>
+              </div>
+
+              <div style={styles.adaptiveActionBox}>
+                <strong>{adaptiveCoachInsight ? "복귀 조정 제안" : "다음 실행 기준"}</strong>
+                <br />
+                {memoryReviewInsight.nextCoachLine || "오늘은 5분 행동 1개만 다시 시작하기"}
+              </div>
+            </div>
+
+            {adaptiveCoachInsight ? (
               <button
                 type="button"
                 style={styles.primaryButton}
@@ -2988,8 +3134,8 @@ export default function App() {
                   ? "조정 완료"
                   : "오늘 행동 줄이기"}
               </button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
 
           <div style={styles.stageSystemGrid}>
             <div style={styles.stageSystemCard}>
@@ -3529,6 +3675,42 @@ const styles = {
     color: "#fff7ed",
     lineHeight: 1.65,
     fontWeight: 800,
+  },
+  memoryReviewGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: "12px",
+    marginTop: "16px",
+  },
+  memoryReviewBox: {
+    padding: "14px 16px",
+    borderRadius: "18px",
+    background: "rgba(255,255,255,0.085)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    color: "rgba(255,255,255,0.84)",
+    lineHeight: 1.6,
+    fontSize: "14px",
+  },
+  memoryMiniGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "10px",
+    marginTop: "12px",
+  },
+  memoryMiniItem: {
+    padding: "12px 14px",
+    borderRadius: "16px",
+    background: "rgba(15,23,42,0.34)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    color: "rgba(255,255,255,0.78)",
+    lineHeight: 1.55,
+    fontSize: "13px",
   },
   stageSystemGrid: {
     display: "grid",
