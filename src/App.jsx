@@ -1993,6 +1993,8 @@ export default function App() {
   const [lastAdaptiveCoachKey, setLastAdaptiveCoachKey] = useState("");
   const [selectedEmotion, setSelectedEmotion] = useState("");
   const [lastEmotionCoachKey, setLastEmotionCoachKey] = useState("");
+  const [emotionApplying, setEmotionApplying] = useState(false);
+  const [emotionApplyCount, setEmotionApplyCount] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -2484,9 +2486,15 @@ export default function App() {
     const currentIndex = getCurrentDayIndex(checks);
     if (currentIndex < 0) return;
 
+    // ✅ 버튼을 눌렀다는 느낌이 즉시 보이도록 먼저 상태를 바꾼다.
+    // ✅ 연속 클릭해도 막지 않고 매번 카운트와 문구를 새로 갱신한다.
+    const pressedAt = Date.now();
+    setEmotionApplying(true);
+    setEmotionApplyCount((count) => count + 1);
+
     // ✅ 감정 재배치는 하루 1회 제한하지 않는다.
     // 사용자가 연속해서 눌러도 매번 즉시 오른쪽 Day 계획과 분석에 다시 반영되게 한다.
-    const emotionKey = `${emotionCoachInsight.id}-${currentIndex}-${Date.now()}`;
+    const emotionKey = `${emotionCoachInsight.id}-${currentIndex}-${pressedAt}`;
     const adjustedAction = addDefaultActionTime(
       stripAdaptivePrefix(emotionCoachInsight.adjustedAction),
       currentIndex + 1
@@ -2512,17 +2520,23 @@ export default function App() {
     setMessage(`${emotionCoachInsight.emoji} ${emotionCoachInsight.label} 상태에 맞게 오른쪽 Day ${currentIndex + 1} 계획을 바로 재배치했어.`);
     setMessageType("success");
 
-    await setDoc(
-      doc(db, "users", user.uid),
-      {
-        selectedEmotion,
-        lastEmotionCoachKey: emotionKey,
-        analysis: nextAnalysis,
-        dailyPlan: nextPlan,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          selectedEmotion,
+          lastEmotionCoachKey: emotionKey,
+          analysis: nextAnalysis,
+          dailyPlan: nextPlan,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } finally {
+      setTimeout(() => {
+        setEmotionApplying(false);
+      }, 900);
+    }
   };
 
   const expandExecutionStage = async (completedChecks, completedDayImages, completedAt) => {
@@ -3127,10 +3141,16 @@ export default function App() {
               </div>
               <button
                 type="button"
-                style={styles.primaryButton}
+                style={{
+                  ...styles.primaryButton,
+                  ...styles.emotionApplyButton,
+                  ...(emotionApplying ? styles.emotionApplyButtonDone : null),
+                }}
                 onClick={applyEmotionCoachAction}
               >
-                감정에 맞게 AI 분석 재배치
+                {emotionApplying
+                  ? `재배치 완료 ✓ ${emotionApplyCount > 1 ? `(${emotionApplyCount})` : ""}`
+                  : "감정에 맞게 AI 분석 재배치"}
               </button>
             </div>
           ) : (
@@ -3701,6 +3721,15 @@ const styles = {
     color: "#eff6ff",
     lineHeight: 1.65,
     fontWeight: 800,
+  },
+  emotionApplyButton: {
+    minWidth: "220px",
+    transition: "transform 140ms ease, box-shadow 140ms ease, background 140ms ease",
+  },
+  emotionApplyButtonDone: {
+    transform: "scale(0.98)",
+    background: "linear-gradient(135deg, #16a34a, #22c55e)",
+    boxShadow: "0 18px 34px rgba(34,197,94,0.28)",
   },
   emotionEmptyText: {
     margin: "14px 0 0",
