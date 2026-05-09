@@ -466,6 +466,139 @@ const VELAXION_AI_ROLE_INSTRUCTION = `
 애매한 표현(언젠가, 시간 날 때, 가능하면, 열심히 하기)은 쓰지 않는다.
 `;
 
+
+const EMOTION_OPTIONS = [
+  {
+    id: "normal",
+    emoji: "🙂",
+    label: "괜찮음",
+    title: "기본 흐름 유지",
+    message: "오늘은 계획을 그대로 실행해도 괜찮아요. 정확한 시간에 하나만 끝내면 돼요.",
+    time: "20:00",
+    tone: "기본 난이도 유지",
+  },
+  {
+    id: "motivated",
+    emoji: "🔥",
+    label: "의욕 넘침",
+    title: "오늘은 성장 기회예요",
+    message: "컨디션이 좋은 날은 조금 더 밀어붙여도 돼요. 단, 욕심보다 완료 기준을 분명히 잡을게요.",
+    time: "18:30",
+    tone: "난이도 소폭 상승",
+  },
+  {
+    id: "anxious",
+    emoji: "😰",
+    label: "불안함",
+    title: "불안을 줄이고 행동을 작게 나눠요",
+    message: "불안한 날에는 생각이 커지고 행동이 멈춰요. 오늘은 머리로 고민하지 말고 5분 행동으로 시작해요.",
+    time: "19:30",
+    tone: "불안 완화 + 작은 행동",
+  },
+  {
+    id: "tired",
+    emoji: "😴",
+    label: "지침",
+    title: "오늘은 유지가 목표예요",
+    message: "지친 날에는 크게 이기려 하지 말고 흐름만 지키면 돼요. 오늘 행동은 아주 작게 줄일게요.",
+    time: "20:30",
+    tone: "최소 행동",
+  },
+  {
+    id: "stressed",
+    emoji: "😵",
+    label: "스트레스 많음",
+    title: "복잡한 계획을 하나로 줄여요",
+    message: "스트레스가 많은 날에는 선택지가 많을수록 멈춰요. 오늘은 딱 하나만 끝내는 구조로 바꿀게요.",
+    time: "21:00",
+    tone: "압박 감소",
+  },
+  {
+    id: "unfocused",
+    emoji: "😶",
+    label: "집중 안됨",
+    title: "시작만 하게 만들어요",
+    message: "집중이 안 되는 날에는 오래 하는 것보다 시작 버튼을 누르는 게 중요해요. 5분 시작 행동으로 바꿀게요.",
+    time: "20:00",
+    tone: "시작 중심",
+  },
+];
+
+function getEmotionProfile(emotionId) {
+  return EMOTION_OPTIONS.find((item) => item.id === emotionId) || null;
+}
+
+function removeActionTimePrefix(action) {
+  return String(action || "오늘 해야 할 행동을 아주 작게 시작하기")
+    .replace(/^오늘\s*\d{1,2}:\d{2}에\s*/g, "")
+    .replace(/^\d{1,2}:\d{2}\s*[:：]?\s*/g, "")
+    .trim();
+}
+
+function buildEmotionAdjustedAction(originalAction, emotionId) {
+  const profile = getEmotionProfile(emotionId);
+  const baseAction = stripAdaptivePrefix(removeActionTimePrefix(originalAction));
+  const cleanBase = baseAction || "목표와 연결된 작은 행동 1개 실행하기";
+
+  if (!profile) return addDefaultActionTime(cleanBase);
+
+  if (emotionId === "motivated") {
+    return `${profile.time}: ${cleanBase} + 완료 후 3줄 기록 남기기`;
+  }
+
+  if (emotionId === "normal") {
+    return `${profile.time}: ${cleanBase}`;
+  }
+
+  if (emotionId === "anxious") {
+    return `${profile.time}: 5분만 하기 - ${cleanBase}`;
+  }
+
+  if (emotionId === "tired") {
+    return `${profile.time}: 가장 쉬운 버전으로 3분만 하기 - ${cleanBase}`;
+  }
+
+  if (emotionId === "stressed") {
+    return `${profile.time}: 딱 하나만 끝내기 - ${cleanBase}`;
+  }
+
+  if (emotionId === "unfocused") {
+    return `${profile.time}: 타이머 5분 켜고 시작만 하기 - ${cleanBase}`;
+  }
+
+  return `${profile.time}: ${cleanBase}`;
+}
+
+function buildEmotionAnalysisNote(emotionId, adjustedAction, dayNumber) {
+  const profile = getEmotionProfile(emotionId);
+  if (!profile) return "";
+
+  return `
+
+오늘 감정 기반 AI 재배치
+감정 상태: ${profile.emoji} ${profile.label}
+판단: ${profile.message}
+오늘 실행 기준: Day ${dayNumber} · ${adjustedAction}
+코치 기준: ${profile.tone}. 감정이 낮은 날은 완벽함보다 복귀를 우선하고, 컨디션이 좋은 날은 성장 폭을 조금 키웁니다.`;
+}
+
+function getEmotionCoachInsight({ selectedEmotion, checks, dailyPlan }) {
+  const profile = getEmotionProfile(selectedEmotion);
+  if (!profile) return null;
+
+  const currentIndex = Array.isArray(checks) ? getCurrentDayIndex(checks) : 0;
+  if (currentIndex < 0) return null;
+
+  const currentAction = Array.isArray(dailyPlan) ? dailyPlan[currentIndex] : "";
+  const adjustedAction = buildEmotionAdjustedAction(currentAction, selectedEmotion);
+
+  return {
+    ...profile,
+    dayNumber: currentIndex + 1,
+    adjustedAction,
+  };
+}
+
 function replaceDayActionInAnalysis(analysisText, dayNumber, nextAction) {
   const text = String(analysisText || "").trim();
   const action = addDefaultActionTime(stripAdaptivePrefix(nextAction), dayNumber);
@@ -1662,6 +1795,8 @@ export default function App() {
   const [executionStage, setExecutionStage] = useState(EXECUTION_STAGES.SEVEN);
   const [planStartedAt, setPlanStartedAt] = useState(new Date().toISOString());
   const [lastAdaptiveCoachKey, setLastAdaptiveCoachKey] = useState("");
+  const [selectedEmotion, setSelectedEmotion] = useState("");
+  const [lastEmotionCoachKey, setLastEmotionCoachKey] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -1692,6 +1827,11 @@ export default function App() {
   const adaptiveCoachInsight = useMemo(
     () => getStallCoachInsight({ checks, dailyPlan, lastCheckedAt, planStartedAt }),
     [checks, dailyPlan, lastCheckedAt, planStartedAt]
+  );
+
+  const emotionCoachInsight = useMemo(
+    () => getEmotionCoachInsight({ selectedEmotion, checks, dailyPlan }),
+    [selectedEmotion, checks, dailyPlan]
   );
 
   const parsedAnalysis = useMemo(() => parseAnalysisSections(analysis), [analysis]);
@@ -1755,6 +1895,14 @@ export default function App() {
 
           if (typeof data.lastAdaptiveCoachKey === "string") {
             setLastAdaptiveCoachKey(data.lastAdaptiveCoachKey);
+          }
+
+          if (typeof data.selectedEmotion === "string") {
+            setSelectedEmotion(data.selectedEmotion);
+          }
+
+          if (typeof data.lastEmotionCoachKey === "string") {
+            setLastEmotionCoachKey(data.lastEmotionCoachKey);
           }
 
           if (Array.isArray(data.checks)) {
@@ -1829,6 +1977,8 @@ export default function App() {
           executionStage,
           planStartedAt,
           lastAdaptiveCoachKey,
+          selectedEmotion,
+          lastEmotionCoachKey,
           lastCheckedAt: nextLastCheckedAt,
           dayImages: nextDayImages.map((item) =>
             item
@@ -1868,7 +2018,7 @@ export default function App() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [form, checks, analysis, lastCheckedAt, dayImages, dailyPlan, executionStage, planStartedAt, lastAdaptiveCoachKey, user, loading]);
+  }, [form, checks, analysis, lastCheckedAt, dayImages, dailyPlan, executionStage, planStartedAt, lastAdaptiveCoachKey, selectedEmotion, lastEmotionCoachKey, user, loading]);
 
   const handleLogin = async () => {
     try {
@@ -1901,6 +2051,8 @@ export default function App() {
       setExecutionStage(EXECUTION_STAGES.SEVEN);
       setPlanStartedAt(new Date().toISOString());
       setLastAdaptiveCoachKey("");
+      setSelectedEmotion("");
+      setLastEmotionCoachKey("");
       setCoachMessages([]);
       setCoachQuestion("");
       setMessage("로그아웃 완료.");
@@ -2082,6 +2234,45 @@ export default function App() {
     );
   };
 
+  const applyEmotionCoachAction = async () => {
+    if (!emotionCoachInsight || !user) {
+      if (!user) {
+        setMessage("감정 기반 AI 재배치를 사용하려면 먼저 로그인해줘.");
+        setMessageType("error");
+      }
+      return;
+    }
+
+    const currentIndex = getCurrentDayIndex(checks);
+    if (currentIndex < 0) return;
+
+    const emotionKey = `${emotionCoachInsight.id}-${currentIndex}-${new Date().toISOString().slice(0, 10)}`;
+    const adjustedAction = emotionCoachInsight.adjustedAction;
+    const nextPlan = normalizeArrayLength(dailyPlan, checks.length, "");
+    nextPlan[currentIndex] = adjustedAction;
+
+    let nextAnalysis = replaceDayActionInAnalysis(analysis, currentIndex + 1, adjustedAction);
+    nextAnalysis = `${nextAnalysis}${buildEmotionAnalysisNote(selectedEmotion, adjustedAction, currentIndex + 1)}`;
+
+    setDailyPlan(nextPlan);
+    setAnalysis(nextAnalysis);
+    setLastEmotionCoachKey(emotionKey);
+    setMessage(`${emotionCoachInsight.emoji} ${emotionCoachInsight.label} 상태에 맞게 오늘 AI 분석과 실행 계획을 재배치했어.`);
+    setMessageType("success");
+
+    await setDoc(
+      doc(db, "users", user.uid),
+      {
+        selectedEmotion,
+        lastEmotionCoachKey: emotionKey,
+        analysis: nextAnalysis,
+        dailyPlan: nextPlan,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  };
+
   const expandExecutionStage = async (completedChecks, completedDayImages, completedAt) => {
     const nextStage = getNextStage(executionStage);
 
@@ -2102,6 +2293,7 @@ export default function App() {
     setDailyPlan(nextPlan);
     setPlanStartedAt(nowIso);
     setLastAdaptiveCoachKey("");
+    setLastEmotionCoachKey("");
     setMessage(getStageIntroMessage(nextStage));
     setMessageType("success");
 
@@ -2123,6 +2315,7 @@ export default function App() {
         executionStage: nextStage,
         planStartedAt: nowIso,
         lastAdaptiveCoachKey: "",
+        lastEmotionCoachKey: "",
         lastCheckedAt: completedAt,
         updatedAt: nowIso,
       },
@@ -2314,6 +2507,8 @@ export default function App() {
           concern: form.concern,
           goal: form.goal,
           progress,
+          selectedEmotion,
+          emotionProfile: getEmotionProfile(selectedEmotion),
           instruction: `${VELAXION_AI_ROLE_INSTRUCTION}
 
 출력 형식:
@@ -2322,6 +2517,7 @@ export default function App() {
 3. 바로 실천할 수 있는 7일 행동 계획
 4. 짧은 응원 한마디
 
+현재 사용자의 감정 상태가 전달되면 그 감정에 맞게 난이도와 실행 시간을 재배치해줘. 불안/지침/스트레스/집중 안됨이면 행동을 작게 줄이고, 의욕 넘침이면 완료 기준을 조금 높여줘.
 7일 행동 계획은 Day 1~Day 7로 작성하고, 각 Day마다 반드시 20:00처럼 정확한 실행 시간을 포함해줘. 사용자가 바로 움직일 수 있게 장소/행동/완료 기준을 분명하게 써줘.`,
           coachRole: VELAXION_AI_ROLE_INSTRUCTION,
         }),
@@ -2525,6 +2721,68 @@ export default function App() {
           </div>
 
           <div style={styles.autoSaveHint}>글을 쓰면 자동 저장돼.</div>
+        </div>
+
+        <div style={styles.card}>
+          <div style={styles.sectionHeader}>
+            <div>
+              <h2 style={styles.sectionTitle}>오늘 감정 체크</h2>
+              <p style={styles.emotionSubtitle}>감정을 고르면 오늘 AI 분석과 실행 계획이 현실에 맞게 다시 배치돼.</p>
+            </div>
+          </div>
+
+          <div style={styles.emotionGrid}>
+            {EMOTION_OPTIONS.map((item) => {
+              const active = selectedEmotion === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  style={{
+                    ...styles.emotionButton,
+                    ...(active ? styles.emotionButtonActive : null),
+                  }}
+                  onClick={() => {
+                    setSelectedEmotion(item.id);
+                    setLastEmotionCoachKey("");
+                    setMessage(`${item.emoji} ${item.label} 상태로 감정 체크했어. 아래 버튼을 누르면 오늘 AI 분석이 재배치돼.`);
+                    setMessageType("info");
+                  }}
+                >
+                  <span style={styles.emotionEmoji}>{item.emoji}</span>
+                  <strong>{item.label}</strong>
+                  <small>{item.tone}</small>
+                </button>
+              );
+            })}
+          </div>
+
+          {emotionCoachInsight ? (
+            <div style={styles.emotionCoachBox}>
+              <div>
+                <p style={styles.emotionCoachKicker}>EMOTION AI REBUILD</p>
+                <h3 style={styles.emotionCoachTitle}>
+                  {emotionCoachInsight.emoji} {emotionCoachInsight.title}
+                </h3>
+                <p style={styles.emotionCoachText}>{emotionCoachInsight.message}</p>
+                <div style={styles.emotionActionPreview}>
+                  Day {emotionCoachInsight.dayNumber} · {emotionCoachInsight.adjustedAction}
+                </div>
+              </div>
+              <button
+                type="button"
+                style={styles.primaryButton}
+                onClick={applyEmotionCoachAction}
+                disabled={lastEmotionCoachKey === `${emotionCoachInsight.id}-${emotionCoachInsight.dayNumber - 1}-${new Date().toISOString().slice(0, 10)}`}
+              >
+                {lastEmotionCoachKey === `${emotionCoachInsight.id}-${emotionCoachInsight.dayNumber - 1}-${new Date().toISOString().slice(0, 10)}`
+                  ? "재배치 완료"
+                  : "감정에 맞게 AI 분석 재배치"}
+              </button>
+            </div>
+          ) : (
+            <p style={styles.emotionEmptyText}>오늘 상태를 하나 선택하면 AI가 오늘 행동을 다시 맞춰줘.</p>
+          )}
         </div>
 
         <div style={styles.card}>
@@ -2932,6 +3190,86 @@ const styles = {
   subtleText: {
     color: "#6b7280",
     fontSize: "15px",
+  },
+  emotionSubtitle: {
+    margin: "6px 0 0",
+    color: "#64748b",
+    fontSize: "14px",
+    lineHeight: 1.6,
+  },
+  emotionGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "10px",
+    marginTop: "14px",
+  },
+  emotionButton: {
+    border: "1px solid rgba(148,163,184,0.24)",
+    background: "rgba(255,255,255,0.82)",
+    borderRadius: "20px",
+    padding: "15px 12px",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    alignItems: "flex-start",
+    textAlign: "left",
+    color: "#0f172a",
+    boxShadow: "0 12px 30px rgba(15,23,42,0.06)",
+  },
+  emotionButtonActive: {
+    border: "1px solid rgba(37,99,235,0.5)",
+    background: "linear-gradient(180deg, rgba(239,246,255,0.98), rgba(219,234,254,0.86))",
+    boxShadow: "0 16px 34px rgba(37,99,235,0.16)",
+  },
+  emotionEmoji: {
+    fontSize: "24px",
+    lineHeight: 1,
+  },
+  emotionCoachBox: {
+    marginTop: "16px",
+    padding: "20px",
+    borderRadius: "24px",
+    background: "linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,64,175,0.88))",
+    color: "#ffffff",
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: "16px",
+    alignItems: "center",
+    border: "1px solid rgba(255,255,255,0.13)",
+  },
+  emotionCoachKicker: {
+    margin: 0,
+    color: "#93c5fd",
+    fontSize: "12px",
+    letterSpacing: "0.14em",
+    fontWeight: 900,
+  },
+  emotionCoachTitle: {
+    margin: "8px 0 0",
+    fontSize: "21px",
+    letterSpacing: "-0.035em",
+  },
+  emotionCoachText: {
+    margin: "10px 0 0",
+    color: "rgba(255,255,255,0.78)",
+    lineHeight: 1.7,
+    fontSize: "15px",
+  },
+  emotionActionPreview: {
+    marginTop: "14px",
+    padding: "14px 16px",
+    borderRadius: "18px",
+    background: "rgba(255,255,255,0.1)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    color: "#eff6ff",
+    lineHeight: 1.65,
+    fontWeight: 800,
+  },
+  emotionEmptyText: {
+    margin: "14px 0 0",
+    color: "#64748b",
+    lineHeight: 1.7,
   },
   adaptiveCoachCard: {
     marginTop: "18px",
