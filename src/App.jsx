@@ -1970,6 +1970,352 @@ function ConsultingRoom({
   );
 }
 
+
+function NoaChatApp({
+  user,
+  form,
+  handleLogin,
+  handleLogout,
+  loginLoading,
+  navigateTo,
+  selectedEmotion,
+  setSelectedEmotion,
+  setLastEmotionCoachKey,
+  emotionCoachInsight,
+  applyEmotionCoachAction,
+  checks,
+  currentDayIndex,
+  progress,
+  currentStageLabel,
+  dailyPlan,
+  dayImages,
+  toggleCheck,
+  galleryInputRefs,
+  cameraInputRefs,
+  openGalleryPicker,
+  openCameraPicker,
+  handleImageChange,
+  clearDayImage,
+  uploadingImageIndex,
+  removingImageIndex,
+  activeJournalIndex,
+  setActiveJournalIndex,
+  dayJournals,
+  handleJournalChange,
+  generateDayJournalCoaching,
+  dayCoachings,
+  journalLoadingIndex,
+  noaMessages,
+  noaInput,
+  setNoaInput,
+  noaLoading,
+  handleNoaSend,
+  parsedAnalysis,
+  adaptiveCoachInsight,
+  applyAdaptiveCoachAction,
+  lastAdaptiveCoachKey,
+  setMessage,
+  setMessageType,
+  message,
+  messageType,
+}) {
+  const doneCount = checks.filter(Boolean).length;
+  const currentAction = currentDayIndex >= 0 ? dailyPlan[currentDayIndex] : "오늘 행동을 모두 완료했어.";
+
+  const sendOnEnter = (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleNoaSend();
+    }
+  };
+
+  return (
+    <div style={noaStyles.shell}>
+      <style>{mobileCss}</style>
+      <style>{noaCss}</style>
+
+      <aside className="noa-sidebar" style={noaStyles.sidebar}>
+        <div style={noaStyles.sidebarBrandRow}>
+          <div style={noaStyles.noaMark}>N</div>
+          <div className="noa-sidebar-label" style={noaStyles.sidebarBrandText}>NOA</div>
+        </div>
+
+        <button className="noa-side-item" style={noaStyles.sideItem} onClick={() => navigateTo("home")}>
+          <span>⌂</span><span className="noa-sidebar-label">홈페이지</span>
+        </button>
+        <button className="noa-side-item" style={noaStyles.sideItem} onClick={() => navigateTo("app")}>
+          <span>☑</span><span className="noa-sidebar-label">Day 체크</span>
+        </button>
+        <button className="noa-side-item" style={noaStyles.sideItem} onClick={() => navigateTo("consulting")}>
+          <span>✦</span><span className="noa-sidebar-label">컨설팅룸</span>
+        </button>
+        <button className="noa-side-item" style={noaStyles.sideItem} onClick={() => navigateTo("community")}>
+          <span>◌</span><span className="noa-sidebar-label">커뮤니티</span>
+        </button>
+
+        <div className="noa-sidebar-label" style={noaStyles.sideDivider}>오늘 진행</div>
+        <div className="noa-sidebar-label" style={noaStyles.sidebarProgressBox}>
+          <strong>{currentStageLabel}</strong>
+          <span>{doneCount}/{checks.length} 완료 · {progress}%</span>
+          <div style={noaStyles.miniProgress}><div style={{ ...noaStyles.miniProgressFill, width: `${progress}%` }} /></div>
+        </div>
+
+        <div style={noaStyles.sidebarBottom}>
+          {user ? (
+            <button className="noa-side-item" style={noaStyles.sideItem} onClick={handleLogout}>
+              <span>↩</span><span className="noa-sidebar-label">로그아웃</span>
+            </button>
+          ) : (
+            <button className="noa-side-item" style={noaStyles.sideItem} onClick={handleLogin} disabled={loginLoading}>
+              <span>●</span><span className="noa-sidebar-label">{loginLoading ? "로그인 중" : "로그인"}</span>
+            </button>
+          )}
+        </div>
+      </aside>
+
+      <main style={noaStyles.main}>
+        <section style={noaStyles.heroArea}>
+          <div style={noaStyles.greetingBlock}>
+            <div style={noaStyles.noaAvatar}>노아</div>
+            <h1 style={noaStyles.mainQuestion}>
+              {user?.displayName || form.name ? `${user?.displayName || form.name}님, 오늘은 어디까지 가볼까?` : "안녕, 나는 노아야."}
+            </h1>
+            <p style={noaStyles.mainSubText}>
+              너의 목표, 고민, 감정, 실행 기록을 기억하면서 오늘 해야 할 행동을 같이 정리해줄게.
+            </p>
+          </div>
+
+          <div style={noaStyles.chatCard}>
+            <div style={noaStyles.messageList}>
+              <div style={{ ...noaStyles.chatMessage, ...noaStyles.assistantMessage }}>
+                <strong>노아</strong>
+                <p>
+                  먼저 오늘 감정부터 알려줘. 그 다음 너의 목표, 고민, 꿈을 말해줘. 내가 친근하게 듣고, 필요한 부분은 냉정하게 분석해줄게.
+                </p>
+              </div>
+
+              {noaMessages.map((item, index) => (
+                <div
+                  key={`${item.createdAt || index}-${index}`}
+                  style={{
+                    ...noaStyles.chatMessage,
+                    ...(item.role === "user" ? noaStyles.userMessage : noaStyles.assistantMessage),
+                  }}
+                >
+                  <strong>{item.role === "user" ? "나" : "노아"}</strong>
+                  <p>{item.content}</p>
+                </div>
+              ))}
+
+              {noaLoading ? (
+                <div style={{ ...noaStyles.chatMessage, ...noaStyles.assistantMessage }}>
+                  <strong>노아</strong>
+                  <p>네 말을 바탕으로 목표와 오늘 행동을 정리하는 중이야...</p>
+                </div>
+              ) : null}
+            </div>
+
+            <div style={noaStyles.emotionStrip}>
+              {EMOTION_OPTIONS.map((item) => {
+                const active = selectedEmotion === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    style={{ ...noaStyles.emotionChip, ...(active ? noaStyles.emotionChipActive : null) }}
+                    onClick={() => {
+                      setSelectedEmotion(item.id);
+                      setLastEmotionCoachKey("");
+                      setMessage(`${item.emoji} ${item.label} 상태를 노아가 기억했어.`);
+                      setMessageType("success");
+                    }}
+                  >
+                    <span>{item.emoji}</span> {item.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {emotionCoachInsight ? (
+              <div style={noaStyles.inlineCoachCard}>
+                <div>
+                  <strong>{emotionCoachInsight.emoji} {emotionCoachInsight.title}</strong>
+                  <p>{emotionCoachInsight.adjustedAction}</p>
+                </div>
+                <button type="button" style={noaStyles.darkMiniButton} onClick={applyEmotionCoachAction}>
+                  감정에 맞게 재배치
+                </button>
+              </div>
+            ) : null}
+
+            {adaptiveCoachInsight ? (
+              <div style={noaStyles.inlineCoachCardWarn}>
+                <div>
+                  <strong>노아가 기억한 멈춤 신호</strong>
+                  <p>{adaptiveCoachInsight.message}</p>
+                  <p>{adaptiveCoachInsight.adjustedAction}</p>
+                </div>
+                <button
+                  type="button"
+                  style={noaStyles.darkMiniButton}
+                  onClick={applyAdaptiveCoachAction}
+                  disabled={lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`}
+                >
+                  오늘 행동 줄이기
+                </button>
+              </div>
+            ) : null}
+
+            <div style={noaStyles.composerWrap}>
+              <button type="button" style={noaStyles.plusButton}>＋</button>
+              <textarea
+                style={noaStyles.noaTextarea}
+                placeholder="너의 목표, 고민, 꿈을 노아에게 말해줘"
+                value={noaInput}
+                onChange={(e) => setNoaInput(e.target.value)}
+                onKeyDown={sendOnEnter}
+                rows={1}
+              />
+              <button
+                type="button"
+                style={noaStyles.sendButton}
+                onClick={handleNoaSend}
+                disabled={noaLoading}
+              >
+                {noaLoading ? "…" : "➤"}
+              </button>
+            </div>
+
+            <div style={noaStyles.quickPromptRow}>
+              {["내 목표를 분석해줘", "오늘 할 행동 하나만 정해줘", "내가 왜 미루는지 알려줘"].map((item) => (
+                <button key={item} type="button" style={noaStyles.quickPrompt} onClick={() => setNoaInput(item)}>
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section style={noaStyles.dashboardGrid}>
+          <div style={noaStyles.panelCard}>
+            <div style={noaStyles.panelHeader}>
+              <div>
+                <p style={noaStyles.panelKicker}>DAY CHECK</p>
+                <h2 style={noaStyles.panelTitle}>{currentStageLabel} 실행 체크</h2>
+              </div>
+              <strong>{progress}%</strong>
+            </div>
+            <div style={noaStyles.progressBar}><div style={{ ...noaStyles.progressFill, width: `${progress}%` }} /></div>
+            <p style={noaStyles.helperText}>24시간 전에 다음 Day를 누르면 “24시간 뒤에 다시 체크할 수 있어요” 안내가 떠.</p>
+
+            <div style={noaStyles.compactDayList}>
+              {checks.map((checked, index) => {
+                const isCurrent = index === currentDayIndex;
+                return (
+                  <div key={index} style={{ ...noaStyles.compactDayItem, ...(isCurrent ? noaStyles.compactDayCurrent : null) }}>
+                    <div>
+                      <strong>Day {index + 1}</strong>
+                      <p>{dailyPlan[index] || "노아와 대화하면 오늘 행동이 생성돼."}</p>
+                      {dayImages[index] ? <small>사진 인증 완료</small> : null}
+                    </div>
+                    <div style={noaStyles.dayActions}>
+                      <input
+                        ref={(el) => (galleryInputRefs.current[index] = el)}
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={(e) => handleImageChange(index, e)}
+                      />
+                      <input
+                        ref={(el) => (cameraInputRefs.current[index] = el)}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        style={{ display: "none" }}
+                        onChange={(e) => handleImageChange(index, e)}
+                      />
+                      {!checked && isCurrent ? (
+                        <>
+                          <button type="button" style={noaStyles.lightMiniButton} onClick={(e) => openGalleryPicker(index, e)}>
+                            {uploadingImageIndex === index ? "업로드 중" : "사진"}
+                          </button>
+                          <button type="button" style={noaStyles.darkMiniButton} onClick={() => toggleCheck(index)}>
+                            완료
+                          </button>
+                        </>
+                      ) : checked ? (
+                        <span style={noaStyles.doneBadge}>완료</span>
+                      ) : (
+                        <button type="button" style={noaStyles.lightMiniButton} onClick={() => toggleCheck(index)}>
+                          잠금
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={noaStyles.panelCard}>
+            <div style={noaStyles.panelHeader}>
+              <div>
+                <p style={noaStyles.panelKicker}>NOA MEMORY</p>
+                <h2 style={noaStyles.panelTitle}>노아가 기억한 너</h2>
+              </div>
+            </div>
+            <div style={noaStyles.memoryBox}>
+              <p>최근 진행률은 {progress}%이고, 지금은 Day {currentDayIndex === -1 ? checks.length : currentDayIndex + 1} 흐름이야.</p>
+              <p>{selectedEmotion ? `오늘 감정은 ${getEmotionProfile(selectedEmotion)?.emoji} ${getEmotionProfile(selectedEmotion)?.label}로 기억했어.` : "아직 오늘 감정을 고르지 않았어."}</p>
+              <p>{parsedAnalysis.current || "노아와 대화를 시작하면 너의 목표와 패턴을 계속 기억해."}</p>
+            </div>
+
+            {currentDayIndex >= 0 ? (
+              <div style={noaStyles.journalBox}>
+                <div style={noaStyles.panelHeader}>
+                  <div>
+                    <p style={noaStyles.panelKicker}>DAY JOURNAL</p>
+                    <h3 style={noaStyles.journalTitle}>오늘 실행 후 일기</h3>
+                  </div>
+                  <button type="button" style={noaStyles.lightMiniButton} onClick={() => setActiveJournalIndex(activeJournalIndex === currentDayIndex ? null : currentDayIndex)}>
+                    {activeJournalIndex === currentDayIndex ? "닫기" : "쓰기"}
+                  </button>
+                </div>
+                {activeJournalIndex === currentDayIndex ? (
+                  <>
+                    <textarea
+                      style={noaStyles.journalTextarea}
+                      placeholder="오늘 무엇을 했고, 어떤 감정이었는지 적어줘. 노아가 이어서 코칭해줄게."
+                      value={dayJournals[currentDayIndex] || ""}
+                      onChange={(e) => handleJournalChange(currentDayIndex, e.target.value)}
+                      rows={4}
+                    />
+                    <button type="button" style={noaStyles.darkMiniButton} onClick={() => generateDayJournalCoaching(currentDayIndex)} disabled={journalLoadingIndex === currentDayIndex}>
+                      {journalLoadingIndex === currentDayIndex ? "노아가 코칭 중" : "노아 코칭 받기"}
+                    </button>
+                  </>
+                ) : null}
+                {dayCoachings[currentDayIndex] ? <div style={noaStyles.coachingResult}>{dayCoachings[currentDayIndex]}</div> : null}
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        {message ? (
+          <p
+            style={{
+              ...noaStyles.toastMessage,
+              ...(messageType === "success" ? noaStyles.toastSuccess : messageType === "error" ? noaStyles.toastError : noaStyles.toastInfo),
+            }}
+          >
+            {message}
+          </p>
+        ) : null}
+      </main>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(initialForm);
@@ -2008,6 +2354,9 @@ export default function App() {
   const [coachMessages, setCoachMessages] = useState([]);
   const [coachQuestion, setCoachQuestion] = useState("");
   const [coachLoading, setCoachLoading] = useState(false);
+  const [noaMessages, setNoaMessages] = useState([]);
+  const [noaInput, setNoaInput] = useState("");
+  const [noaLoading, setNoaLoading] = useState(false);
 
   const skipAutoSaveRef = useRef(true);
   const galleryInputRefs = useRef([]);
@@ -2185,6 +2534,19 @@ export default function App() {
                 }))
             );
           }
+
+          if (Array.isArray(data.noaMessages)) {
+            setNoaMessages(
+              data.noaMessages
+                .filter((item) => item && typeof item === "object")
+                .map((item) => ({
+                  role: item.role === "assistant" ? "assistant" : "user",
+                  content: String(item.content || ""),
+                  createdAt: item.createdAt || new Date().toISOString(),
+                }))
+                .slice(-80)
+            );
+          }
         }
       } catch (error) {
         console.error(error);
@@ -2239,6 +2601,7 @@ export default function App() {
           ),
           dayJournals,
           dayCoachings,
+          noaMessages: noaMessages.slice(-80),
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
@@ -2267,7 +2630,7 @@ export default function App() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [form, checks, analysis, lastCheckedAt, dayImages, dayJournals, dayCoachings, dailyPlan, executionStage, planStartedAt, lastAdaptiveCoachKey, selectedEmotion, lastEmotionCoachKey, user, loading]);
+  }, [form, checks, analysis, lastCheckedAt, dayImages, dayJournals, dayCoachings, dailyPlan, executionStage, planStartedAt, lastAdaptiveCoachKey, selectedEmotion, lastEmotionCoachKey, noaMessages, user, loading]);
 
   const handleLogin = async () => {
     try {
@@ -2308,6 +2671,8 @@ export default function App() {
       setLastEmotionCoachKey("");
       setCoachMessages([]);
       setCoachQuestion("");
+      setNoaMessages([]);
+      setNoaInput("");
       setMessage("로그아웃 완료.");
       setMessageType("info");
     } catch (error) {
@@ -2833,6 +3198,96 @@ export default function App() {
     }
   };
 
+
+  const handleNoaSend = async () => {
+    const cleanText = noaInput.trim();
+
+    if (!user) {
+      setMessage("노아가 너를 계속 기억하려면 먼저 로그인해줘.");
+      setMessageType("error");
+      return;
+    }
+
+    if (!cleanText) {
+      setMessage("노아에게 목표, 고민, 꿈 중 하나를 말해줘.");
+      setMessageType("info");
+      return;
+    }
+
+    const emotionProfile = getEmotionProfile(selectedEmotion);
+    const userMessage = {
+      role: "user",
+      content: cleanText,
+      createdAt: new Date().toISOString(),
+    };
+
+    const optimisticMessages = [...noaMessages, userMessage].slice(-80);
+    setNoaMessages(optimisticMessages);
+    setNoaInput("");
+
+    const nextForm = {
+      ...form,
+      concern: form.concern?.trim() ? form.concern : cleanText,
+      goal: form.goal?.trim() ? form.goal : cleanText,
+    };
+    setForm(nextForm);
+
+    try {
+      setNoaLoading(true);
+      setMessage("");
+
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: nextForm.name,
+          concern: nextForm.concern,
+          goal: nextForm.goal,
+          progress,
+          selectedEmotion,
+          emotionLabel: emotionProfile ? `${emotionProfile.emoji} ${emotionProfile.label}` : "감정 미선택",
+          noaConversation: optimisticMessages.slice(-10),
+          roleInstruction: VELAXION_AI_ROLE_INSTRUCTION,
+          requestMode: "noa_chat_analysis",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "노아 분석 실패");
+
+      const resultText = data.result || "분석 결과를 만들지 못했어. 목표를 조금 더 구체적으로 말해줘.";
+      const assistantMessage = {
+        role: "assistant",
+        content: resultText,
+        createdAt: new Date().toISOString(),
+      };
+      const nextMessages = [...optimisticMessages, assistantMessage].slice(-80);
+
+      setAnalysis(resultText);
+      setNoaMessages(nextMessages);
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          form: nextForm,
+          analysis: resultText,
+          noaMessages: nextMessages,
+          selectedEmotion,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
+      setMessage("노아가 목표와 오늘 행동을 정리했어.");
+      setMessageType("success");
+    } catch (error) {
+      console.error("NOA CHAT ERROR:", error);
+      setMessage(`노아 분석 실패: ${error.message}`);
+      setMessageType("error");
+    } finally {
+      setNoaLoading(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) {
       setMessage("먼저 로그인해줘.");
@@ -2969,624 +3424,162 @@ export default function App() {
   const currentDayIndex = getCurrentDayIndex(checks);
 
   return (
-    <div style={styles.page}>
-      <style>{mobileCss}</style>
-      <div style={styles.container}>
-        <button style={styles.backToLandingButton} onClick={() => navigateTo("home")}>
-          ← 홈페이지로 돌아가기
-        </button>
-        <button style={styles.backToLandingButton} onClick={() => navigateTo("consulting")}>
-          AI 컨설팅룸으로 이동 →
-        </button>
-        <div style={styles.header}>
-          <div>
-            <p style={styles.workspaceEyebrow}>VELAXION EXECUTION OS</p>
-            <h1 style={styles.title}>나만의 실행 앱</h1>
-            <p style={styles.subtitle}>
-              목표를 분석하고, 하루 행동으로 쪼개고, 노아와 함께 끝까지 실행해.
-            </p>
-          </div>
-        </div>
-
-        <div style={styles.commandCenter}>
-          <div style={styles.commandGlow} />
-          <div style={styles.commandContent}>
-            <div>
-              <p style={styles.commandLabel}>오늘의 실행 상태</p>
-              <h2 style={styles.commandTitle}>
-                {currentDayIndex === -1 ? `${currentStageLabel} 완료` : `Day ${currentDayIndex + 1} 실행 준비`}
-              </h2>
-              <p style={styles.commandText}>
-                컨설팅은 방향을 만들고, 코칭은 실행을 계속 이어가게 합니다.
-              </p>
-            </div>
-
-            <div style={styles.commandStats}>
-              <div style={styles.commandStatCard}>
-                <span>진행률</span>
-                <strong>{progress}%</strong>
-              </div>
-              <div style={styles.commandStatCard}>
-                <span>완료</span>
-                <strong>{checks.filter(Boolean).length}/{checks.length}</strong>
-              </div>
-              <div style={styles.commandStatCard}>
-                <span>인증 사진</span>
-                <strong>{dayImages.filter(Boolean).length}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>계정</h2>
-          </div>
-
-          {user ? (
-            <div style={styles.userBox}>
-              <div style={styles.userTop}>
-                <div>
-                  <p style={styles.userName}>
-                    {user.displayName || form.name || "사용자"}
-                  </p>
-                  <p style={styles.userEmail}>{user.email}</p>
-                </div>
-                <button style={styles.secondaryButton} onClick={handleLogout}>
-                  로그아웃
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              style={styles.primaryButton}
-              onClick={handleLogin}
-              disabled={loginLoading}
-            >
-              {loginLoading ? "로그인 중..." : "Google 로그인"}
-            </button>
-          )}
-        </div>
-
-        <div style={styles.communityEntryCard}>
-          <div>
-            <p style={styles.communityEntryEyebrow}>COMMUNITY</p>
-            <h2 style={styles.communityEntryTitle}>함께 성장하기</h2>
-            <p style={styles.communityEntryText}>
-              컨설팅을 받은 사람끼리 경험을 공유하고, 사진과 메시지로 서로에게 조언을 주고받는 공간이야.
-            </p>
-          </div>
-          <button style={styles.primaryButton} onClick={() => setShowCommunity(true)}>
-            경험 공유방 들어가기
-          </button>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>기본 정보</h2>
-          </div>
-
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>이름</label>
-            <input
-              style={styles.input}
-              placeholder="이름을 입력해"
-              value={form.name}
-              onChange={(e) => handleInputChange("name", e.target.value)}
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>지금 가장 큰 고민</label>
-            <textarea
-              style={styles.textarea}
-              placeholder="예: 진로, 공부, 창업, 관계"
-              value={form.concern}
-              onChange={(e) => handleInputChange("concern", e.target.value)}
-              rows={5}
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>목표</label>
-            <textarea
-              style={styles.textarea}
-              placeholder="3개월 뒤 이루고 싶은 목표를 적어줘"
-              value={form.goal}
-              onChange={(e) => handleInputChange("goal", e.target.value)}
-              rows={5}
-            />
-          </div>
-
-          <div style={styles.autoSaveHint}>글을 쓰면 자동 저장돼.</div>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.sectionHeader}>
-            <div>
-              <h2 style={styles.sectionTitle}>오늘 감정 체크</h2>
-              <p style={styles.emotionSubtitle}>감정을 고르면 오늘 AI 분석과 실행 계획이 현실에 맞게 다시 배치돼.</p>
-            </div>
-          </div>
-
-          <div style={styles.emotionGrid}>
-            {EMOTION_OPTIONS.map((item) => {
-              const active = selectedEmotion === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  style={{
-                    ...styles.emotionButton,
-                    ...(active ? styles.emotionButtonActive : null),
-                  }}
-                  onClick={() => {
-                    setSelectedEmotion(item.id);
-                    setLastEmotionCoachKey("");
-                    setMessage(`${item.emoji} ${item.label} 상태로 감정 체크했어. 아래 버튼을 누르면 오늘 AI 분석이 재배치돼.`);
-                    setMessageType("info");
-                  }}
-                >
-                  <span style={styles.emotionEmoji}>{item.emoji}</span>
-                  <strong>{item.label}</strong>
-                  <small>{item.tone}</small>
-                </button>
-              );
-            })}
-          </div>
-
-          {emotionCoachInsight ? (
-            <div style={styles.emotionCoachBox}>
-              <div>
-                <p style={styles.emotionCoachKicker}>EMOTION AI REBUILD</p>
-                <h3 style={styles.emotionCoachTitle}>
-                  {emotionCoachInsight.emoji} {emotionCoachInsight.title}
-                </h3>
-                <p style={styles.emotionCoachText}>{emotionCoachInsight.message}</p>
-                <div style={styles.emotionActionPreview}>
-                  Day {emotionCoachInsight.dayNumber} · {emotionCoachInsight.adjustedAction}
-                </div>
-              </div>
-              <button
-                type="button"
-                style={styles.primaryButton}
-                onClick={applyEmotionCoachAction}
-                disabled={lastEmotionCoachKey === `${emotionCoachInsight.id}-${emotionCoachInsight.dayNumber - 1}-${new Date().toISOString().slice(0, 10)}`}
-              >
-                {lastEmotionCoachKey === `${emotionCoachInsight.id}-${emotionCoachInsight.dayNumber - 1}-${new Date().toISOString().slice(0, 10)}`
-                  ? "재배치 완료"
-                  : "감정에 맞게 AI 분석 재배치"}
-              </button>
-            </div>
-          ) : (
-            <p style={styles.emotionEmptyText}>오늘 상태를 하나 선택하면 AI가 오늘 행동을 다시 맞춰줘.</p>
-          )}
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>{currentStageLabel} 실행 체크</h2>
-            <span style={styles.progressText}>{progress}%</span>
-          </div>
-
-          <div style={styles.progressBar}>
-            <div
-              style={{
-                ...styles.progressFill,
-                width: `${progress}%`,
-              }}
-            />
-          </div>
-
-          <div style={styles.autoSaveHint}>
-            AI가 만든 실행 계획과 연결돼. 7일을 끝내면 30일로, 30일을 끝내면 90일로 자동 확장돼. 체크하려면 사진 촬영 또는 갤러리 이미지를 먼저 등록해야 해.
-          </div>
-
-          {adaptiveCoachInsight ? (
-            <div style={styles.adaptiveCoachCard}>
-              <div>
-                <p style={styles.adaptiveCoachEyebrow}>AI MEMORY COACH</p>
-                <h3 style={styles.adaptiveCoachTitle}>{adaptiveCoachInsight.title}</h3>
-                <p style={styles.adaptiveCoachText}>{adaptiveCoachInsight.message}</p>
-                <div style={styles.adaptiveActionBox}>
-                  <strong>조정 제안</strong>
-                  <br />
-                  {adaptiveCoachInsight.adjustedAction || "오늘은 5분 행동 1개만 다시 시작하기"}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                style={styles.primaryButton}
-                onClick={applyAdaptiveCoachAction}
-                disabled={lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`}
-              >
-                {lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`
-                  ? "조정 완료"
-                  : "오늘 행동 줄이기"}
-              </button>
-            </div>
-          ) : null}
-
-          <div style={styles.stageSystemGrid}>
-            <div style={styles.stageSystemCard}>
-              <strong>7일</strong>
-              <span>처음 실행을 증명</span>
-            </div>
-            <div style={styles.stageSystemCard}>
-              <strong>30일</strong>
-              <span>행동을 습관으로 확장</span>
-            </div>
-            <div style={styles.stageSystemCard}>
-              <strong>90일</strong>
-              <span>성장 패턴으로 고정</span>
-            </div>
-          </div>
-
-          <div style={styles.dayPlanGrid}>
-            {checks.map((checked, index) => {
-              const isCurrentDay = index === currentDayIndex;
-              const canUploadImage = !checked && isCurrentDay;
-              const isUploading = uploadingImageIndex === index;
-              const isRemoving = removingImageIndex === index;
-
-              return (
-                <div key={index} style={styles.dayPlanCard}>
-                  <div style={styles.dayPlanTop}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={checked || index !== currentDayIndex || !dayImages[index]}
-                      onChange={() => toggleCheck(index)}
-                    />
-                    <span style={styles.dayLabel}>Day {index + 1}</span>
-                  </div>
-
-                  <div style={styles.dayContentRow}>
-                    <div style={styles.dayLeftContent}>
-                      <div style={styles.dayTaskText}>
-                        {dailyPlan[index] || "AI 분석 후 이 날의 계획이 표시돼."}
-                      </div>
-
-                      <input
-                        ref={(el) => {
-                          galleryInputRefs.current[index] = el;
-                        }}
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={(e) => handleImageChange(index, e)}
-                      />
-
-                      <input
-                        ref={(el) => {
-                          cameraInputRefs.current[index] = el;
-                        }}
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        style={{ display: "none" }}
-                        onChange={(e) => handleImageChange(index, e)}
-                      />
-
-                      <div style={styles.dayImageActions}>
-                        <button
-                          type="button"
-                          style={{
-                            ...styles.secondaryButton,
-                            ...(canUploadImage && !isUploading ? null : styles.disabledButton),
-                          }}
-                          onClick={(e) => openCameraPicker(index, e)}
-                          disabled={!canUploadImage || isUploading}
-                        >
-                          {isUploading ? "이미지 저장 중..." : "사진 촬영"}
-                        </button>
-
-                        <button
-                          type="button"
-                          style={{
-                            ...styles.secondaryButton,
-                            ...(canUploadImage && !isUploading ? null : styles.disabledButton),
-                          }}
-                          onClick={(e) => openGalleryPicker(index, e)}
-                          disabled={!canUploadImage || isUploading}
-                        >
-                          {isUploading ? "이미지 저장 중..." : "갤러리 선택"}
-                        </button>
-
-                        {dayImages[index] ? (
-                          <button
-                            type="button"
-                            style={{
-                              ...styles.imageRemoveButton,
-                              ...(checked || isRemoving ? styles.disabledButton : null),
-                            }}
-                            onClick={(e) => clearDayImage(index, e)}
-                            disabled={checked || isRemoving}
-                          >
-                            {isRemoving ? "제거 중..." : "이미지 제거"}
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div style={styles.dayRightPreview}>
-                      {dayImages[index] ? (
-                        <div style={styles.dayInlinePreviewBox}>
-                          <img
-                            src={dayImages[index].preview || dayImages[index].url}
-                            alt={`Day ${index + 1} 인증`}
-                            style={styles.dayInlinePreviewImage}
-                          />
-                          <div style={styles.dayImageName}>
-                            {dayImages[index].name || `Day ${index + 1} 이미지`}
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={styles.dayInlinePreviewEmpty}>
-                          {checked
-                            ? "완료된 Day야."
-                            : isCurrentDay
-                              ? "여기에 인증 사진이 보여."
-                              : "이전 Day를 완료하면 사진 등록이 열려."}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {checked ? (
-                    <div style={styles.dayJournalBox}>
-                      <div style={styles.dayJournalHeader}>
-                        <div>
-                          <p style={styles.dayJournalKicker}>DAY {index + 1} JOURNAL</p>
-                          <h4 style={styles.dayJournalTitle}>오늘 뭐 했는지 적으면 AI가 바로 코칭해줘</h4>
-                        </div>
-                        <button
-                          type="button"
-                          style={styles.journalToggleButton}
-                          onClick={() => setActiveJournalIndex(activeJournalIndex === index ? null : index)}
-                        >
-                          {activeJournalIndex === index ? "닫기" : "일기 쓰기"}
-                        </button>
-                      </div>
-
-                      {activeJournalIndex === index ? (
-                        <div style={styles.dayJournalContent}>
-                          <textarea
-                            style={styles.dayJournalTextarea}
-                            placeholder="예: 오늘 20:00에 5분만 하려고 했는데 12분 했다. 시작 전에는 귀찮았지만 하고 나니까 조금 자신감이 생겼다."
-                            value={dayJournals[index] || ""}
-                            onChange={(e) => handleJournalChange(index, e.target.value)}
-                            rows={4}
-                          />
-                          <button
-                            type="button"
-                            style={{
-                              ...styles.primaryButton,
-                              ...(journalLoadingIndex === index ? styles.disabledButton : null),
-                            }}
-                            onClick={() => generateDayJournalCoaching(index)}
-                            disabled={journalLoadingIndex === index}
-                          >
-                            {journalLoadingIndex === index ? "AI 코칭 중..." : "일기 저장하고 AI 코칭 받기"}
-                          </button>
-
-                          {dayCoachings[index] ? (
-                            <div style={styles.dayCoachingResultBox}>
-                              <p style={styles.dayJournalKicker}>VELAXION AI COACHING</p>
-                              <div style={styles.dayCoachingText}>{dayCoachings[index]}</div>
-                            </div>
-                          ) : (
-                            <p style={styles.dayJournalHint}>완료한 행동을 적으면 AI가 잘한 점, 부족한 점, 내일 해야 할 행동을 바로 정리해줘.</p>
-                          )}
-                        </div>
-                      ) : dayCoachings[index] ? (
-                        <div style={styles.dayCoachingMiniBox}>AI 코칭 완료 · 눌러서 다시 보기</div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={styles.card}>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>AI 분석</h2>
-          </div>
-
-          <div style={styles.actionRow}>
-            <button
-              style={styles.primaryButton}
-              onClick={handleAnalyze}
-              disabled={analyzing}
-            >
-              {analyzing ? "분석 중..." : "AI 분석하기"}
-            </button>
-
-            <button
-              style={styles.secondaryButton}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "저장 중..." : "수동 저장"}
-            </button>
-          </div>
-
-          {!analysis ? (
-            <div style={styles.analysisEmptyBox}>
-              아직 분석 결과가 없어. 내용을 적고 "AI 분석하기"를 눌러봐.
-            </div>
-          ) : hasStructuredAnalysis ? (
-            <div style={styles.analysisLayout}>
-              <div style={styles.analysisSummaryColumn}>
-                <div style={styles.resultCard}>
-                  <div style={styles.resultCardHeader}>
-                    <span style={styles.resultBadge}>01</span>
-                    <div>
-                      <p style={styles.resultKicker}>CURRENT</p>
-                      <h3 style={styles.resultTitle}>현재 상태 분석</h3>
-                    </div>
-                  </div>
-                  <p style={styles.resultText}>
-                    {parsedAnalysis.current || "분석 내용이 아직 없어."}
-                  </p>
-                </div>
-
-                <div style={styles.resultCard}>
-                  <div style={styles.resultCardHeader}>
-                    <span style={styles.resultBadge}>02</span>
-                    <div>
-                      <p style={styles.resultKicker}>FOCUS</p>
-                      <h3 style={styles.resultTitle}>가장 중요한 핵심 문제</h3>
-                    </div>
-                  </div>
-                  <p style={styles.resultText}>
-                    {parsedAnalysis.core || "핵심 문제 내용이 아직 없어."}
-                  </p>
-                </div>
-
-                <div style={styles.resultCard}>
-                  <div style={styles.resultCardHeader}>
-                    <span style={styles.resultBadge}>04</span>
-                    <div>
-                      <p style={styles.resultKicker}>MESSAGE</p>
-                      <h3 style={styles.resultTitle}>짧은 응원 한마디</h3>
-                    </div>
-                  </div>
-                  <p style={styles.cheerText}>
-                    {parsedAnalysis.cheer || "응원 메시지가 아직 없어."}
-                  </p>
-                </div>
-              </div>
-
-              <div style={styles.planResultCard}>
-                <div style={styles.resultCardHeader}>
-                  <span style={styles.resultBadge}>03</span>
-                  <div>
-                    <p style={styles.resultKicker}>ACTION PLAN</p>
-                    <h3 style={styles.resultTitle}>{currentStageLabel} 행동 계획</h3>
-                  </div>
-                </div>
-
-                {parsedAnalysis.plan.length > 0 ? (
-                  <div style={styles.planList}>
-                    {parsedAnalysis.plan.map((item, index) => {
-                      const displayDayNumber = getPlanDisplayDayNumber(item, index);
-                      const displayText = getPlanDisplayText(item);
-                      return (
-                        <div key={`${displayDayNumber}-${index}`} style={styles.planItem}>
-                          <div style={styles.planDayBadge}>Day {displayDayNumber}</div>
-                          <div style={styles.planText}>{displayText}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p style={styles.resultText}>행동 계획이 아직 없어.</p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div style={styles.analysisBox}>{analysis}</div>
-          )}
-
-          <div style={styles.coachBox}>
-            <div style={styles.coachHeader}>
-              <div>
-                <p style={styles.coachEyebrow}>AI EXECUTION COACH</p>
-                <h3 style={styles.coachTitle}>AI 실행 피드백</h3>
-              </div>
-              <span style={styles.coachStatus}>{checks.filter(Boolean).length}/7 Day 진행 중</span>
-            </div>
-
-            <p style={styles.coachDescription}>
-              분석이 끝난 뒤에도 AI에게 계속 질문할 수 있어. 무엇이 부족한지, 어떻게 더 효율적으로 실행할지, 오늘 막힌 부분을 바로 피드백 받아봐.
-            </p>
-
-            <div style={styles.coachQuickRow}>
-              {[
-                "내 계획에서 부족한 점 알려줘",
-                "오늘 실행을 더 쉽게 쪼개줘",
-                "더 효율적으로 실행하는 방법 알려줘",
-              ].map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  style={styles.coachQuickButton}
-                  onClick={() => setCoachQuestion(item)}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-
-            <div style={styles.coachMessagesBox}>
-              {coachMessages.length === 0 ? (
-                <div style={styles.coachEmpty}>
-                  아직 추가 피드백이 없어. AI 분석 후 궁금한 점을 질문해봐.
-                </div>
-              ) : (
-                coachMessages.map((item, index) => (
-                  <div
-                    key={`${item.createdAt}-${index}`}
-                    style={{
-                      ...styles.coachMessageRow,
-                      ...(item.role === "user" ? styles.coachMessageUser : styles.coachMessageAssistant),
-                    }}
-                  >
-                    <div style={styles.coachMessageLabel}>
-                      {item.role === "user" ? "나" : "VELAXION AI"}
-                    </div>
-                    <div style={styles.coachBubble}>{item.content}</div>
-                  </div>
-                ))
-              )}
-              <div ref={coachBottomRef} />
-            </div>
-
-            <div style={styles.coachComposer}>
-              <textarea
-                style={styles.coachTextarea}
-                placeholder="예: 지금 내 실행 방식에서 가장 부족한 점이 뭐야?"
-                value={coachQuestion}
-                onChange={(e) => setCoachQuestion(e.target.value)}
-                rows={3}
-              />
-              <button
-                type="button"
-                style={{
-                  ...styles.primaryButton,
-                  ...(coachLoading ? styles.disabledButton : null),
-                }}
-                onClick={handleCoachAsk}
-                disabled={coachLoading}
-              >
-                {coachLoading ? "피드백 받는 중..." : "AI에게 추가 질문하기"}
-              </button>
-            </div>
-          </div>
-
-          {message ? (
-            <p
-              style={{
-                ...styles.message,
-                ...(messageType === "success"
-                  ? styles.messageSuccess
-                  : messageType === "error"
-                    ? styles.messageError
-                    : styles.messageInfo),
-              }}
-            >
-              {message}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </div>
+    <NoaChatApp
+      user={user}
+      form={form}
+      handleLogin={handleLogin}
+      handleLogout={handleLogout}
+      loginLoading={loginLoading}
+      navigateTo={navigateTo}
+      selectedEmotion={selectedEmotion}
+      setSelectedEmotion={setSelectedEmotion}
+      setLastEmotionCoachKey={setLastEmotionCoachKey}
+      emotionCoachInsight={emotionCoachInsight}
+      applyEmotionCoachAction={applyEmotionCoachAction}
+      checks={checks}
+      currentDayIndex={currentDayIndex}
+      progress={progress}
+      currentStageLabel={currentStageLabel}
+      dailyPlan={dailyPlan}
+      dayImages={dayImages}
+      toggleCheck={toggleCheck}
+      galleryInputRefs={galleryInputRefs}
+      cameraInputRefs={cameraInputRefs}
+      openGalleryPicker={openGalleryPicker}
+      openCameraPicker={openCameraPicker}
+      handleImageChange={handleImageChange}
+      clearDayImage={clearDayImage}
+      uploadingImageIndex={uploadingImageIndex}
+      removingImageIndex={removingImageIndex}
+      activeJournalIndex={activeJournalIndex}
+      setActiveJournalIndex={setActiveJournalIndex}
+      dayJournals={dayJournals}
+      handleJournalChange={handleJournalChange}
+      generateDayJournalCoaching={generateDayJournalCoaching}
+      dayCoachings={dayCoachings}
+      journalLoadingIndex={journalLoadingIndex}
+      noaMessages={noaMessages}
+      noaInput={noaInput}
+      setNoaInput={setNoaInput}
+      noaLoading={noaLoading}
+      handleNoaSend={handleNoaSend}
+      parsedAnalysis={parsedAnalysis}
+      hasStructuredAnalysis={hasStructuredAnalysis}
+      adaptiveCoachInsight={adaptiveCoachInsight}
+      applyAdaptiveCoachAction={applyAdaptiveCoachAction}
+      lastAdaptiveCoachKey={lastAdaptiveCoachKey}
+      setMessage={setMessage}
+      setMessageType={setMessageType}
+      message={message}
+      messageType={messageType}
+    />
   );
 }
+
+const noaCss = `
+  .noa-sidebar {
+    transition: width 260ms ease, box-shadow 260ms ease;
+  }
+  .noa-sidebar .noa-sidebar-label {
+    opacity: 0;
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 180ms ease, max-width 220ms ease;
+  }
+  .noa-sidebar:hover {
+    width: 286px !important;
+    box-shadow: 28px 0 80px rgba(15, 23, 42, 0.12);
+  }
+  .noa-sidebar:hover .noa-sidebar-label {
+    opacity: 1;
+    max-width: 210px;
+  }
+  .noa-side-item:hover {
+    background: rgba(15,23,42,0.07) !important;
+  }
+  @media (max-width: 760px) {
+    .noa-sidebar { display: none !important; }
+  }
+`;
+
+const noaStyles = {
+  shell: {
+    minHeight: "100vh",
+    background: "#ffffff",
+    color: "#111827",
+    fontFamily: 'Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  },
+  sidebar: {
+    position: "fixed",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 72,
+    background: "#f7f7f8",
+    borderRight: "1px solid rgba(15,23,42,0.08)",
+    padding: "14px 10px",
+    zIndex: 20,
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  sidebarBrandRow: { display: "flex", alignItems: "center", gap: 10, padding: "8px 10px 18px" },
+  noaMark: { width: 34, height: 34, borderRadius: 12, background: "#111827", color: "#fff", display: "grid", placeItems: "center", fontWeight: 900 },
+  sidebarBrandText: { fontWeight: 900, letterSpacing: "0.16em" },
+  sideItem: { border: "none", background: "transparent", borderRadius: 12, padding: "12px 10px", display: "flex", alignItems: "center", gap: 12, fontWeight: 800, cursor: "pointer", color: "#111827", fontSize: 14 },
+  sideDivider: { margin: "18px 10px 4px", fontSize: 12, fontWeight: 900, color: "#6b7280" },
+  sidebarProgressBox: { margin: "0 6px", padding: 12, borderRadius: 16, background: "#fff", border: "1px solid rgba(15,23,42,0.08)", display: "grid", gap: 6, fontSize: 13 },
+  miniProgress: { height: 6, borderRadius: 99, background: "#e5e7eb", overflow: "hidden" },
+  miniProgressFill: { height: "100%", borderRadius: 99, background: "#111827" },
+  sidebarBottom: { marginTop: "auto" },
+  main: { marginLeft: 72, minHeight: "100vh", padding: "32px 24px 60px", display: "flex", flexDirection: "column", alignItems: "center" },
+  heroArea: { width: "min(980px, 100%)", minHeight: "62vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 26 },
+  greetingBlock: { textAlign: "center" },
+  noaAvatar: { display: "inline-flex", padding: "10px 16px", borderRadius: 999, background: "#f3f4f6", fontWeight: 900, marginBottom: 18 },
+  mainQuestion: { fontSize: "clamp(30px, 4vw, 46px)", letterSpacing: "-0.04em", margin: 0, fontWeight: 850 },
+  mainSubText: { margin: "14px auto 0", maxWidth: 620, color: "#6b7280", lineHeight: 1.7, fontSize: 16 },
+  chatCard: { width: "min(820px, 100%)", display: "grid", gap: 14 },
+  messageList: { maxHeight: 360, overflowY: "auto", display: "grid", gap: 12, padding: "0 4px" },
+  chatMessage: { maxWidth: "86%", padding: "14px 16px", borderRadius: 22, lineHeight: 1.65, whiteSpace: "pre-wrap", boxShadow: "0 10px 28px rgba(15,23,42,0.06)" },
+  assistantMessage: { justifySelf: "start", background: "#f5f6f8", color: "#111827" },
+  userMessage: { justifySelf: "end", background: "#111827", color: "#fff" },
+  emotionStrip: { display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" },
+  emotionChip: { border: "1px solid #e5e7eb", background: "#fff", padding: "9px 12px", borderRadius: 999, cursor: "pointer", fontWeight: 800 },
+  emotionChipActive: { background: "#111827", color: "#fff", borderColor: "#111827" },
+  inlineCoachCard: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: 16, borderRadius: 22, background: "linear-gradient(135deg,#eef6ff,#f8fbff)", border: "1px solid #dbeafe" },
+  inlineCoachCardWarn: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, padding: 16, borderRadius: 22, background: "linear-gradient(135deg,#fff7ed,#fff)", border: "1px solid #fed7aa" },
+  composerWrap: { minHeight: 64, border: "1px solid rgba(15,23,42,0.12)", borderRadius: 999, display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", boxShadow: "0 24px 60px rgba(15,23,42,0.1)", background: "#fff" },
+  plusButton: { width: 42, height: 42, borderRadius: 999, border: "none", background: "#f3f4f6", fontSize: 24, cursor: "pointer" },
+  noaTextarea: { flex: 1, border: "none", outline: "none", resize: "none", minHeight: 28, maxHeight: 120, fontSize: 16, lineHeight: 1.6, fontFamily: "inherit" },
+  sendButton: { width: 46, height: 46, borderRadius: 999, border: "none", background: "#111827", color: "#fff", fontWeight: 900, cursor: "pointer" },
+  quickPromptRow: { display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 10 },
+  quickPrompt: { border: "1px solid #e5e7eb", background: "#fff", borderRadius: 999, padding: "10px 14px", cursor: "pointer", color: "#374151", fontWeight: 700 },
+  dashboardGrid: { width: "min(1120px, 100%)", display: "grid", gridTemplateColumns: "1.15fr 0.85fr", gap: 18 },
+  panelCard: { border: "1px solid rgba(15,23,42,0.1)", borderRadius: 28, padding: 22, background: "#fff", boxShadow: "0 20px 60px rgba(15,23,42,0.07)" },
+  panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14 },
+  panelKicker: { margin: 0, fontSize: 12, fontWeight: 900, color: "#64748b", letterSpacing: "0.16em" },
+  panelTitle: { margin: "4px 0 0", fontSize: 22, letterSpacing: "-0.03em" },
+  progressBar: { height: 10, background: "#e5e7eb", borderRadius: 999, overflow: "hidden" },
+  progressFill: { height: "100%", background: "#111827", borderRadius: 999 },
+  helperText: { color: "#6b7280", fontSize: 13, lineHeight: 1.6 },
+  compactDayList: { display: "grid", gap: 10, marginTop: 16 },
+  compactDayItem: { display: "flex", justifyContent: "space-between", gap: 14, padding: 14, borderRadius: 18, border: "1px solid #e5e7eb", background: "#fafafa" },
+  compactDayCurrent: { borderColor: "#111827", background: "#f8fafc" },
+  dayActions: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" },
+  lightMiniButton: { border: "1px solid #e5e7eb", background: "#fff", borderRadius: 999, padding: "9px 12px", fontWeight: 800, cursor: "pointer" },
+  darkMiniButton: { border: "none", background: "#111827", color: "#fff", borderRadius: 999, padding: "10px 14px", fontWeight: 900, cursor: "pointer" },
+  doneBadge: { background: "#dcfce7", color: "#166534", borderRadius: 999, padding: "8px 10px", fontWeight: 900 },
+  memoryBox: { background: "#f8fafc", border: "1px solid #e5e7eb", borderRadius: 20, padding: 16, lineHeight: 1.7, color: "#374151" },
+  journalBox: { marginTop: 18, paddingTop: 18, borderTop: "1px solid #e5e7eb" },
+  journalTitle: { margin: 0, fontSize: 18 },
+  journalTextarea: { width: "100%", border: "1px solid #e5e7eb", borderRadius: 18, padding: 14, resize: "vertical", fontFamily: "inherit", fontSize: 15, boxSizing: "border-box", marginBottom: 10 },
+  coachingResult: { marginTop: 12, whiteSpace: "pre-wrap", padding: 14, borderRadius: 16, background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#14532d", lineHeight: 1.7 },
+  toastMessage: { position: "fixed", right: 24, bottom: 24, zIndex: 40, padding: "14px 16px", borderRadius: 16, fontWeight: 800, boxShadow: "0 14px 40px rgba(15,23,42,0.16)" },
+  toastSuccess: { background: "#ecfdf5", color: "#047857", border: "1px solid #a7f3d0" },
+  toastError: { background: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca" },
+  toastInfo: { background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" },
+};
 
 const styles = {
   page: {
