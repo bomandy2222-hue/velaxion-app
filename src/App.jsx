@@ -836,6 +836,49 @@ function parseAnalysisSections(text) {
 }
 
 
+
+function isNoaPlanningIntent(text) {
+  const value = String(text || "").toLowerCase();
+  return /(목표|꿈|고민|계획|분석|실행|습관|미래|하고 싶|이루고 싶|도와줘|어떻게)/.test(value);
+}
+
+function cleanNoaChatText(text) {
+  return String(text || "")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/__END_OF_ANALYSIS__/g, "")
+    .replace(/(?:^|\n)\s*\d+\.\s*(현재 상태 분석|핵심 문제|7일 실행 계획|짧은 응원 한마디)\s*/gi, "\n$1\n")
+    .trim();
+}
+
+function buildNoaChatReplyFromAnalysis({ analysisText, name, userText, selectedEmotion, progress, dailyPlan, checks }) {
+  const parsed = parseAnalysisSections(analysisText);
+  const currentIndex = Array.isArray(checks) ? getCurrentDayIndex(checks) : 0;
+  const dayNumber = currentIndex >= 0 ? currentIndex + 1 : (Array.isArray(checks) ? checks.length : 7);
+  const planFromAnalysis = Array.isArray(parsed.plan) && parsed.plan[currentIndex] ? getPlanDisplayText(parsed.plan[currentIndex]) : "";
+  const planFromState = Array.isArray(dailyPlan) && dailyPlan[currentIndex] ? dailyPlan[currentIndex] : "";
+  const action = addDefaultActionTime(stripAdaptivePrefix(planFromAnalysis || planFromState || "오늘 목표와 연결된 작은 행동 1개를 실행하기"), dayNumber);
+  const emotionProfile = getEmotionProfile(selectedEmotion);
+  const displayName = name ? `${name}님` : "너";
+  const current = parsed.current || "지금은 목표를 말로만 키우기보다, 오늘 바로 실행할 수 있는 한 가지로 줄이는 게 중요해.";
+  const core = parsed.core || "핵심은 완벽한 계획이 아니라 다시 움직이게 만드는 작은 시작이야.";
+
+  return [
+    `${displayName}, 말해줘서 고마워. 노아가 네 흐름을 조금 더 기억해둘게.`,
+    ``,
+    `내가 보기엔 지금 네 진행률은 ${progress}%이고, 오늘은 Day ${dayNumber} 흐름이야.${emotionProfile ? ` 오늘 감정은 ${emotionProfile.emoji} ${emotionProfile.label}로 기억해둘게.` : ""}`,
+    ``,
+    `냉정하게 말하면, ${cleanNoaChatText(current)}`,
+    ``,
+    `핵심은 이거야. ${cleanNoaChatText(core)}`,
+    ``,
+    `그래서 오늘은 크게 벌리지 말고 딱 하나만 하자.`,
+    `오늘 행동: ${action}`,
+    ``,
+    `끝나면 사진이나 짧은 기록으로 남겨줘. 그러면 다음 대화에서 내가 이 흐름을 이어서 기억하고, 더 현실적인 다음 행동으로 조정해줄게.`
+  ].join("\n");
+}
+
 function extractSevenDayPlan(planLines) {
   const plan = [...initialPlan];
 
@@ -2101,9 +2144,11 @@ function NoaChatApp({
                 <p>
                   {user?.displayName || form.name ? `${user?.displayName || form.name}님, 다시 와줘서 고마워. 나는 노아야.` : "안녕, 나는 노아야."}
 
-나는 네 목표, 감정, 실행 기록을 기억하면서 같이 움직이는 AI 파트너야. 오늘은 먼저 네 상태를 가볍게 확인하고 싶어.
+나는 네가 말한 목표, 감정, 실행 기록을 계속 기억하면서 같이 이겨나가는 AI 파트너야. 꼭 목표 얘기만 하지 않아도 돼. 오늘 있었던 일, 고민, 감정, 헷갈리는 생각을 편하게 말해줘.
 
-지금 감정은 어때? 그리고 이루고 싶은 목표, 고민, 꿈 중 하나를 편하게 말해줘. 내가 친근하게 듣고, 필요한 부분은 냉정하게 정리해서 오늘 할 행동까지 같이 잡아줄게.
+내가 바로 분석부터 들이밀지 않고 먼저 대화로 받아줄게. 필요할 때만 냉정하게 정리하고, 정말 움직일 수 있는 오늘 행동 하나로 줄여줄게.{adaptiveCoachInsight ? `
+
+그리고 하나 기억해둘게. 지금은 실행이 조금 멈춘 신호가 보여. 이건 실패가 아니라 계획을 현실에 맞게 다시 맞추라는 신호야. 원하면 내가 오늘 행동을 더 작게 줄여줄게.` : ""}
                 </p>
               </div>
 
@@ -2131,16 +2176,12 @@ function NoaChatApp({
                 <div style={{ ...noaStyles.chatMessage, ...noaStyles.assistantMessage }}>
                   <strong>노아</strong>
                   <p>
-                    내가 너의 실행 흐름을 다시 봤어. 지금은 의지가 없는 게 아니라, 계획이 현실보다 조금 크게 잡힌 신호에 가까워.
+내가 네 실행 흐름을 기억해보니까 지금은 의지가 없는 게 아니라, 계획이 현실보다 조금 크게 잡힌 신호에 가까워.
 
 {adaptiveCoachInsight.message}
 
-그래서 오늘은 목표를 포기하는 게 아니라, 다시 움직일 수 있을 만큼 작게 줄여볼게. 지금은 크게 이기는 것보다 흐름을 다시 살리는 게 더 중요해.
-
-오늘은 이렇게 가자.
+오늘은 목표를 포기하는 게 아니라 다시 움직일 수 있을 만큼만 줄여보자.
 {adaptiveCoachInsight.adjustedAction}
-
-괜찮아. 멈춘 건 실패가 아니라 계획을 현실에 맞게 다시 조정하라는 신호야. 내가 기억하고 있으니까, 오늘은 다시 시작하는 쪽으로만 가보자.
                   </p>
                   <button
                     type="button"
@@ -3096,7 +3137,7 @@ export default function App() {
     }
 
     if (!cleanText) {
-      setMessage("노아에게 목표, 고민, 꿈 중 하나를 말해줘.");
+      setMessage("노아에게 편하게 말해줘. 목표가 아니어도 괜찮아.");
       setMessageType("info");
       return;
     }
@@ -3112,52 +3153,98 @@ export default function App() {
     setNoaMessages(optimisticMessages);
     setNoaInput("");
 
-    const nextForm = {
-      ...form,
-      concern: form.concern?.trim() ? form.concern : cleanText,
-      goal: form.goal?.trim() ? form.goal : cleanText,
-    };
-    setForm(nextForm);
+    const planningIntent = isNoaPlanningIntent(cleanText);
+    const nextForm = planningIntent
+      ? {
+          ...form,
+          concern: form.concern?.trim() ? form.concern : cleanText,
+          goal: form.goal?.trim() ? form.goal : cleanText,
+        }
+      : form;
+
+    if (planningIntent) {
+      setForm(nextForm);
+    }
 
     try {
       setNoaLoading(true);
       setMessage("");
 
-      const res = await fetch("/api/analyze", {
+      const endpoint = planningIntent ? "/api/analyze" : "/api/coach";
+      const payload = planningIntent
+        ? {
+            name: nextForm.name,
+            concern: nextForm.concern || cleanText,
+            goal: nextForm.goal || cleanText,
+            progress,
+            selectedEmotion,
+            emotionLabel: emotionProfile ? `${emotionProfile.emoji} ${emotionProfile.label}` : "감정 미선택",
+            noaConversation: optimisticMessages.slice(-12),
+            roleInstruction: VELAXION_AI_ROLE_INSTRUCTION,
+            requestMode: "noa_goal_to_plan",
+            noaStyleInstruction:
+              "내부적으로는 7일 실행 계획을 만들되, 사용자에게 보여줄 말투는 노아처럼 자연스럽게 한다. 딱딱한 제목(### 현재 상태 분석, 핵심 문제 등)을 대화 답변 첫 화면에 그대로 보여주지 않는다. 사용자의 말이 목표/고민/꿈이면 공감 1문장, 기억한 흐름 1문장, 냉정한 분석 2~3문장, 오늘 행동 1개, 다음 질문 1개 순서로 답한다. 행동에는 정확한 시간과 소요시간을 넣는다.",
+          }
+        : {
+            question: cleanText,
+            name: form.name || user.displayName || "",
+            concern: form.concern,
+            goal: form.goal,
+            analysis,
+            dailyPlan,
+            checks,
+            progress,
+            lastCheckedAt,
+            completedDays: checks.filter(Boolean).length,
+            coachMessages: noaMessages.slice(-12),
+            noaConversation: optimisticMessages.slice(-12),
+            selectedEmotion,
+            emotionLabel: emotionProfile ? `${emotionProfile.emoji} ${emotionProfile.label}` : "감정 미선택",
+            roleInstruction: VELAXION_AI_ROLE_INSTRUCTION,
+            requestMode: "noa_free_chat",
+            noaStyleInstruction:
+              "너는 노아다. ChatGPT처럼 자유롭게 대화하되, 사용자의 목표와 실행 흐름을 기억하는 파트너처럼 답한다. 사용자가 일상 얘기나 감정 얘기를 하면 억지로 7일 계획을 만들지 말고 자연스럽게 받아준다. 필요한 경우에만 짧게 실행 조언을 한다. Markdown 제목(###)이나 '현재 상태 분석/핵심 문제/7일 실행 계획' 같은 보고서 형식은 쓰지 않는다. 말투는 성의 있고 친근하지만 현실적이어야 한다.",
+          };
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: nextForm.name,
-          concern: nextForm.concern,
-          goal: nextForm.goal,
-          progress,
-          selectedEmotion,
-          emotionLabel: emotionProfile ? `${emotionProfile.emoji} ${emotionProfile.label}` : "감정 미선택",
-          noaConversation: optimisticMessages.slice(-10),
-          roleInstruction: VELAXION_AI_ROLE_INSTRUCTION,
-          requestMode: "noa_chat_analysis",
-          noaStyleInstruction: "반드시 노아라는 이름의 대화형 코치처럼 답한다. 첫 문장은 사용자를 기억하고 반겨주는 톤으로 시작한다. 답변은 성의 있게 하되 너무 길게 늘어놓지 말고, 1) 네가 기억한 사용자 상태 2) 냉정한 분석 3) 오늘 당장 할 행동 1개 4) 다음 대화 질문 순서로 답한다. 사용자가 멈췄다면 별도 배너가 아니라 채팅 안에서 자연스럽게 말한다. 각 행동에는 정확한 시간과 소요시간을 포함한다.",
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "노아 분석 실패");
+      if (!res.ok) throw new Error(data.error || "노아 답변 실패");
 
-      const resultText = data.result || "분석 결과를 만들지 못했어. 목표를 조금 더 구체적으로 말해줘.";
+      const rawResult = data.result || "네 말을 들었어. 조금만 더 구체적으로 말해주면 내가 더 정확하게 도와줄게.";
+      const assistantContent = planningIntent
+        ? buildNoaChatReplyFromAnalysis({
+            analysisText: rawResult,
+            name: nextForm.name || user.displayName || "",
+            userText: cleanText,
+            selectedEmotion,
+            progress,
+            dailyPlan,
+            checks,
+          })
+        : cleanNoaChatText(rawResult);
+
       const assistantMessage = {
         role: "assistant",
-        content: resultText,
+        content: assistantContent,
         createdAt: new Date().toISOString(),
       };
       const nextMessages = [...optimisticMessages, assistantMessage].slice(-80);
 
-      setAnalysis(resultText);
+      if (planningIntent) {
+        setAnalysis(rawResult);
+      }
       setNoaMessages(nextMessages);
+
       await setDoc(
         doc(db, "users", user.uid),
         {
           form: nextForm,
-          analysis: resultText,
+          analysis: planningIntent ? rawResult : analysis,
           noaMessages: nextMessages,
           selectedEmotion,
           updatedAt: new Date().toISOString(),
@@ -3165,11 +3252,11 @@ export default function App() {
         { merge: true }
       );
 
-      setMessage("노아가 목표와 오늘 행동을 정리했어.");
+      setMessage(planningIntent ? "노아가 목표와 오늘 행동을 정리했어." : "노아가 답장했어.");
       setMessageType("success");
     } catch (error) {
       console.error("NOA CHAT ERROR:", error);
-      setMessage(`노아 분석 실패: ${error.message}`);
+      setMessage(`노아 답변 실패: ${error.message}`);
       setMessageType("error");
     } finally {
       setNoaLoading(false);
