@@ -550,19 +550,9 @@ function removeActionTimePrefix(action) {
     .trim();
 }
 
-function stripEmotionAdjustmentPrefix(action) {
-  return String(action || "오늘 해야 할 행동을 아주 작게 시작하기")
-    .replace(/^5분만\s*하기\s*[-:：]\s*/g, "")
-    .replace(/^가장\s*쉬운\s*버전으로\s*3분만\s*하기\s*[-:：]\s*/g, "")
-    .replace(/^딱\s*하나만\s*끝내기\s*[-:：]\s*/g, "")
-    .replace(/^타이머\s*5분\s*켜고\s*시작만\s*하기\s*[-:：]\s*/g, "")
-    .replace(/\s*\+\s*완료\s*후\s*3줄\s*기록\s*남기기$/g, "")
-    .trim();
-}
-
 function buildEmotionAdjustedAction(originalAction, emotionId) {
   const profile = getEmotionProfile(emotionId);
-  const baseAction = stripEmotionAdjustmentPrefix(stripAdaptivePrefix(removeActionTimePrefix(originalAction)));
+  const baseAction = stripAdaptivePrefix(removeActionTimePrefix(originalAction));
   const cleanBase = baseAction || "목표와 연결된 작은 행동 1개 실행하기";
 
   if (!profile) return addDefaultActionTime(cleanBase);
@@ -605,58 +595,6 @@ function buildEmotionAnalysisNote(emotionId, adjustedAction, dayNumber) {
 판단: ${profile.message}
 오늘 실행 기준: Day ${dayNumber} · ${adjustedAction}
 코치 기준: ${profile.tone}. 감정이 낮은 날은 완벽함보다 복귀를 우선하고, 컨디션이 좋은 날은 성장 폭을 조금 키웁니다.`;
-}
-
-
-function buildEmotionRebuiltAnalysis({ analysisText, dayNumber, adjustedAction, emotionId, progress, name }) {
-  const profile = getEmotionProfile(emotionId);
-  const parsed = parseAnalysisSections(analysisText);
-  const cleanName = String(name || "사용자").trim() || "사용자";
-  const cleanAction = addDefaultActionTime(stripAdaptivePrefix(adjustedAction), dayNumber);
-
-  const planItems = Array.from({ length: 7 }, (_, index) => {
-    const existing = parsed.plan?.[index]
-      ? getPlanDisplayText(parsed.plan[index])
-      : `20:00: 목표와 연결된 작은 행동 1개 실행하기`;
-    return index === dayNumber - 1 ? cleanAction : existing;
-  });
-
-  const emotionLabel = profile ? `${profile.emoji} ${profile.label}` : "감정 미선택";
-  const emotionMessage = profile ? profile.message : "오늘 상태에 맞게 실행 행동을 다시 조정했어요.";
-  const emotionTone = profile ? profile.tone : "기본 난이도 유지";
-
-  const currentText = [
-    `${cleanName}님은 현재 ${progress}%까지 실행을 이어왔어요.`,
-    `오늘 감정 상태는 ${emotionLabel}이에요.`,
-    `그래서 전체 목표를 바꾸는 게 아니라 현재 진행 중인 Day ${dayNumber} 행동만 현실에 맞게 다시 배치했어요.`,
-    emotionMessage,
-  ].join(" ");
-
-  const coreText = [
-    "지금 핵심은 더 많은 일을 하는 게 아니라 오늘 끝낼 수 있는 크기로 행동을 낮추는 거예요.",
-    `완료한 Day는 그대로 유지하고, Day ${dayNumber}만 '${emotionTone}' 기준으로 바꿨어요.`,
-    "이렇게 해야 흐름이 끊기지 않고 다시 이어져요.",
-  ].join(" ");
-
-  const cheerText = [
-    "좋아. 오늘은 크게 이기려고 하지 말고 딱 하나만 끝내면 돼요.",
-    `오늘 기준은 Day ${dayNumber} · ${cleanAction} 입니다.`,
-    "완벽함보다 다시 움직이는 사람이 결국 목표에 가까워져요.",
-  ].join(" ");
-
-  return [
-    "현재 상태 분석",
-    currentText,
-    "",
-    "가장 중요한 핵심 문제",
-    coreText,
-    "",
-    "바로 실천할 수 있는 7일 행동 계획",
-    ...planItems.map((item, index) => `Day ${index + 1}: ${item}`),
-    "",
-    "짧은 응원 한마디",
-    cheerText,
-  ].join("\n");
 }
 
 function getEmotionCoachInsight({ selectedEmotion, checks, dailyPlan }) {
@@ -772,97 +710,6 @@ function getStallCoachInsight({ checks, dailyPlan, lastCheckedAt, planStartedAt 
   }
 
   return null;
-}
-
-function summarizeRecentJournal(dayJournals) {
-  const journals = Array.isArray(dayJournals) ? dayJournals : [];
-  const recent = [...journals].reverse().find((item) => String(item || "").trim());
-  if (!recent) return "아직 일기 기록이 부족해. Day 완료 후 한 줄만 남겨도 노아가 너의 패턴을 기억할 수 있어.";
-
-  const clean = String(recent).replace(/\s+/g, " ").trim();
-  return clean.length > 72 ? `${clean.slice(0, 72)}...` : clean;
-}
-
-function summarizeRecentCoaching(dayCoachings) {
-  const coachings = Array.isArray(dayCoachings) ? dayCoachings : [];
-  const recent = [...coachings].reverse().find((item) => String(item || "").trim());
-  if (!recent) return "아직 코칭 기록이 부족해. 일기를 쓰면 노아의 다음 회고가 더 정확해져.";
-
-  const firstUsefulLine = String(recent)
-    .split("\n")
-    .map((line) => line.trim())
-    .find((line) => line && !line.startsWith("Day") && !line.startsWith("오늘 기록"));
-
-  const clean = String(firstUsefulLine || recent).replace(/\s+/g, " ").trim();
-  return clean.length > 86 ? `${clean.slice(0, 86)}...` : clean;
-}
-
-function buildMemoryReviewInsight({
-  checks,
-  dailyPlan,
-  dayJournals,
-  dayCoachings,
-  selectedEmotion,
-  lastCheckedAt,
-  planStartedAt,
-  executionStage,
-  goal,
-  adaptiveCoachInsight,
-}) {
-  const safeChecks = Array.isArray(checks) ? checks : [];
-  const total = safeChecks.length || 7;
-  const completed = safeChecks.filter(Boolean).length;
-  const progressRate = total ? Math.round((completed / total) * 100) : 0;
-  const currentIndex = getCurrentDayIndex(safeChecks);
-  const currentDay = currentIndex >= 0 ? currentIndex + 1 : total;
-  const stoppedDays = getDaysSince(lastCheckedAt || planStartedAt);
-  const emotion = getEmotionProfile(selectedEmotion);
-  const stageLabel = getStageLabel(executionStage);
-  const currentAction = currentIndex >= 0
-    ? String((Array.isArray(dailyPlan) ? dailyPlan[currentIndex] : "") || "오늘은 목표와 연결된 가장 작은 행동 1개를 실행하기")
-    : "이번 단계는 완료됐어요. 다음 단계로 확장할 준비가 됐어요.";
-
-  const completedJournals = Array.isArray(dayJournals)
-    ? dayJournals.filter((item) => String(item || "").trim()).length
-    : 0;
-  const completedCoachings = Array.isArray(dayCoachings)
-    ? dayCoachings.filter((item) => String(item || "").trim()).length
-    : 0;
-
-  let rememberedPattern = "아직 너를 기억할 데이터가 많지 않아. 사진 인증, 감정 체크, 일기가 쌓이면 노아가 너의 실행 패턴을 더 정확히 기억할게.";
-
-  if (completed > 0) {
-    rememberedPattern = `지금까지 ${completed}번 행동을 증명했어요. ${completedJournals}번의 일기와 ${completedCoachings}번의 코칭 기록을 기준으로 보면, 당신은 기록이 붙었을 때 실행 흐름이 더 강해지는 타입이에요.`;
-  }
-
-  if (stoppedDays >= 2 && completed > 0) {
-    rememberedPattern = `노아가 기억한 패턴: 너는 완전히 포기한 게 아니라, 계획이 커지거나 현실과 안 맞을 때 멈추는 흐름이 있어. 그래서 지금은 더 작은 행동으로 복귀하는 게 맞아.`;
-  }
-
-  const reviewSummary = stoppedDays >= 2
-    ? `${stoppedDays}일 동안 실행 공백이 생겼어요. 이건 실패가 아니라 계획 강도를 다시 맞추라는 신호예요.`
-    : `${stageLabel} 기준 현재 ${progressRate}% 진행 중이에요. 오늘은 Day ${currentDay} 흐름을 끊지 않는 게 가장 중요해요.`;
-
-  const nextCoachLine = adaptiveCoachInsight
-    ? adaptiveCoachInsight.adjustedAction
-    : `${currentAction}`;
-
-  return {
-    title: adaptiveCoachInsight ? adaptiveCoachInsight.title : "노아가 기억한 실행 패턴과 오늘의 회고",
-    message: adaptiveCoachInsight
-      ? adaptiveCoachInsight.message
-      : "노아가 지금까지의 실행, 감정, 일기 기록을 같이 보고 오늘의 흐름을 정리했어.",
-    rememberedPattern,
-    reviewSummary,
-    recentJournal: summarizeRecentJournal(dayJournals),
-    recentCoaching: summarizeRecentCoaching(dayCoachings),
-    emotionText: emotion ? `${emotion.emoji} ${emotion.label}` : "감정 기록 부족",
-    goalText: String(goal || "목표").trim() || "목표",
-    nextCoachLine,
-    currentDay,
-    stoppedDays,
-    progressRate,
-  };
 }
 
 function cleanSectionText(text) {
@@ -1384,7 +1231,7 @@ function DetailPage({ type, onBack, onStart }) {
   );
 }
 
-function LandingPage({ onStart, onCommunity }) {
+function LandingPage({ onStart, onCommunity, onConsulting }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [detailPage, setDetailPage] = useState(null);
   const menuCloseTimerRef = useRef(null);
@@ -1509,6 +1356,9 @@ function LandingPage({ onStart, onCommunity }) {
           <button type="button" style={landingStyles.navTextButton} onClick={onCommunity}>
             커뮤니티
           </button>
+          <button type="button" style={landingStyles.navTextButton} onClick={onConsulting}>
+            컨설팅룸
+          </button>
           <button type="button" style={landingStyles.navTextButton} onClick={() => openDetail("reviews")}>
             후기
           </button>
@@ -1537,6 +1387,7 @@ function LandingPage({ onStart, onCommunity }) {
             <div style={landingStyles.megaColumn}>
               <p style={landingStyles.megaTitle}>고객 리소스</p>
               <button style={landingStyles.megaItem} onClick={onCommunity}>경험 공유 채팅방</button>
+              <button style={landingStyles.megaItem} onClick={onConsulting}>AI 컨설팅룸</button>
               <button style={landingStyles.megaItem} onClick={() => openDetail("reviews")}>고객 경험담</button>
               <button style={landingStyles.megaItem} onClick={onStart}>7일 먼저 체험하기</button>
             </div>
@@ -1976,6 +1827,149 @@ function CommunityChat({ user, form, onBack, onLogin }) {
   );
 }
 
+function ConsultingRoom({
+  user,
+  form,
+  onBack,
+  onLogin,
+  coachMessages,
+  coachQuestion,
+  setCoachQuestion,
+  coachLoading,
+  handleCoachAsk,
+  coachBottomRef,
+  checks,
+  message,
+  messageType,
+}) {
+  const quickQuestions = [
+    "지금 내 목표에서 가장 부족한 점을 직설적으로 알려줘",
+    "오늘 바로 해야 할 행동 1개만 정해줘",
+    "내가 계속 미루는 이유를 분석해줘",
+    "내 목표를 더 현실적인 계획으로 바꿔줘",
+  ];
+
+  return (
+    <div style={styles.page}>
+      <style>{mobileCss}</style>
+      <div style={styles.container}>
+        <button style={styles.backToLandingButton} onClick={onBack}>
+          ← 홈페이지로 돌아가기
+        </button>
+
+        <div style={styles.header}>
+          <div>
+            <p style={styles.workspaceEyebrow}>VELAXION CONSULTING ROOM</p>
+            <h1 style={styles.title}>AI 컨설팅룸</h1>
+            <p style={styles.subtitle}>
+              목표, 고민, 사업 방향, 실행 전략을 노아와 깊게 대화하는 별도 공간이야. 실행 앱은 행동을 관리하고, 컨설팅룸은 방향을 잡아줘.
+            </p>
+          </div>
+        </div>
+
+        {!user ? (
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>로그인 후 컨설팅을 시작해줘</h2>
+            <p style={styles.subtleText}>
+              상담 내용과 노아의 피드백을 계속 기억하려면 로그인이 필요해.
+            </p>
+            <button style={styles.primaryButton} onClick={onLogin}>
+              Google 로그인하기
+            </button>
+          </div>
+        ) : null}
+
+        <div style={styles.coachBox}>
+          <div style={styles.coachHeader}>
+            <div>
+              <p style={styles.coachEyebrow}>NOA CONSULTING</p>
+              <h3 style={styles.coachTitle}>노아와 컨설팅하기</h3>
+            </div>
+            <span style={styles.coachStatus}>{checks.filter(Boolean).length}/7 Day 진행 중</span>
+          </div>
+
+          <p style={styles.coachDescription}>
+            노아는 네 목표, 감정, 실행 기록을 바탕으로 현실적인 방향을 잡아줘. 막연한 위로보다 지금 해야 할 행동과 버려야 할 행동을 직설적으로 알려주는 공간이야.
+          </p>
+
+          <div style={styles.coachQuickRow}>
+            {quickQuestions.map((item) => (
+              <button
+                key={item}
+                type="button"
+                style={styles.coachQuickButton}
+                onClick={() => setCoachQuestion(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+
+          <div style={styles.coachMessagesBox}>
+            {coachMessages.length === 0 ? (
+              <div style={styles.coachEmpty}>
+                아직 컨설팅 기록이 없어. 지금 고민이나 목표를 한 문장으로 물어봐.
+              </div>
+            ) : (
+              coachMessages.map((item, index) => (
+                <div
+                  key={`${item.createdAt}-${index}`}
+                  style={{
+                    ...styles.coachMessageRow,
+                    ...(item.role === "user" ? styles.coachMessageUser : styles.coachMessageAssistant),
+                  }}
+                >
+                  <div style={styles.coachMessageLabel}>
+                    {item.role === "user" ? "나" : "노아"}
+                  </div>
+                  <div style={styles.coachBubble}>{item.content}</div>
+                </div>
+              ))
+            )}
+            <div ref={coachBottomRef} />
+          </div>
+
+          <div style={styles.coachComposer}>
+            <textarea
+              style={styles.coachTextarea}
+              placeholder="예: 내가 이 목표를 이루려면 지금 뭘 먼저 버리고 뭘 해야 해?"
+              value={coachQuestion}
+              onChange={(e) => setCoachQuestion(e.target.value)}
+              rows={4}
+            />
+            <button
+              type="button"
+              style={{
+                ...styles.primaryButton,
+                ...(coachLoading ? styles.disabledButton : null),
+              }}
+              onClick={handleCoachAsk}
+              disabled={coachLoading || !user}
+            >
+              {coachLoading ? "노아가 분석 중..." : "노아에게 컨설팅 받기"}
+            </button>
+          </div>
+        </div>
+
+        {message ? (
+          <p
+            style={{
+              ...styles.message,
+              ...(messageType === "success"
+                ? styles.messageSuccess
+                : messageType === "error"
+                  ? styles.messageError
+                  : styles.messageInfo),
+            }}
+          >
+            {message}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState(initialForm);
@@ -1993,8 +1987,6 @@ export default function App() {
   const [lastAdaptiveCoachKey, setLastAdaptiveCoachKey] = useState("");
   const [selectedEmotion, setSelectedEmotion] = useState("");
   const [lastEmotionCoachKey, setLastEmotionCoachKey] = useState("");
-  const [emotionApplying, setEmotionApplying] = useState(false);
-  const [emotionApplyCount, setEmotionApplyCount] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -2006,6 +1998,13 @@ export default function App() {
   const [messageType, setMessageType] = useState("info");
   const [showExperience, setShowExperience] = useState(false);
   const [showCommunity, setShowCommunity] = useState(false);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const path = window.location.pathname;
+    if (path.startsWith("/app")) return "app";
+    if (path.startsWith("/consulting")) return "consulting";
+    if (path.startsWith("/community")) return "community";
+    return "home";
+  });
   const [coachMessages, setCoachMessages] = useState([]);
   const [coachQuestion, setCoachQuestion] = useState("");
   const [coachLoading, setCoachLoading] = useState(false);
@@ -2014,6 +2013,48 @@ export default function App() {
   const galleryInputRefs = useRef([]);
   const cameraInputRefs = useRef([]);
   const coachBottomRef = useRef(null);
+
+  const navigateTo = (page) => {
+    const pathMap = {
+      home: "/",
+      app: "/app",
+      consulting: "/consulting",
+      community: "/community",
+    };
+
+    setCurrentPage(page);
+    setShowExperience(page !== "home");
+    setShowCommunity(page === "community");
+
+    const nextPath = pathMap[page] || "/";
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, "", nextPath);
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      const nextPage = path.startsWith("/app")
+        ? "app"
+        : path.startsWith("/consulting")
+          ? "consulting"
+          : path.startsWith("/community")
+            ? "community"
+            : "home";
+
+      setCurrentPage(nextPage);
+      setShowExperience(nextPage !== "home");
+      setShowCommunity(nextPage === "community");
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    handlePopState();
+
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const progress = useMemo(() => {
     const done = checks.filter(Boolean).length;
@@ -2025,34 +2066,6 @@ export default function App() {
   const adaptiveCoachInsight = useMemo(
     () => getStallCoachInsight({ checks, dailyPlan, lastCheckedAt, planStartedAt }),
     [checks, dailyPlan, lastCheckedAt, planStartedAt]
-  );
-
-  const memoryReviewInsight = useMemo(
-    () =>
-      buildMemoryReviewInsight({
-        checks,
-        dailyPlan,
-        dayJournals,
-        dayCoachings,
-        selectedEmotion,
-        lastCheckedAt,
-        planStartedAt,
-        executionStage,
-        goal: form.goal,
-        adaptiveCoachInsight,
-      }),
-    [
-      checks,
-      dailyPlan,
-      dayJournals,
-      dayCoachings,
-      selectedEmotion,
-      lastCheckedAt,
-      planStartedAt,
-      executionStage,
-      form.goal,
-      adaptiveCoachInsight,
-    ]
   );
 
   const emotionCoachInsight = useMemo(
@@ -2459,7 +2472,7 @@ export default function App() {
     setDailyPlan(nextPlan);
     setAnalysis(nextAnalysis);
     setLastAdaptiveCoachKey(coachKey);
-    setMessage("노아가 오늘 행동과 AI 분석 내용을 더 쉽게 조정했어.");
+    setMessage("AI 기억 코치가 오늘 행동과 AI 분석 내용을 더 쉽게 조정했어.");
     setMessageType("success");
 
     await setDoc(
@@ -2486,57 +2499,31 @@ export default function App() {
     const currentIndex = getCurrentDayIndex(checks);
     if (currentIndex < 0) return;
 
-    // ✅ 버튼을 눌렀다는 느낌이 즉시 보이도록 먼저 상태를 바꾼다.
-    // ✅ 연속 클릭해도 막지 않고 매번 카운트와 문구를 새로 갱신한다.
-    const pressedAt = Date.now();
-    setEmotionApplying(true);
-    setEmotionApplyCount((count) => count + 1);
-
-    // ✅ 감정 재배치는 하루 1회 제한하지 않는다.
-    // 사용자가 연속해서 눌러도 매번 즉시 오른쪽 Day 계획과 분석에 다시 반영되게 한다.
-    const emotionKey = `${emotionCoachInsight.id}-${currentIndex}-${pressedAt}`;
-    const adjustedAction = addDefaultActionTime(
-      stripAdaptivePrefix(emotionCoachInsight.adjustedAction),
-      currentIndex + 1
-    );
+    const emotionKey = `${emotionCoachInsight.id}-${currentIndex}-${new Date().toISOString().slice(0, 10)}`;
+    const adjustedAction = emotionCoachInsight.adjustedAction;
     const nextPlan = normalizeArrayLength(dailyPlan, checks.length, "");
     nextPlan[currentIndex] = adjustedAction;
 
-    // ✅ 기존 방식은 짧은 응원 한마디 아래에 감정 재배치 메모가 붙는 문제가 있었음.
-    // ✅ 이제는 분석 문자열을 새로 구성해서 오른쪽 ACTION PLAN의 현재 Day가 즉시 바뀌게 한다.
-    // ✅ 완료한 Day는 유지하고, 현재 진행 중인 Day만 감정에 맞게 변경한다.
-    const nextAnalysis = buildEmotionRebuiltAnalysis({
-      analysisText: analysis,
-      dayNumber: currentIndex + 1,
-      adjustedAction,
-      emotionId: selectedEmotion,
-      progress,
-      name: form.name,
-    });
+    let nextAnalysis = replaceDayActionInAnalysis(analysis, currentIndex + 1, adjustedAction);
+    nextAnalysis = `${nextAnalysis}${buildEmotionAnalysisNote(selectedEmotion, adjustedAction, currentIndex + 1)}`;
 
     setDailyPlan(nextPlan);
     setAnalysis(nextAnalysis);
     setLastEmotionCoachKey(emotionKey);
-    setMessage(`${emotionCoachInsight.emoji} ${emotionCoachInsight.label} 상태에 맞게 오른쪽 Day ${currentIndex + 1} 계획을 바로 재배치했어.`);
+    setMessage(`${emotionCoachInsight.emoji} ${emotionCoachInsight.label} 상태에 맞게 오늘 AI 분석과 실행 계획을 재배치했어.`);
     setMessageType("success");
 
-    try {
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          selectedEmotion,
-          lastEmotionCoachKey: emotionKey,
-          analysis: nextAnalysis,
-          dailyPlan: nextPlan,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-    } finally {
-      setTimeout(() => {
-        setEmotionApplying(false);
-      }, 900);
-    }
+    await setDoc(
+      doc(db, "users", user.uid),
+      {
+        selectedEmotion,
+        lastEmotionCoachKey: emotionKey,
+        analysis: nextAnalysis,
+        dailyPlan: nextPlan,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
   };
 
   const expandExecutionStage = async (completedChecks, completedDayImages, completedAt) => {
@@ -2919,14 +2906,12 @@ export default function App() {
     }
   };
 
-  if (!showExperience) {
+  if (currentPage === "home") {
     return (
       <LandingPage
-        onStart={() => setShowExperience(true)}
-        onCommunity={() => {
-          setShowExperience(true);
-          setShowCommunity(true);
-        }}
+        onStart={() => navigateTo("app")}
+        onCommunity={() => navigateTo("community")}
+        onConsulting={() => navigateTo("consulting")}
       />
     );
   }
@@ -2944,13 +2929,33 @@ export default function App() {
     );
   }
 
-  if (showCommunity) {
+  if (currentPage === "community") {
     return (
       <CommunityChat
         user={user}
         form={form}
-        onBack={() => setShowCommunity(false)}
+        onBack={() => navigateTo("home")}
         onLogin={handleLogin}
+      />
+    );
+  }
+
+  if (currentPage === "consulting") {
+    return (
+      <ConsultingRoom
+        user={user}
+        form={form}
+        onBack={() => navigateTo("home")}
+        onLogin={handleLogin}
+        coachMessages={coachMessages}
+        coachQuestion={coachQuestion}
+        setCoachQuestion={setCoachQuestion}
+        coachLoading={coachLoading}
+        handleCoachAsk={handleCoachAsk}
+        coachBottomRef={coachBottomRef}
+        checks={checks}
+        message={message}
+        messageType={messageType}
       />
     );
   }
@@ -2967,15 +2972,18 @@ export default function App() {
     <div style={styles.page}>
       <style>{mobileCss}</style>
       <div style={styles.container}>
-        <button style={styles.backToLandingButton} onClick={() => setShowExperience(false)}>
-          ← 소개 화면으로 돌아가기
+        <button style={styles.backToLandingButton} onClick={() => navigateTo("home")}>
+          ← 홈페이지로 돌아가기
+        </button>
+        <button style={styles.backToLandingButton} onClick={() => navigateTo("consulting")}>
+          AI 컨설팅룸으로 이동 →
         </button>
         <div style={styles.header}>
           <div>
             <p style={styles.workspaceEyebrow}>VELAXION EXECUTION OS</p>
-            <h1 style={styles.title}>나만의 실행 컨설팅룸</h1>
+            <h1 style={styles.title}>나만의 실행 앱</h1>
             <p style={styles.subtitle}>
-              목표를 분석하고, 하루 행동으로 쪼개고, AI 코치와 함께 끝까지 실행해.
+              목표를 분석하고, 하루 행동으로 쪼개고, 노아와 함께 끝까지 실행해.
             </p>
           </div>
         </div>
@@ -3141,15 +3149,12 @@ export default function App() {
               </div>
               <button
                 type="button"
-                style={{
-                  ...styles.primaryButton,
-                  ...styles.emotionApplyButton,
-                  ...(emotionApplying ? styles.emotionApplyButtonDone : null),
-                }}
+                style={styles.primaryButton}
                 onClick={applyEmotionCoachAction}
+                disabled={lastEmotionCoachKey === `${emotionCoachInsight.id}-${emotionCoachInsight.dayNumber - 1}-${new Date().toISOString().slice(0, 10)}`}
               >
-                {emotionApplying
-                  ? `재배치 완료 ✓ ${emotionApplyCount > 1 ? `(${emotionApplyCount})` : ""}`
+                {lastEmotionCoachKey === `${emotionCoachInsight.id}-${emotionCoachInsight.dayNumber - 1}-${new Date().toISOString().slice(0, 10)}`
+                  ? "재배치 완료"
                   : "감정에 맞게 AI 분석 재배치"}
               </button>
             </div>
@@ -3177,46 +3182,19 @@ export default function App() {
             AI가 만든 실행 계획과 연결돼. 7일을 끝내면 30일로, 30일을 끝내면 90일로 자동 확장돼. 체크하려면 사진 촬영 또는 갤러리 이미지를 먼저 등록해야 해.
           </div>
 
-          <div style={styles.adaptiveCoachCard}>
-            <div>
-              <p style={styles.adaptiveCoachEyebrow}>노아가 기억한 너</p>
-              <h3 style={styles.adaptiveCoachTitle}>{memoryReviewInsight.title}</h3>
-              <p style={styles.adaptiveCoachText}>{memoryReviewInsight.message}</p>
-
-              <div style={styles.memoryReviewGrid}>
-                <div style={styles.memoryReviewBox}>
-                  <strong>노아가 기억한 너</strong>
-                  <span>{memoryReviewInsight.rememberedPattern}</span>
-                </div>
-                <div style={styles.memoryReviewBox}>
-                  <strong>노아의 회고</strong>
-                  <span>{memoryReviewInsight.reviewSummary}</span>
+          {adaptiveCoachInsight ? (
+            <div style={styles.adaptiveCoachCard}>
+              <div>
+                <p style={styles.adaptiveCoachEyebrow}>AI MEMORY COACH</p>
+                <h3 style={styles.adaptiveCoachTitle}>{adaptiveCoachInsight.title}</h3>
+                <p style={styles.adaptiveCoachText}>{adaptiveCoachInsight.message}</p>
+                <div style={styles.adaptiveActionBox}>
+                  <strong>조정 제안</strong>
+                  <br />
+                  {adaptiveCoachInsight.adjustedAction || "오늘은 5분 행동 1개만 다시 시작하기"}
                 </div>
               </div>
 
-              <div style={styles.memoryMiniGrid}>
-                <div style={styles.memoryMiniItem}>
-                  <strong>감정 기록</strong>
-                  <span>{memoryReviewInsight.emotionText}</span>
-                </div>
-                <div style={styles.memoryMiniItem}>
-                  <strong>최근 일기</strong>
-                  <span>{memoryReviewInsight.recentJournal}</span>
-                </div>
-                <div style={styles.memoryMiniItem}>
-                  <strong>최근 코칭</strong>
-                  <span>{memoryReviewInsight.recentCoaching}</span>
-                </div>
-              </div>
-
-              <div style={styles.adaptiveActionBox}>
-                <strong>{adaptiveCoachInsight ? "복귀 조정 제안" : "다음 실행 기준"}</strong>
-                <br />
-                {memoryReviewInsight.nextCoachLine || "오늘은 5분 행동 1개만 다시 시작하기"}
-              </div>
-            </div>
-
-            {adaptiveCoachInsight ? (
               <button
                 type="button"
                 style={styles.primaryButton}
@@ -3227,8 +3205,8 @@ export default function App() {
                   ? "조정 완료"
                   : "오늘 행동 줄이기"}
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
 
           <div style={styles.stageSystemGrid}>
             <div style={styles.stageSystemCard}>
@@ -3722,15 +3700,6 @@ const styles = {
     lineHeight: 1.65,
     fontWeight: 800,
   },
-  emotionApplyButton: {
-    minWidth: "220px",
-    transition: "transform 140ms ease, box-shadow 140ms ease, background 140ms ease",
-  },
-  emotionApplyButtonDone: {
-    transform: "scale(0.98)",
-    background: "linear-gradient(135deg, #16a34a, #22c55e)",
-    boxShadow: "0 18px 34px rgba(34,197,94,0.28)",
-  },
   emotionEmptyText: {
     margin: "14px 0 0",
     color: "#64748b",
@@ -3777,42 +3746,6 @@ const styles = {
     color: "#fff7ed",
     lineHeight: 1.65,
     fontWeight: 800,
-  },
-  memoryReviewGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: "12px",
-    marginTop: "16px",
-  },
-  memoryReviewBox: {
-    padding: "14px 16px",
-    borderRadius: "18px",
-    background: "rgba(255,255,255,0.085)",
-    border: "1px solid rgba(255,255,255,0.12)",
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    color: "rgba(255,255,255,0.84)",
-    lineHeight: 1.6,
-    fontSize: "14px",
-  },
-  memoryMiniGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "10px",
-    marginTop: "12px",
-  },
-  memoryMiniItem: {
-    padding: "12px 14px",
-    borderRadius: "16px",
-    background: "rgba(15,23,42,0.34)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-    color: "rgba(255,255,255,0.78)",
-    lineHeight: 1.55,
-    fontSize: "13px",
   },
   stageSystemGrid: {
     display: "grid",
