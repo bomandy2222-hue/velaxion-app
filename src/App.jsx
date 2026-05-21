@@ -2060,6 +2060,15 @@ function NoaChatApp({
           <div style={noaStyles.miniProgress}><div style={{ ...noaStyles.miniProgressFill, width: `${progress}%` }} /></div>
         </div>
 
+        <div className="noa-sidebar-label" style={noaStyles.sidebarDayBox}>
+          <strong>Day 체크</strong>
+          <p>현재 Day {currentDayIndex === -1 ? checks.length : currentDayIndex + 1}</p>
+          <button type="button" style={noaStyles.sidebarDayButton} onClick={() => toggleCheck(currentDayIndex)}>
+            오늘 완료 체크
+          </button>
+          <small>24시간 전에 다음 Day를 누르면 24시간 뒤에 다시 체크할 수 있어요.</small>
+        </div>
+
         <div style={noaStyles.sidebarBottom}>
           {user ? (
             <button className="noa-side-item" style={noaStyles.sideItem} onClick={handleLogout}>
@@ -2115,39 +2124,6 @@ function NoaChatApp({
               ) : null}
             </div>
 
-            <div style={noaStyles.emotionStrip}>
-              {EMOTION_OPTIONS.map((item) => {
-                const active = selectedEmotion === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    style={{ ...noaStyles.emotionChip, ...(active ? noaStyles.emotionChipActive : null) }}
-                    onClick={() => {
-                      setSelectedEmotion(item.id);
-                      setLastEmotionCoachKey("");
-                      setMessage(`${item.emoji} ${item.label} 상태를 노아가 기억했어.`);
-                      setMessageType("success");
-                    }}
-                  >
-                    <span>{item.emoji}</span> {item.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {emotionCoachInsight ? (
-              <div style={noaStyles.inlineCoachCard}>
-                <div>
-                  <strong>{emotionCoachInsight.emoji} {emotionCoachInsight.title}</strong>
-                  <p>{emotionCoachInsight.adjustedAction}</p>
-                </div>
-                <button type="button" style={noaStyles.darkMiniButton} onClick={applyEmotionCoachAction}>
-                  감정에 맞게 재배치
-                </button>
-              </div>
-            ) : null}
-
             {adaptiveCoachInsight ? (
               <div style={noaStyles.inlineCoachCardWarn}>
                 <div>
@@ -2187,7 +2163,7 @@ function NoaChatApp({
             </div>
 
             <div style={noaStyles.quickPromptRow}>
-              {["내 목표를 분석해줘", "오늘 할 행동 하나만 정해줘", "내가 왜 미루는지 알려줘"].map((item) => (
+              {["내 목표를 분석해줘", "오늘 감정은 지침이야", "오늘 할 행동 하나만 정해줘"].map((item) => (
                 <button key={item} type="button" style={noaStyles.quickPrompt} onClick={() => setNoaInput(item)}>
                   {item}
                 </button>
@@ -2196,109 +2172,8 @@ function NoaChatApp({
           </div>
         </section>
 
-        <section style={noaStyles.dashboardGrid}>
-          <div style={noaStyles.panelCard}>
-            <div style={noaStyles.panelHeader}>
-              <div>
-                <p style={noaStyles.panelKicker}>DAY CHECK</p>
-                <h2 style={noaStyles.panelTitle}>{currentStageLabel} 실행 체크</h2>
-              </div>
-              <strong>{progress}%</strong>
-            </div>
-            <div style={noaStyles.progressBar}><div style={{ ...noaStyles.progressFill, width: `${progress}%` }} /></div>
-            <p style={noaStyles.helperText}>24시간 전에 다음 Day를 누르면 “24시간 뒤에 다시 체크할 수 있어요” 안내가 떠.</p>
-
-            <div style={noaStyles.compactDayList}>
-              {checks.map((checked, index) => {
-                const isCurrent = index === currentDayIndex;
-                return (
-                  <div key={index} style={{ ...noaStyles.compactDayItem, ...(isCurrent ? noaStyles.compactDayCurrent : null) }}>
-                    <div>
-                      <strong>Day {index + 1}</strong>
-                      <p>{dailyPlan[index] || "노아와 대화하면 오늘 행동이 생성돼."}</p>
-                      {dayImages[index] ? <small>사진 인증 완료</small> : null}
-                    </div>
-                    <div style={noaStyles.dayActions}>
-                      <input
-                        ref={(el) => (galleryInputRefs.current[index] = el)}
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={(e) => handleImageChange(index, e)}
-                      />
-                      <input
-                        ref={(el) => (cameraInputRefs.current[index] = el)}
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        style={{ display: "none" }}
-                        onChange={(e) => handleImageChange(index, e)}
-                      />
-                      {!checked && isCurrent ? (
-                        <>
-                          <button type="button" style={noaStyles.lightMiniButton} onClick={(e) => openGalleryPicker(index, e)}>
-                            {uploadingImageIndex === index ? "업로드 중" : "사진"}
-                          </button>
-                          <button type="button" style={noaStyles.darkMiniButton} onClick={() => toggleCheck(index)}>
-                            완료
-                          </button>
-                        </>
-                      ) : checked ? (
-                        <span style={noaStyles.doneBadge}>완료</span>
-                      ) : (
-                        <button type="button" style={noaStyles.lightMiniButton} onClick={() => toggleCheck(index)}>
-                          잠금
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div style={noaStyles.panelCard}>
-            <div style={noaStyles.panelHeader}>
-              <div>
-                <p style={noaStyles.panelKicker}>NOA MEMORY</p>
-                <h2 style={noaStyles.panelTitle}>노아가 기억한 너</h2>
-              </div>
-            </div>
-            <div style={noaStyles.memoryBox}>
-              <p>최근 진행률은 {progress}%이고, 지금은 Day {currentDayIndex === -1 ? checks.length : currentDayIndex + 1} 흐름이야.</p>
-              <p>{selectedEmotion ? `오늘 감정은 ${getEmotionProfile(selectedEmotion)?.emoji} ${getEmotionProfile(selectedEmotion)?.label}로 기억했어.` : "아직 오늘 감정을 고르지 않았어."}</p>
-              <p>{parsedAnalysis.current || "노아와 대화를 시작하면 너의 목표와 패턴을 계속 기억해."}</p>
-            </div>
-
-            {currentDayIndex >= 0 ? (
-              <div style={noaStyles.journalBox}>
-                <div style={noaStyles.panelHeader}>
-                  <div>
-                    <p style={noaStyles.panelKicker}>DAY JOURNAL</p>
-                    <h3 style={noaStyles.journalTitle}>오늘 실행 후 일기</h3>
-                  </div>
-                  <button type="button" style={noaStyles.lightMiniButton} onClick={() => setActiveJournalIndex(activeJournalIndex === currentDayIndex ? null : currentDayIndex)}>
-                    {activeJournalIndex === currentDayIndex ? "닫기" : "쓰기"}
-                  </button>
-                </div>
-                {activeJournalIndex === currentDayIndex ? (
-                  <>
-                    <textarea
-                      style={noaStyles.journalTextarea}
-                      placeholder="오늘 무엇을 했고, 어떤 감정이었는지 적어줘. 노아가 이어서 코칭해줄게."
-                      value={dayJournals[currentDayIndex] || ""}
-                      onChange={(e) => handleJournalChange(currentDayIndex, e.target.value)}
-                      rows={4}
-                    />
-                    <button type="button" style={noaStyles.darkMiniButton} onClick={() => generateDayJournalCoaching(currentDayIndex)} disabled={journalLoadingIndex === currentDayIndex}>
-                      {journalLoadingIndex === currentDayIndex ? "노아가 코칭 중" : "노아 코칭 받기"}
-                    </button>
-                  </>
-                ) : null}
-                {dayCoachings[currentDayIndex] ? <div style={noaStyles.coachingResult}>{dayCoachings[currentDayIndex]}</div> : null}
-              </div>
-            ) : null}
-          </div>
+        <section style={noaStyles.hiddenDataArea} aria-hidden="true">
+          {/* Day 체크, 노아 기억, 감정 재배치, 일기/코칭은 첫 화면에 카드로 노출하지 않고 노아 대화 안으로 흡수한다. */}
         </section>
 
         {message ? (
