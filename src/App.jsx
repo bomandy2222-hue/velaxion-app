@@ -2090,7 +2090,7 @@ function NoaChatApp({
               {user?.displayName || form.name ? `${user?.displayName || form.name}님, 오늘은 어디까지 가볼까?` : "안녕, 나는 노아야."}
             </h1>
             <p style={noaStyles.mainSubText}>
-              너의 목표, 고민, 감정, 실행 기록을 기억하면서 오늘 해야 할 행동을 같이 정리해줄게.
+              너의 목표, 고민, 감정, 실행 기록을 기억하면서 대화 안에서 분석·코칭·피드백·재배치까지 같이 해줄게.
             </p>
           </div>
 
@@ -2099,7 +2099,11 @@ function NoaChatApp({
               <div style={{ ...noaStyles.chatMessage, ...noaStyles.assistantMessage }}>
                 <strong>노아</strong>
                 <p>
-                  먼저 오늘 감정부터 알려줘. 그 다음 너의 목표, 고민, 꿈을 말해줘. 내가 친근하게 듣고, 필요한 부분은 냉정하게 분석해줄게.
+                  {user?.displayName || form.name ? `${user?.displayName || form.name}님, 다시 와줘서 고마워. 나는 노아야.` : "안녕, 나는 노아야."}
+
+나는 네 목표, 감정, 실행 기록을 기억하면서 같이 움직이는 AI 파트너야. 오늘은 먼저 네 상태를 가볍게 확인하고 싶어.
+
+지금 감정은 어때? 그리고 이루고 싶은 목표, 고민, 꿈 중 하나를 편하게 말해줘. 내가 친근하게 듣고, 필요한 부분은 냉정하게 정리해서 오늘 할 행동까지 같이 잡아줄게.
                 </p>
               </div>
 
@@ -2119,28 +2123,35 @@ function NoaChatApp({
               {noaLoading ? (
                 <div style={{ ...noaStyles.chatMessage, ...noaStyles.assistantMessage }}>
                   <strong>노아</strong>
-                  <p>네 말을 바탕으로 목표와 오늘 행동을 정리하는 중이야...</p>
+                  <p>네 말을 천천히 읽고 있어. 목표, 감정, 지금까지의 실행 흐름까지 같이 보고 오늘 할 행동을 정리하는 중이야...</p>
                 </div>
               ) : null}
             </div>
 
-            {adaptiveCoachInsight ? (
-              <div style={noaStyles.inlineCoachCardWarn}>
-                <div>
-                  <strong>노아가 기억한 멈춤 신호</strong>
-                  <p>{adaptiveCoachInsight.message}</p>
-                  <p>{adaptiveCoachInsight.adjustedAction}</p>
+              {adaptiveCoachInsight ? (
+                <div style={{ ...noaStyles.chatMessage, ...noaStyles.assistantMessage }}>
+                  <strong>노아</strong>
+                  <p>
+                    내가 기억해보니까 지금은 실행 흐름이 잠깐 멈춘 신호가 보여.
+
+{adaptiveCoachInsight.message}
+
+지금 중요한 건 스스로를 몰아붙이는 게 아니라, 다시 움직일 수 있을 만큼 작게 줄이는 거야. 오늘은 이렇게 바꿔볼게.
+
+{adaptiveCoachInsight.adjustedAction}
+
+괜찮아. 멈춘 건 실패가 아니라 계획을 현실에 맞게 다시 조정하라는 신호야.
+                  </p>
+                  <button
+                    type="button"
+                    style={{ ...noaStyles.darkMiniButton, marginTop: 10 }}
+                    onClick={applyAdaptiveCoachAction}
+                    disabled={lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`}
+                  >
+                    {lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}` ? "노아가 행동을 줄였어 ✓" : "노아가 오늘 행동 줄이기"}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  style={noaStyles.darkMiniButton}
-                  onClick={applyAdaptiveCoachAction}
-                  disabled={lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`}
-                >
-                  오늘 행동 줄이기
-                </button>
-              </div>
-            ) : null}
+              ) : null}
 
             <div style={noaStyles.composerWrap}>
               <button type="button" style={noaStyles.plusButton}>＋</button>
@@ -3124,6 +3135,7 @@ export default function App() {
           noaConversation: optimisticMessages.slice(-10),
           roleInstruction: VELAXION_AI_ROLE_INSTRUCTION,
           requestMode: "noa_chat_analysis",
+          noaStyleInstruction: "반드시 노아라는 이름의 대화형 코치처럼 답한다. 첫 문장은 사용자를 기억하고 반겨주는 톤으로 시작한다. 답변은 성의 있게 하되 너무 길게 늘어놓지 말고, 1) 네가 기억한 사용자 상태 2) 냉정한 분석 3) 오늘 당장 할 행동 1개 4) 다음 대화 질문 순서로 답한다. 사용자가 멈췄다면 별도 배너가 아니라 채팅 안에서 자연스럽게 말한다. 각 행동에는 정확한 시간과 소요시간을 포함한다.",
         }),
       });
 
