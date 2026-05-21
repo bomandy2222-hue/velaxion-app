@@ -19,23 +19,13 @@ function Header() {
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-[#0b0f14]/80 backdrop-blur-xl border-b border-white/10">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-wide">
-          VELAXION
-        </h1>
+        <h1 className="text-xl font-bold tracking-wide">VELAXION</h1>
 
         <nav className="hidden md:flex gap-8 text-sm text-white/70">
-          <a href="#about" className="hover:text-white transition">
-            소개
-          </a>
-          <a href="#change" className="hover:text-white transition">
-            변화
-          </a>
-          <a href="#future" className="hover:text-white transition">
-            계획
-          </a>
-          <a href="#service" className="hover:text-white transition">
-            서비스
-          </a>
+          <a href="#about" className="hover:text-white transition">소개</a>
+          <a href="#change" className="hover:text-white transition">변화</a>
+          <a href="#future" className="hover:text-white transition">계획</a>
+          <a href="#service" className="hover:text-white transition">서비스</a>
         </nav>
       </div>
     </header>
@@ -46,11 +36,8 @@ function Hero() {
   return (
     <section className="pt-32 pb-24 px-6">
       <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
-
         <div>
-          <p className="text-white/50 mb-4">
-            생각을 행동으로, 행동을 변화로
-          </p>
+          <p className="text-white/50 mb-4">생각을 행동으로, 행동을 변화로</p>
 
           <h2 className="text-5xl md:text-7xl font-bold leading-tight">
             꿈은 행동할 때
@@ -98,9 +85,7 @@ function Experience() {
   return (
     <section id="about" className="py-24 px-6 bg-[#10161d]">
       <div className="max-w-7xl mx-auto">
-        <p className="text-white/50 mb-3">
-          Customer Experience
-        </p>
+        <p className="text-white/50 mb-3">Customer Experience</p>
 
         <h2 className="text-4xl md:text-5xl font-bold mb-12">
           사람들은 생각보다
@@ -139,7 +124,6 @@ function CompanyIntro() {
   return (
     <section className="py-28 px-6">
       <div className="max-w-7xl mx-auto text-center">
-
         <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
           함께 실천하고 경험하고
           <br />
@@ -176,14 +160,9 @@ function UserChanges() {
   ];
 
   return (
-    <section
-      id="change"
-      className="py-24 px-6 bg-[#10161d]"
-    >
+    <section id="change" className="py-24 px-6 bg-[#10161d]">
       <div className="max-w-7xl mx-auto">
-        <p className="text-white/50 mb-3">
-          Real Change
-        </p>
+        <p className="text-white/50 mb-3">Real Change</p>
 
         <h2 className="text-4xl md:text-5xl font-bold mb-12">
           실제 사용자들의 변화
@@ -195,9 +174,7 @@ function UserChanges() {
               key={index}
               className="rounded-[32px] border border-white/10 bg-white/5 p-8"
             >
-              <p className="text-2xl font-bold leading-relaxed">
-                {item}
-              </p>
+              <p className="text-2xl font-bold leading-relaxed">{item}</p>
             </div>
           ))}
         </div>
@@ -225,10 +202,7 @@ function FuturePlan() {
   return (
     <section id="future" className="py-28 px-6">
       <div className="max-w-7xl mx-auto">
-
-        <p className="text-white/50 mb-3">
-          Future Plan
-        </p>
+        <p className="text-white/50 mb-3">Future Plan</p>
 
         <h2 className="text-4xl md:text-6xl font-bold mb-14">
           앞으로의 계획
@@ -240,13 +214,8 @@ function FuturePlan() {
               key={index}
               className="rounded-[32px] bg-white/5 border border-white/10 p-8"
             >
-              <h3 className="text-2xl font-bold mb-4">
-                {plan.title}
-              </h3>
-
-              <p className="text-white/60 leading-relaxed">
-                {plan.text}
-              </p>
+              <h3 className="text-2xl font-bold mb-4">{plan.title}</h3>
+              <p className="text-white/60 leading-relaxed">{plan.text}</p>
             </div>
           ))}
         </div>
@@ -268,15 +237,9 @@ function FuturePlan() {
 
 function ServicePreview() {
   return (
-    <section
-      id="service"
-      className="py-24 px-6 bg-[#10161d]"
-    >
+    <section id="service" className="py-24 px-6 bg-[#10161d]">
       <div className="max-w-7xl mx-auto">
-
-        <p className="text-white/50 mb-3">
-          Service
-        </p>
+        <p className="text-white/50 mb-3">Service</p>
 
         <h2 className="text-4xl md:text-5xl font-bold mb-8">
           서비스는 다시 설계 중입니다.
