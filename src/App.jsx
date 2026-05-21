@@ -839,7 +839,17 @@ function parseAnalysisSections(text) {
 
 function isNoaPlanningIntent(text) {
   const value = String(text || "").toLowerCase();
-  return /(목표|꿈|고민|계획|분석|실행|습관|미래|하고 싶|이루고 싶|도와줘|어떻게)/.test(value);
+
+  // ✅ 일반 대화를 AI 분석으로 오해하지 않게 한다.
+  // "친구와 싸웠어", "오늘 기분이 안 좋아", "어떻게 해야 해?" 같은 말은
+  // 노아가 ChatGPT처럼 자연스럽게 대화해야 한다.
+  const relationshipOrDailyTalk =
+    /(친구|여자친구|남자친구|가족|부모님|선생님|학교|싸웠|화해|선물|초콜릿|기분|속상|힘들|외롭|불안|우울|짜증|오늘 있었|고민 상담)/.test(value);
+
+  const explicitPlanning =
+    /(목표|꿈|계획|실행 계획|7일|습관|루틴|성장|미래|분석해|분석 해|행동 계획|자기계발|이루고 싶|되고 싶|만들고 싶|시작하고 싶|계획 짜|도전)/.test(value);
+
+  return explicitPlanning && !relationshipOrDailyTalk;
 }
 
 function cleanNoaChatText(text) {
@@ -847,7 +857,9 @@ function cleanNoaChatText(text) {
     .replace(/^#{1,6}\s*/gm, "")
     .replace(/\*\*/g, "")
     .replace(/__END_OF_ANALYSIS__/g, "")
-    .replace(/(?:^|\n)\s*\d+\.\s*(현재 상태 분석|핵심 문제|7일 실행 계획|짧은 응원 한마디)\s*/gi, "\n$1\n")
+    .replace(/(?:^|\n)\s*\d+\.\s*(현재 상태 분석|핵심 문제|7일 실행 계획|짧은 응원 한마디)\s*/gi, "\n")
+    .replace(/(?:^|\n)\s*(현재 상태 분석|핵심 문제|7일 실행 계획|짧은 응원 한마디)\s*/gi, "\n")
+    .replace(/Day\s*\d+\s*[:：]/gi, "오늘 행동:")
     .trim();
 }
 
@@ -2146,9 +2158,9 @@ function NoaChatApp({
 
 나는 네가 말한 목표, 감정, 실행 기록을 계속 기억하면서 같이 이겨나가는 AI 파트너야. 꼭 목표 얘기만 하지 않아도 돼. 오늘 있었던 일, 고민, 감정, 헷갈리는 생각을 편하게 말해줘.
 
-내가 바로 분석부터 들이밀지 않고 먼저 대화로 받아줄게. 필요할 때만 냉정하게 정리하고, 정말 움직일 수 있는 오늘 행동 하나로 줄여줄게.{adaptiveCoachInsight ? `
+내가 바로 분석부터 들이밀지 않고 먼저 대화로 받아줄게. 필요할 때만 냉정하게 정리하고, 정말 움직일 수 있는 오늘 행동 하나로 줄여줄게.{adaptiveCoachInsight && noaMessages.length === 0 ? `
 
-그리고 하나 기억해둘게. 지금은 실행이 조금 멈춘 신호가 보여. 이건 실패가 아니라 계획을 현실에 맞게 다시 맞추라는 신호야. 원하면 내가 오늘 행동을 더 작게 줄여줄게.` : ""}
+그리고 하나만 조용히 기억해둘게. 지금은 실행이 조금 멈춘 신호가 보여. 이건 실패가 아니라 계획을 현실에 맞게 다시 맞추라는 신호야. 원하면 내가 오늘 행동을 더 작게 줄여줄게.` : ""}
                 </p>
               </div>
 
@@ -2169,28 +2181,6 @@ function NoaChatApp({
                 <div style={{ ...noaStyles.chatMessage, ...noaStyles.assistantMessage }}>
                   <strong>노아</strong>
                   <p>네 말을 천천히 읽고 있어. 목표, 감정, 지금까지의 실행 흐름까지 같이 보고 오늘 할 행동을 정리하는 중이야...</p>
-                </div>
-              ) : null}
-
-              {adaptiveCoachInsight ? (
-                <div style={{ ...noaStyles.chatMessage, ...noaStyles.assistantMessage }}>
-                  <strong>노아</strong>
-                  <p>
-내가 네 실행 흐름을 기억해보니까 지금은 의지가 없는 게 아니라, 계획이 현실보다 조금 크게 잡힌 신호에 가까워.
-
-{adaptiveCoachInsight.message}
-
-오늘은 목표를 포기하는 게 아니라 다시 움직일 수 있을 만큼만 줄여보자.
-{adaptiveCoachInsight.adjustedAction}
-                  </p>
-                  <button
-                    type="button"
-                    style={{ ...noaStyles.darkMiniButton, marginTop: 10 }}
-                    onClick={applyAdaptiveCoachAction}
-                    disabled={lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}`}
-                  >
-                    {lastAdaptiveCoachKey === `${adaptiveCoachInsight.level}-${currentDayIndex}-${adaptiveCoachInsight.stoppedDays}` ? "노아가 행동을 줄였어 ✓" : "노아가 오늘 행동 줄이기"}
-                  </button>
                 </div>
               ) : null}
             </div>
@@ -3203,7 +3193,7 @@ export default function App() {
             roleInstruction: VELAXION_AI_ROLE_INSTRUCTION,
             requestMode: "noa_free_chat",
             noaStyleInstruction:
-              "너는 노아다. ChatGPT처럼 자유롭게 대화하되, 사용자의 목표와 실행 흐름을 기억하는 파트너처럼 답한다. 사용자가 일상 얘기나 감정 얘기를 하면 억지로 7일 계획을 만들지 말고 자연스럽게 받아준다. 필요한 경우에만 짧게 실행 조언을 한다. Markdown 제목(###)이나 '현재 상태 분석/핵심 문제/7일 실행 계획' 같은 보고서 형식은 쓰지 않는다. 말투는 성의 있고 친근하지만 현실적이어야 한다.",
+              "너는 노아다. ChatGPT처럼 자유롭게 대화한다. 사용자의 말을 먼저 이해하고, 질문의 의도에 직접 답한다. 사용자가 친구/연애/가족/일상/감정 이야기를 하면 목표 분석이나 7일 계획을 절대 만들지 말고, 자연스럽고 성의 있게 대화한다. 답변은 따뜻하게 시작하고, 현실적인 조언을 2~4문장으로 준 뒤, 사용자가 바로 해볼 수 있는 작은 행동 1개를 제안한다. Markdown 제목(###), 현재 상태 분석, 핵심 문제, 7일 실행 계획 같은 보고서 형식은 금지한다. 사용자를 고치려 들지 말고 같이 이겨나가는 파트너처럼 말한다.",
           };
 
       const res = await fetch(endpoint, {
