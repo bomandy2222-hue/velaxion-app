@@ -2126,21 +2126,21 @@ function NoaChatApp({
                   <p>네 말을 천천히 읽고 있어. 목표, 감정, 지금까지의 실행 흐름까지 같이 보고 오늘 할 행동을 정리하는 중이야...</p>
                 </div>
               ) : null}
-            </div>
 
               {adaptiveCoachInsight ? (
                 <div style={{ ...noaStyles.chatMessage, ...noaStyles.assistantMessage }}>
                   <strong>노아</strong>
                   <p>
-                    내가 기억해보니까 지금은 실행 흐름이 잠깐 멈춘 신호가 보여.
+                    내가 너의 실행 흐름을 다시 봤어. 지금은 의지가 없는 게 아니라, 계획이 현실보다 조금 크게 잡힌 신호에 가까워.
 
 {adaptiveCoachInsight.message}
 
-지금 중요한 건 스스로를 몰아붙이는 게 아니라, 다시 움직일 수 있을 만큼 작게 줄이는 거야. 오늘은 이렇게 바꿔볼게.
+그래서 오늘은 목표를 포기하는 게 아니라, 다시 움직일 수 있을 만큼 작게 줄여볼게. 지금은 크게 이기는 것보다 흐름을 다시 살리는 게 더 중요해.
 
+오늘은 이렇게 가자.
 {adaptiveCoachInsight.adjustedAction}
 
-괜찮아. 멈춘 건 실패가 아니라 계획을 현실에 맞게 다시 조정하라는 신호야.
+괜찮아. 멈춘 건 실패가 아니라 계획을 현실에 맞게 다시 조정하라는 신호야. 내가 기억하고 있으니까, 오늘은 다시 시작하는 쪽으로만 가보자.
                   </p>
                   <button
                     type="button"
@@ -2152,6 +2152,7 @@ function NoaChatApp({
                   </button>
                 </div>
               ) : null}
+            </div>
 
             <div style={noaStyles.composerWrap}>
               <button type="button" style={noaStyles.plusButton}>＋</button>
