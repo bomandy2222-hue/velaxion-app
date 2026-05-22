@@ -933,9 +933,8 @@ export default function App() {
   );
 }
 
-
 const emotionOptions = [
-  { id: "calm", emoji: "🙂", label: "괜찮음", mode: "기본 그대로" },
+  { id: "calm", emoji: "🙂", label: "괜찮음", mode: "원래 계획 그대로" },
   { id: "fire", emoji: "🔥", label: "의욕 넘침", mode: "조금 더 도전" },
   { id: "anxious", emoji: "😰", label: "불안함", mode: "부담 줄이기" },
   { id: "tired", emoji: "😴", label: "지침", mode: "최소 실행" },
@@ -960,64 +959,116 @@ function getEmotionById(id) {
   return emotionOptions.find((item) => item.id === id) || emotionOptions[0];
 }
 
-function adjustPlanByEmotion(plan, emotionId) {
+function normalizeTime(raw) {
+  const value = String(raw || "").replace(/\s/g, "");
+  let match = value.match(/(오전|오후)?(\d{1,2})[:시](\d{1,2})?/);
+  if (!match) return null;
+  let hour = Number(match[2]);
+  const minute = Number(match[3] || 0);
+  if (match[1] === "오후" && hour < 12) hour += 12;
+  if (match[1] === "오전" && hour === 12) hour = 0;
+  if (hour > 23 || minute > 59) return null;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function timeToMinutes(time) {
+  const [h, m] = String(time || "00:00").split(":").map(Number);
+  return h * 60 + m;
+}
+
+function cleanTaskText(text) {
+  return String(text || "")
+    .replace(/^[\s,.:：~-]+/, "")
+    .replace(/^(부터|에는|에|은|는|그리고|그다음|다음|후에|해서|하고)\s*/g, "")
+    .trim();
+}
+
+function parsePlanToTasks(planText) {
+  const text = String(planText || "").replace(/\n+/g, " ").trim();
+  const timeRegex = /(오전|오후)?\s*\d{1,2}\s*(?::|시)\s*\d{0,2}/g;
+  const matches = [...text.matchAll(timeRegex)];
+
+  if (matches.length === 0) {
+    return [
+      {
+        id: `task-${Date.now()}-0`,
+        time: "20:00",
+        title: text || "목표와 연결된 작은 행동 1개 실행하기",
+        originalTitle: text || "목표와 연결된 작은 행동 1개 실행하기",
+        status: "active",
+        proofImage: "",
+      },
+    ];
+  }
+
+  const tasks = matches.map((match, index) => {
+    const start = match.index;
+    const end = index + 1 < matches.length ? matches[index + 1].index : text.length;
+    const time = normalizeTime(match[0]) || "20:00";
+    let chunk = text.slice(start + match[0].length, end);
+    chunk = cleanTaskText(chunk);
+
+    if (!chunk) chunk = "정해둔 행동 실행하기";
+
+    return {
+      id: `task-${Date.now()}-${index}`,
+      time,
+      title: chunk,
+      originalTitle: chunk,
+      status: index === 0 ? "active" : "locked",
+      proofImage: "",
+    };
+  });
+
+  return tasks
+    .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time))
+    .map((task, index) => ({ ...task, status: index === 0 ? "active" : "locked" }));
+}
+
+function adjustTaskTitle(title, emotionId) {
   const emotion = getEmotionById(emotionId);
-  const cleanPlan = String(plan || "").trim();
+  const clean = String(title || "정해둔 행동 실행하기").trim();
 
-  if (!cleanPlan) {
-    if (emotion.id === "fire") return "오늘은 목표와 연결된 행동을 20분 실행하고, 끝나면 사진으로 남기기";
-    if (emotion.id === "calm") return "오늘은 목표와 연결된 행동을 10분 실행하고, 끝나면 사진으로 남기기";
-    return "오늘은 목표와 연결된 행동을 3분만 시작하고, 끝나면 사진으로 남기기";
-  }
+  if (emotion.id === "fire") return `${clean} + 가능하면 5분 더 하기`;
+  if (emotion.id === "calm") return clean;
+  if (emotion.id === "anxious") return `부담 줄여서 절반만 하기 · ${clean}`;
+  if (emotion.id === "tired") return `3분만 하기 · ${clean}`;
+  if (emotion.id === "stress") return `가장 쉬운 하나만 하기 · ${clean}`;
+  return `타이머 5분 켜고 시작만 하기 · ${clean}`;
+}
 
-  if (emotion.id === "fire") {
-    return `${cleanPlan}\n\n오늘은 컨디션이 좋아 보여. 가능하면 마지막에 5분만 더 해보자.`;
-  }
-
-  if (emotion.id === "calm") {
-    return `${cleanPlan}\n\n오늘은 원래 계획 그대로 가도 괜찮아.`;
-  }
-
-  if (emotion.id === "anxious") {
-    return `${cleanPlan}\n\n오늘은 불안을 줄이기 위해 계획을 절반으로 줄이자. 완벽보다 시작이 먼저야.`;
-  }
-
-  if (emotion.id === "tired") {
-    return `${cleanPlan}\n\n오늘은 지친 날이니까 3분만 하자. 흐름만 지키면 충분해.`;
-  }
-
-  if (emotion.id === "stress") {
-    return `${cleanPlan}\n\n오늘은 복잡하게 하지 말고 가장 쉬운 행동 하나만 끝내자.`;
-  }
-
-  return `${cleanPlan}\n\n오늘은 집중이 안 되는 날이니까 타이머 5분만 켜고 시작만 하자.`;
+function unlockNextTask(tasks, completedIndex) {
+  return tasks.map((task, index) => {
+    if (index === completedIndex) return { ...task, status: "done" };
+    if (index === completedIndex + 1 && task.status === "locked") return { ...task, status: "active" };
+    return task;
+  });
 }
 
 function NoahApp({ onBack }) {
   const [messages, setMessages] = useState([firstNoahMessage]);
   const [input, setInput] = useState("");
   const [step, setStep] = useState("name");
-  const [profile, setProfile] = useState({
-    name: "",
-    dream: "",
-    wantsIt: "",
-    plan: "",
-    emotion: "",
-    adjustedPlan: "",
-    proofImage: "",
-  });
+  const [profile, setProfile] = useState({ name: "", dream: "", wantsIt: "" });
+  const [tasks, setTasks] = useState([]);
+  const [selectedTaskIndex, setSelectedTaskIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEmotionPanel, setShowEmotionPanel] = useState(false);
-  const [showProofPanel, setShowProofPanel] = useState(false);
   const fileInputRef = useRef(null);
+
+  const activeTaskIndex = tasks.findIndex((task) => task.status === "active");
+  const activeTask = activeTaskIndex >= 0 ? tasks[activeTaskIndex] : null;
+  const completedCount = tasks.filter((task) => task.status === "done").length;
 
   const progressText = useMemo(() => {
     if (!profile.name) return "처음 만나는 중";
     if (!profile.dream) return `${profile.name}의 꿈을 찾는 중`;
-    if (!profile.plan) return `${profile.name}의 계획을 만드는 중`;
-    if (!profile.proofImage) return "오늘의 실행을 준비 중";
-    return "오늘 한 걸음 완료";
-  }, [profile]);
+    if (tasks.length === 0) return `${profile.name}의 계획을 만드는 중`;
+    if (completedCount === tasks.length) return "오늘 계획 완료";
+    return `${completedCount}/${tasks.length} 인증 완료`;
+  }, [profile, tasks, completedCount]);
+
+  const addNoah = (text) => setMessages((prev) => [...prev, makeNoahMessage(text)]);
 
   const sendMessage = () => {
     const value = input.trim();
@@ -1049,20 +1100,21 @@ function NoahApp({ onBack }) {
         value.length < 6;
 
       if (hasNoPlan) {
-        nextProfile.plan = "";
         noahReply =
           "좋아. 그럼 나와 설정하고 계획부터 시작해볼까?\n\n먼저 오늘 기준으로 아주 작게 잡자.\n예를 들어 이렇게 적어줘.\n\n“20:00에 목표와 관련된 행동 10분 하기”";
         nextStep = "plan";
       } else {
-        nextProfile.plan = value;
+        const parsedTasks = parsePlanToTasks(value);
+        setTasks(parsedTasks);
+        setSelectedTaskIndex(0);
         noahReply =
-          `좋아. 이 계획을 실행 흐름에 넣을게.\n\n오늘 계획:\n${value}\n\n실행하기 전에 오늘 기분을 먼저 확인하자.\n기분에 따라서 계획을 조금 줄이거나 늘릴게.`;
+          `좋아. 오늘 계획은 왼쪽 사이드바에 시간 순서대로 정리했어.\n\n이제 채팅창에는 긴 계획을 띄우지 않을게.\n왼쪽의 오늘 계획에서 하나씩 사진으로 인증하면서 가자.\n\n실행하기 전에 오늘 기분을 먼저 확인하자.`;
         nextStep = "emotion";
         setShowEmotionPanel(true);
       }
     } else {
       noahReply =
-        "좋아. 지금은 네 계획을 실행하는 흐름이야.\n오늘 기분을 고르고, 조정된 계획을 실행한 뒤 사진으로 증명하면 다음으로 넘어갈 수 있어.";
+        "좋아. 계획은 왼쪽 ‘오늘 계획’에서 확인하면 돼.\n현재 열려 있는 계획부터 사진으로 인증하면 다음 계획이 열릴 거야.";
       setShowEmotionPanel(true);
     }
 
@@ -1074,48 +1126,56 @@ function NoahApp({ onBack }) {
 
   const selectEmotion = (emotionId) => {
     const emotion = getEmotionById(emotionId);
-    const adjusted = adjustPlanByEmotion(profile.plan, emotionId);
-
-    setProfile((prev) => ({
-      ...prev,
-      emotion: emotionId,
-      adjustedPlan: adjusted,
-    }));
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.status === "done"
+          ? task
+          : { ...task, title: adjustTaskTitle(task.originalTitle, emotionId), emotion: emotionId }
+      )
+    );
 
     setMessages((prev) => [
       ...prev,
       makeUserMessage(`${emotion.emoji} ${emotion.label}`),
       makeNoahMessage(
-        `오늘 기분은 ${emotion.emoji} ${emotion.label}이구나.\n\n좋아. 오늘은 이렇게 조정해서 가자.\n\n${adjusted}\n\n끝나면 사진으로 증명해줘.\n사진 인증을 해야 다음 계획으로 넘어갈 수 있어.`
+        `오늘 기분은 ${emotion.emoji} ${emotion.label}이구나.\n\n좋아. 오늘 계획 강도는 왼쪽 사이드바에서 조정해뒀어.\n현재 열려 있는 첫 계획부터 사진으로 인증하면서 하나씩 가자.`
       ),
     ]);
 
     setShowEmotionPanel(false);
-    setShowProofPanel(true);
-    setStep("proof");
+    setStep("execute");
+  };
+
+  const openProof = (index) => {
+    if (tasks[index]?.status !== "active") return;
+    setSelectedTaskIndex(index);
+    fileInputRef.current?.click();
   };
 
   const handleProofImage = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const url = URL.createObjectURL(file);
+    const task = tasks[selectedTaskIndex];
 
-    setProfile((prev) => ({
-      ...prev,
-      proofImage: url,
-    }));
+    setTasks((prev) =>
+      unlockNextTask(
+        prev.map((item, index) =>
+          index === selectedTaskIndex ? { ...item, proofImage: url } : item
+        ),
+        selectedTaskIndex
+      )
+    );
 
     setMessages((prev) => [
       ...prev,
-      makeUserMessage("사진 인증 완료"),
+      makeUserMessage(`${task?.time || "오늘"} 계획 사진 인증 완료`),
       makeNoahMessage(
-        `좋아, ${profile.name || "우리"}.\n오늘 한 걸음 갔네.\n\n완벽해서가 아니라 실제로 움직였기 때문에 의미 있는 거야.\n이렇게 쌓이면 네 꿈은 점점 현실에 가까워져.`
+        `좋아, ${profile.name || "우리"}.\n${task?.time || "오늘"} 계획을 실제로 증명했네.\n\n이제 왼쪽에서 다음 계획이 열렸어.\n이렇게 하나씩 가면 돼.`
       ),
     ]);
 
-    setShowProofPanel(false);
-    setStep("done");
+    event.target.value = "";
   };
 
   const askFeedback = (type) => {
@@ -1150,13 +1210,40 @@ function NoahApp({ onBack }) {
           <span>현재 상태</span>
           <strong>{progressText}</strong>
         </div>
+
+        <div className="plan-box">
+          <div className="plan-box-head">
+            <span>오늘 계획</span>
+            <strong>{tasks.length ? `${completedCount}/${tasks.length}` : "대기"}</strong>
+          </div>
+
+          {tasks.length === 0 ? (
+            <p className="empty-plan">계획을 말하면 시간 순서대로 여기에 정리할게.</p>
+          ) : (
+            <div className="task-list">
+              {tasks.map((task, index) => (
+                <div key={task.id} className={`task-card ${task.status}`}>
+                  <div className="task-top">
+                    <span className="task-time">{task.time}</span>
+                    <span className="task-status">
+                      {task.status === "done" ? "완료" : task.status === "active" ? "진행 가능" : "잠김"}
+                    </span>
+                  </div>
+                  <p>{task.title}</p>
+                  {task.proofImage ? <img src={task.proofImage} alt="인증" /> : null}
+                  <button disabled={task.status !== "active"} onClick={() => openProof(index)}>
+                    {task.status === "done" ? "인증 완료" : task.status === "active" ? "사진 인증" : "이전 계획 인증 필요"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </aside>
 
       <main className="main">
         <header className="topbar">
-          <button className="icon-btn" onClick={() => setSidebarOpen((v) => !v)}>
-            ☰
-          </button>
+          <button className="icon-btn" onClick={() => setSidebarOpen((v) => !v)}>☰</button>
           <div className="brand">
             <span>NOAH</span>
             <small>오늘도 같이</small>
@@ -1185,10 +1272,7 @@ function NoahApp({ onBack }) {
                 <div className="bubble">
                   {message.role === "noah" && <div className="bubble-label">NOAH · 함께 가는 중</div>}
                   {message.text.split("\n").map((line, lineIndex) => (
-                    <Fragment key={lineIndex}>
-                      {line}
-                      <br />
-                    </Fragment>
+                    <Fragment key={lineIndex}>{line}<br /></Fragment>
                   ))}
                 </div>
               </div>
@@ -1199,7 +1283,7 @@ function NoahApp({ onBack }) {
             <div className="panel">
               <div>
                 <h3>오늘 기분은 어때?</h3>
-                <p>기분에 따라 계획 강도를 조정할게.</p>
+                <p>기분에 따라 왼쪽 오늘 계획의 강도를 조정할게.</p>
               </div>
               <div className="emotion-grid">
                 {emotionOptions.map((emotion) => (
@@ -1213,43 +1297,7 @@ function NoahApp({ onBack }) {
             </div>
           )}
 
-          {showProofPanel && (
-            <div className="panel proof-panel">
-              <div>
-                <h3>사진으로 오늘 행동을 증명해줘</h3>
-                <p>사진 인증을 해야 다음 계획으로 넘어갈 수 있어.</p>
-              </div>
-
-              {profile.adjustedPlan && (
-                <div className="today-plan">
-                  <span>오늘 조정된 계획</span>
-                  <p>{profile.adjustedPlan}</p>
-                </div>
-              )}
-
-              <button className="proof-btn" onClick={() => fileInputRef.current?.click()}>
-                사진 촬영 또는 업로드
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleProofImage}
-                hidden
-              />
-            </div>
-          )}
-
-          {profile.proofImage && (
-            <div className="proof-preview">
-              <img src={profile.proofImage} alt="오늘의 인증" />
-              <div>
-                <strong>오늘 인증 완료</strong>
-                <p>좋아. 이게 네가 실제로 움직였다는 증거야.</p>
-              </div>
-            </div>
-          )}
+          <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleProofImage} hidden />
 
           <div className="feedback-row">
             <button onClick={() => askFeedback("relation")}>인간관계 피드백</button>
@@ -1286,20 +1334,40 @@ html, body, #root { width: 100%; min-height: 100%; margin: 0; }
 body { background: #080a14; font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 button, textarea { font-family: inherit; }
 .noah-app { min-height: 100vh; color: rgba(255,255,255,0.92); background: radial-gradient(circle at 22% 8%, rgba(168,85,247,0.22), transparent 28%), radial-gradient(circle at 78% 10%, rgba(96,165,250,0.18), transparent 30%), linear-gradient(180deg, #080a14 0%, #0b1020 46%, #101322 100%); display: flex; overflow: hidden; position: relative; }
-.sidebar { width: 280px; padding: 24px; border-right: 1px solid rgba(255,255,255,0.08); background: rgba(8,10,20,0.72); backdrop-filter: blur(22px); z-index: 10; }
+.sidebar { width: 330px; padding: 24px; border-right: 1px solid rgba(255,255,255,0.08); background: rgba(8,10,20,0.72); backdrop-filter: blur(22px); z-index: 10; overflow-y: auto; }
 .side-logo { letter-spacing: 0.35em; font-size: 18px; font-weight: 800; margin-bottom: 34px; }
 .side-item { width: 100%; border: 0; color: rgba(255,255,255,0.68); background: transparent; text-align: left; padding: 13px 14px; border-radius: 16px; cursor: pointer; margin-bottom: 6px; }
 .side-item.active, .side-item:hover { background: rgba(255,255,255,0.08); color: white; }
 .side-card { margin-top: 28px; padding: 18px; border-radius: 22px; background: linear-gradient(135deg, rgba(168,85,247,0.22), rgba(96,165,250,0.14)); border: 1px solid rgba(255,255,255,0.1); }
 .side-card span { display: block; font-size: 12px; color: rgba(255,255,255,0.58); margin-bottom: 8px; }
 .side-card strong { font-size: 15px; }
+.plan-box { margin-top: 18px; padding: 16px; border-radius: 24px; background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.09); }
+.plan-box-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.plan-box-head span { color: rgba(255,255,255,0.58); font-size: 13px; }
+.plan-box-head strong { font-size: 14px; }
+.empty-plan { margin: 0; color: rgba(255,255,255,0.46); line-height: 1.6; font-size: 13px; }
+.task-list { display: grid; gap: 10px; }
+.task-card { padding: 14px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
+.task-card.locked { opacity: 0.48; }
+.task-card.active { border-color: rgba(125,211,252,0.38); background: rgba(96,165,250,0.11); }
+.task-card.done { border-color: rgba(134,239,172,0.32); background: rgba(34,197,94,0.1); }
+.task-top { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 8px; }
+.task-time { font-weight: 900; color: white; }
+.task-status { font-size: 11px; color: rgba(255,255,255,0.58); }
+.task-card p { margin: 0 0 12px; color: rgba(255,255,255,0.84); line-height: 1.55; font-size: 13px; }
+.task-card img { width: 100%; height: 90px; border-radius: 14px; object-fit: cover; margin-bottom: 10px; }
+.task-card button { width: 100%; border: 0; border-radius: 14px; padding: 10px 12px; color: white; background: linear-gradient(135deg, rgba(168,85,247,0.9), rgba(96,165,250,0.86)); cursor: pointer; font-weight: 800; }
+.task-card button:disabled { cursor: not-allowed; background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.42); }
 .main { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; height: 100vh; }
 .topbar { height: 72px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; z-index: 5; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(8,10,20,0.42); backdrop-filter: blur(18px); }
 .icon-btn { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; border-radius: 14px; cursor: pointer; }
 .brand { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .brand span { letter-spacing: 0.28em; font-weight: 800; }
 .brand small { color: rgba(255,255,255,0.48); font-size: 12px; }
+.top-actions { display: flex; align-items: center; gap: 10px; }
 .top-pill { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.72); font-size: 13px; }
+.home-btn { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.82); border-radius: 999px; padding: 10px 14px; cursor: pointer; font-weight: 700; }
+.home-btn:hover { background: rgba(255,255,255,0.1); }
 .aurora { position: absolute; width: 420px; height: 420px; border-radius: 999px; filter: blur(70px); opacity: 0.42; animation: float 11s ease-in-out infinite alternate; pointer-events: none; }
 .aurora-one { left: 16%; top: 8%; background: rgba(168,85,247,0.34); }
 .aurora-two { right: 8%; top: 28%; background: rgba(125,211,252,0.22); animation-delay: 1.8s; }
@@ -1318,7 +1386,7 @@ button, textarea { font-family: inherit; }
 .message-row.noah .bubble { background: linear-gradient(135deg, rgba(255,255,255,0.09), rgba(168,85,247,0.09)); border: 1px solid rgba(255,255,255,0.09); backdrop-filter: blur(18px); box-shadow: 0 24px 80px rgba(0,0,0,0.18); }
 .message-row.user .bubble { background: rgba(255,255,255,0.14); }
 .bubble-label { font-size: 12px; color: rgba(255,255,255,0.44); margin-bottom: 8px; }
-.panel, .proof-preview { max-width: 860px; margin: 18px auto 0; padding: 22px; border-radius: 28px; background: rgba(255,255,255,0.075); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(22px); }
+.panel { max-width: 860px; margin: 18px auto 0; padding: 22px; border-radius: 28px; background: rgba(255,255,255,0.075); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(22px); }
 .panel h3 { margin: 0 0 6px; font-size: 21px; }
 .panel p { margin: 0; color: rgba(255,255,255,0.58); line-height: 1.65; }
 .emotion-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -1326,14 +1394,6 @@ button, textarea { font-family: inherit; }
 .emotion-grid button:hover { transform: translateY(-2px); background: rgba(255,255,255,0.11); }
 .emotion-grid span { font-size: 24px; }
 .emotion-grid small { color: rgba(255,255,255,0.48); }
-.today-plan { margin-top: 16px; padding: 16px; border-radius: 20px; background: rgba(0,0,0,0.18); }
-.today-plan span { display: block; font-size: 12px; color: rgba(255,255,255,0.48); margin-bottom: 8px; }
-.today-plan p { color: rgba(255,255,255,0.88); white-space: pre-line; }
-.proof-btn { margin-top: 18px; width: 100%; border: 0; background: linear-gradient(135deg, rgba(168,85,247,0.9), rgba(96,165,250,0.86)); color: white; padding: 16px 18px; border-radius: 18px; cursor: pointer; font-weight: 800; }
-.proof-preview { display: flex; gap: 16px; align-items: center; }
-.proof-preview img { width: 92px; height: 92px; border-radius: 22px; object-fit: cover; }
-.proof-preview strong { display: block; margin-bottom: 6px; }
-.proof-preview p { margin: 0; color: rgba(255,255,255,0.58); }
 .feedback-row { max-width: 860px; margin: 18px auto 0; display: flex; gap: 10px; flex-wrap: wrap; }
 .feedback-row button { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); border-radius: 999px; padding: 11px 14px; cursor: pointer; }
 .composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 22px 28px; background: linear-gradient(180deg, transparent, rgba(8,10,20,0.88) 34%, rgba(8,10,20,0.98)); z-index: 6; }
@@ -1341,27 +1401,6 @@ button, textarea { font-family: inherit; }
 .input-shell textarea { flex: 1; resize: none; border: 0; outline: none; color: white; background: transparent; font-size: 16px; line-height: 1.45; max-height: 120px; }
 .input-shell textarea::placeholder { color: rgba(255,255,255,0.42); }
 .input-shell button { width: 46px; height: 46px; border: 0; border-radius: 18px; cursor: pointer; color: white; font-size: 20px; background: linear-gradient(135deg, rgba(168,85,247,0.95), rgba(96,165,250,0.9)); }
-
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.home-btn {
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.82);
-  border-radius: 999px;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.home-btn:hover {
-  background: rgba(255,255,255,0.1);
-}
-
 @media (max-width: 860px) { .sidebar { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); transition: transform 220ms ease; } .sidebar.open { transform: translateX(0); } .topbar { height: 66px; padding: 0 14px; } .top-pill { display: none; } .chat-area { padding: 34px 14px 150px; } .hero-title h1 { font-size: 36px; } .hero-title { margin-bottom: 24px; } .message-row { gap: 9px; } .bubble { max-width: 82vw; padding: 15px 16px; border-radius: 21px; font-size: 15px; } .emotion-grid { grid-template-columns: repeat(2, 1fr); } .feedback-row { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; } .feedback-row button { flex: 0 0 auto; } .composer { padding: 16px 12px 20px; } }
 `;
 
