@@ -1053,8 +1053,10 @@ function NoahApp({ onBack }) {
   const [tasks, setTasks] = useState([]);
   const [selectedTaskIndex, setSelectedTaskIndex] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sideView, setSideView] = useState("chat");
   const [showEmotionPanel, setShowEmotionPanel] = useState(false);
   const fileInputRef = useRef(null);
+  const chatBottomRef = useRef(null);
 
   const activeTaskIndex = tasks.findIndex((task) => task.status === "active");
   const activeTask = activeTaskIndex >= 0 ? tasks[activeTaskIndex] : null;
@@ -1067,6 +1069,10 @@ function NoahApp({ onBack }) {
     if (completedCount === tasks.length) return "오늘 계획 완료";
     return `${completedCount}/${tasks.length} 인증 완료`;
   }, [profile, tasks, completedCount]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, showEmotionPanel]);
 
   const addNoah = (text) => setMessages((prev) => [...prev, makeNoahMessage(text)]);
 
@@ -1107,6 +1113,7 @@ function NoahApp({ onBack }) {
         const parsedTasks = parsePlanToTasks(value);
         setTasks(parsedTasks);
         setSelectedTaskIndex(0);
+        setSideView("plan");
         noahReply =
           `좋아. 오늘 계획은 왼쪽 사이드바에 시간 순서대로 정리했어.\n\n이제 채팅창에는 긴 계획을 띄우지 않을게.\n왼쪽의 오늘 계획에서 하나씩 사진으로 인증하면서 가자.\n\n실행하기 전에 오늘 기분을 먼저 확인하자.`;
         nextStep = "emotion";
@@ -1201,44 +1208,68 @@ function NoahApp({ onBack }) {
 
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="side-logo">NOAH</div>
-        <button className="side-item active">오늘 대화</button>
-        <button className="side-item">내 목표</button>
-        <button className="side-item">오늘 계획</button>
-        <button className="side-item">설정</button>
+        <button
+          className={`side-item ${sideView === "chat" ? "active" : ""}`}
+          onClick={() => setSideView("chat")}
+        >
+          오늘 대화
+        </button>
+        <button
+          className={`side-item ${sideView === "plan" ? "active" : ""}`}
+          onClick={() => setSideView("plan")}
+        >
+          오늘 계획
+        </button>
+        <button
+          className={`side-item ${sideView === "settings" ? "active" : ""}`}
+          onClick={() => setSideView("settings")}
+        >
+          설정
+        </button>
 
         <div className="side-card">
           <span>현재 상태</span>
           <strong>{progressText}</strong>
         </div>
 
-        <div className="plan-box">
-          <div className="plan-box-head">
-            <span>오늘 계획</span>
-            <strong>{tasks.length ? `${completedCount}/${tasks.length}` : "대기"}</strong>
-          </div>
-
-          {tasks.length === 0 ? (
-            <p className="empty-plan">계획을 말하면 시간 순서대로 여기에 정리할게.</p>
-          ) : (
-            <div className="task-list">
-              {tasks.map((task, index) => (
-                <div key={task.id} className={`task-card ${task.status}`}>
-                  <div className="task-top">
-                    <span className="task-time">{task.time}</span>
-                    <span className="task-status">
-                      {task.status === "done" ? "완료" : task.status === "active" ? "진행 가능" : "잠김"}
-                    </span>
-                  </div>
-                  <p>{task.title}</p>
-                  {task.proofImage ? <img src={task.proofImage} alt="인증" /> : null}
-                  <button disabled={task.status !== "active"} onClick={() => openProof(index)}>
-                    {task.status === "done" ? "인증 완료" : task.status === "active" ? "사진 인증" : "이전 계획 인증 필요"}
-                  </button>
-                </div>
-              ))}
+        {sideView === "plan" ? (
+          <div className="plan-box">
+            <div className="plan-box-head">
+              <span>시간 순서</span>
+              <strong>{tasks.length ? `${completedCount}/${tasks.length}` : "대기"}</strong>
             </div>
-          )}
-        </div>
+
+            {tasks.length === 0 ? (
+              <p className="empty-plan">계획을 말하면 시간 순서대로 여기에 정리할게.</p>
+            ) : (
+              <div className="task-list">
+                {tasks.map((task, index) => (
+                  <div key={task.id} className={`task-card ${task.status}`}>
+                    <div className="task-top">
+                      <span className="task-time">{task.time}</span>
+                      <span className="task-status">
+                        {task.status === "done" ? "완료" : task.status === "active" ? "진행 가능" : "잠김"}
+                      </span>
+                    </div>
+                    <p>{task.title}</p>
+                    {task.proofImage ? <img src={task.proofImage} alt="인증" /> : null}
+                    <button disabled={task.status !== "active"} onClick={() => openProof(index)}>
+                      {task.status === "done" ? "인증 완료" : task.status === "active" ? "사진 인증" : "이전 계획 인증 필요"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : sideView === "settings" ? (
+          <div className="plan-box">
+            <p className="empty-plan">설정은 이후 연결할게. 지금은 오늘 계획 실행에 집중하자.</p>
+          </div>
+        ) : (
+          <div className="plan-box subtle-box">
+            <p className="empty-plan">오늘 계획 버튼을 누르면 시간순 계획이 열려.</p>
+          </div>
+        )}
       </aside>
 
       <main className="main">
@@ -1304,6 +1335,7 @@ function NoahApp({ onBack }) {
             <button onClick={() => askFeedback("money")}>돈/사업 피드백</button>
             <button onClick={() => askFeedback("dream")}>꿈/실행 피드백</button>
           </div>
+          <div ref={chatBottomRef} />
         </section>
 
         <footer className="composer">
@@ -1330,10 +1362,11 @@ function NoahApp({ onBack }) {
 
 const styles = `
 * { box-sizing: border-box; }
-html, body, #root { width: 100%; min-height: 100%; margin: 0; }
+html, body, #root { width: 100%; height: 100%; min-height: 100%; margin: 0; }
 body { background: #080a14; font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 button, textarea { font-family: inherit; }
-.noah-app { min-height: 100vh; color: rgba(255,255,255,0.92); background: radial-gradient(circle at 22% 8%, rgba(168,85,247,0.22), transparent 28%), radial-gradient(circle at 78% 10%, rgba(96,165,250,0.18), transparent 30%), linear-gradient(180deg, #080a14 0%, #0b1020 46%, #101322 100%); display: flex; overflow: hidden; position: relative; }
+.noah-app { height: 100vh; max-height: 100vh; color: rgba(255,255,255,0.92); background: radial-gradient(circle at 22% 8%, rgba(168,85,247,0.22), transparent 28%), radial-gradient(circle at 78% 10%, rgba(96,165,250,0.18), transparent 30%), linear-gradient(180deg, #080a14 0%, #0b1020 46%, #101322 100%); display: flex; overflow: hidden; position: relative; }
+.noah-app * { min-width: 0; }
 .sidebar { width: 330px; padding: 24px; border-right: 1px solid rgba(255,255,255,0.08); background: rgba(8,10,20,0.72); backdrop-filter: blur(22px); z-index: 10; overflow-y: auto; }
 .side-logo { letter-spacing: 0.35em; font-size: 18px; font-weight: 800; margin-bottom: 34px; }
 .side-item { width: 100%; border: 0; color: rgba(255,255,255,0.68); background: transparent; text-align: left; padding: 13px 14px; border-radius: 16px; cursor: pointer; margin-bottom: 6px; }
@@ -1342,6 +1375,7 @@ button, textarea { font-family: inherit; }
 .side-card span { display: block; font-size: 12px; color: rgba(255,255,255,0.58); margin-bottom: 8px; }
 .side-card strong { font-size: 15px; }
 .plan-box { margin-top: 18px; padding: 16px; border-radius: 24px; background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.09); }
+.subtle-box { opacity: 0.82; }
 .plan-box-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .plan-box-head span { color: rgba(255,255,255,0.58); font-size: 13px; }
 .plan-box-head strong { font-size: 14px; }
@@ -1358,7 +1392,7 @@ button, textarea { font-family: inherit; }
 .task-card img { width: 100%; height: 90px; border-radius: 14px; object-fit: cover; margin-bottom: 10px; }
 .task-card button { width: 100%; border: 0; border-radius: 14px; padding: 10px 12px; color: white; background: linear-gradient(135deg, rgba(168,85,247,0.9), rgba(96,165,250,0.86)); cursor: pointer; font-weight: 800; }
 .task-card button:disabled { cursor: not-allowed; background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.42); }
-.main { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; height: 100vh; }
+.main { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; height: 100vh; max-height: 100vh; overflow: hidden; }
 .topbar { height: 72px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; z-index: 5; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(8,10,20,0.42); backdrop-filter: blur(18px); }
 .icon-btn { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; border-radius: 14px; cursor: pointer; }
 .brand { display: flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -1373,7 +1407,7 @@ button, textarea { font-family: inherit; }
 .aurora-two { right: 8%; top: 28%; background: rgba(125,211,252,0.22); animation-delay: 1.8s; }
 .stars { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255,255,255,0.55) 1px, transparent 1px), radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px); background-size: 120px 120px, 190px 190px; opacity: 0.16; pointer-events: none; }
 @keyframes float { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(22px,28px,0) scale(1.08); } }
-.chat-area { flex: 1; overflow-y: auto; padding: 44px 22px 160px; z-index: 2; }
+.chat-area { flex: 1; overflow-y: auto; padding: 44px 22px 150px; z-index: 2; scroll-behavior: smooth; }
 .hero-title { max-width: 760px; margin: 0 auto 28px; text-align: center; }
 .hero-title p { margin: 0 0 8px; color: rgba(255,255,255,0.48); letter-spacing: 0.35em; font-size: 13px; }
 .hero-title h1 { margin: 0; font-size: clamp(34px,5vw,64px); letter-spacing: -0.06em; line-height: 1.05; }
@@ -1396,12 +1430,12 @@ button, textarea { font-family: inherit; }
 .emotion-grid small { color: rgba(255,255,255,0.48); }
 .feedback-row { max-width: 860px; margin: 18px auto 0; display: flex; gap: 10px; flex-wrap: wrap; }
 .feedback-row button { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); border-radius: 999px; padding: 11px 14px; cursor: pointer; }
-.composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 22px 28px; background: linear-gradient(180deg, transparent, rgba(8,10,20,0.88) 34%, rgba(8,10,20,0.98)); z-index: 6; }
+.composer { position: sticky; left: 0; right: 0; bottom: 0; margin-top: auto; padding: 20px 22px 28px; background: linear-gradient(180deg, transparent, rgba(8,10,20,0.88) 34%, rgba(8,10,20,0.98)); z-index: 6; }
 .input-shell { max-width: 860px; margin: 0 auto; min-height: 62px; border-radius: 26px; padding: 10px 10px 10px 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; gap: 12px; backdrop-filter: blur(22px); box-shadow: 0 24px 80px rgba(0,0,0,0.25); }
 .input-shell textarea { flex: 1; resize: none; border: 0; outline: none; color: white; background: transparent; font-size: 16px; line-height: 1.45; max-height: 120px; }
 .input-shell textarea::placeholder { color: rgba(255,255,255,0.42); }
 .input-shell button { width: 46px; height: 46px; border: 0; border-radius: 18px; cursor: pointer; color: white; font-size: 20px; background: linear-gradient(135deg, rgba(168,85,247,0.95), rgba(96,165,250,0.9)); }
-@media (max-width: 860px) { .sidebar { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); transition: transform 220ms ease; } .sidebar.open { transform: translateX(0); } .topbar { height: 66px; padding: 0 14px; } .top-pill { display: none; } .chat-area { padding: 34px 14px 150px; } .hero-title h1 { font-size: 36px; } .hero-title { margin-bottom: 24px; } .message-row { gap: 9px; } .bubble { max-width: 82vw; padding: 15px 16px; border-radius: 21px; font-size: 15px; } .emotion-grid { grid-template-columns: repeat(2, 1fr); } .feedback-row { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; } .feedback-row button { flex: 0 0 auto; } .composer { padding: 16px 12px 20px; } }
+@media (max-width: 860px) { .sidebar { width: min(330px, 88vw); position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); transition: transform 220ms ease; } .sidebar.open { transform: translateX(0); } .topbar { height: 66px; padding: 0 14px; } .top-pill { display: none; } .chat-area { padding: 34px 14px 150px; } .hero-title h1 { font-size: 36px; } .hero-title { margin-bottom: 24px; } .message-row { gap: 9px; } .bubble { max-width: 82vw; padding: 15px 16px; border-radius: 21px; font-size: 15px; } .emotion-grid { grid-template-columns: repeat(2, 1fr); } .feedback-row { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; } .feedback-row button { flex: 0 0 auto; } .composer { padding: 16px 12px 20px; } }
 `;
 
 
