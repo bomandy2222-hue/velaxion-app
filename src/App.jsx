@@ -1081,10 +1081,17 @@ function NoahApp({ onBack }) {
   const currentOpenIndex = planItems.findIndex((item) => item.status === "open");
 
   useEffect(() => {
-    if (activeView === "chat") {
-      chatBottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-    }
-  }, [messages, activeView, showEmotionPanel]);
+    if (activeView !== "chat") return;
+
+    const timer = setTimeout(() => {
+      chatBottomRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }, 80);
+
+    return () => clearTimeout(timer);
+  }, [messages.length, activeView, showEmotionPanel, input]);
 
   const progressText = useMemo(() => {
     if (!profile.name) return "처음 만나는 중";
@@ -1092,6 +1099,54 @@ function NoahApp({ onBack }) {
     if (planItems.length === 0) return "계획 설계 중";
     return `${completedCount}/${planItems.length} 인증 완료`;
   }, [profile, planItems.length, completedCount]);
+
+  const getSuggestedReplies = () => {
+    if (step === "name") {
+      return ["정봉", "내 이름부터 알려줄게"];
+    }
+
+    if (step === "dream") {
+      return [
+        "나는 사업으로 성공하고 싶어",
+        "경제적으로 자유로워지고 싶어",
+        "내 꿈을 현실로 만들고 싶어",
+      ];
+    }
+
+    if (step === "confirmDream") {
+      return [
+        "응, 진짜 이루고 싶어",
+        "맞아. 꼭 이루고 싶어",
+        "아직 두렵지만 가고 싶어",
+      ];
+    }
+
+    if (step === "plan") {
+      return [
+        "아직 계획은 없어. 노아가 같이 짜줘",
+        "대략적인 계획은 있는데 정리가 안 됐어",
+        "시간까지 정해서 같이 다듬고 싶어",
+      ];
+    }
+
+    if (step === "emotion") {
+      return [
+        "오늘 기분에 맞게 계획을 조정하고 싶어",
+        "오늘은 조금 힘들어서 줄이고 싶어",
+        "오늘은 괜찮아서 원래 계획대로 가고 싶어",
+      ];
+    }
+
+    if (step === "execute") {
+      return [
+        "오늘 계획을 다시 다듬고 싶어",
+        "지금 계획이 너무 무거운지 봐줘",
+        "다음 행동을 더 작게 쪼개줘",
+      ];
+    }
+
+    return [];
+  };
 
   const savePlan = (items) => {
     setPlanItems(items);
@@ -1196,23 +1251,6 @@ function NoahApp({ onBack }) {
     event.target.value = "";
   };
 
-  const askFeedback = (type) => {
-    const replies = {
-      relation:
-        "사람 관계에서는 이기는 말보다 얻는 태도가 더 중요해.\n상대를 바꾸려 하기 전에 먼저 그 사람이 왜 그렇게 반응했는지 봐야 해.\n오늘 할 수 있는 행동은 하나야. 먼저 이해하려는 질문 하나를 던져봐.",
-      money:
-        "돈은 단순히 많이 버는 문제가 아니라 구조의 문제야.\n시간을 팔고 있는지, 자산이 쌓이는 구조를 만들고 있는지 봐야 해.\n오늘은 네가 반복해서 돈을 만들 수 있는 작은 구조 하나를 적어보자.",
-      dream:
-        "꿈은 크게 가져도 돼. 대신 행동은 작아야 해.\n큰 꿈을 한 번에 이루려 하면 멈추지만, 작은 행동을 반복하면 결국 도착해.\n오늘은 꿈을 증명하는 행동 하나만 하자.",
-    };
-
-    setMessages((prev) => [
-      ...prev,
-      makeUserMessage(type === "relation" ? "인간관계 피드백" : type === "money" ? "돈/사업 피드백" : "꿈/실행 피드백"),
-      makeNoahMessage(replies[type]),
-    ]);
-    setActiveView("chat");
-  };
 
   return (
     <div className="noah-app">
@@ -1288,11 +1326,15 @@ function NoahApp({ onBack }) {
               </div>
             )}
 
-            <div className="feedback-row">
-              <button onClick={() => askFeedback("relation")}>인간관계 피드백</button>
-              <button onClick={() => askFeedback("money")}>돈/사업 피드백</button>
-              <button onClick={() => askFeedback("dream")}>꿈/실행 피드백</button>
-            </div>
+            {getSuggestedReplies().length > 0 ? (
+              <div className="suggestion-row">
+                {getSuggestedReplies().map((item) => (
+                  <button key={item} onClick={() => setInput(item)}>
+                    {item}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <div ref={chatBottomRef} />
           </section>
         )}
@@ -1393,8 +1435,8 @@ button, textarea { font-family: inherit; }
 .emotion-grid button:hover { transform: translateY(-2px); background: rgba(255,255,255,0.11); }
 .emotion-grid span { font-size: 24px; }
 .emotion-grid small { color: rgba(255,255,255,0.48); }
-.feedback-row { max-width: 860px; margin: 18px auto 0; display: flex; gap: 10px; flex-wrap: wrap; }
-.feedback-row button { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); border-radius: 999px; padding: 11px 14px; cursor: pointer; }
+.suggestion-row { max-width: 860px; margin: 18px auto 0; display: flex; gap: 10px; flex-wrap: wrap; }
+.suggestion-row button { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); border-radius: 999px; padding: 11px 14px; cursor: pointer; }
 .composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 22px 28px; background: linear-gradient(180deg, transparent, rgba(8,10,20,0.88) 34%, rgba(8,10,20,0.98)); z-index: 6; }
 .input-shell { max-width: 860px; margin: 0 auto; min-height: 62px; border-radius: 26px; padding: 10px 10px 10px 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; gap: 12px; backdrop-filter: blur(22px); box-shadow: 0 24px 80px rgba(0,0,0,0.25); }
 .input-shell textarea { flex: 1; resize: none; border: 0; outline: none; color: white; background: transparent; font-size: 16px; line-height: 1.45; max-height: 120px; }
@@ -1419,7 +1461,7 @@ button, textarea { font-family: inherit; }
 .empty-plan { max-width: 780px; margin: 0 auto; text-align: center; }
 .empty-plan h2 { margin: 0 0 10px; }
 .empty-plan p { margin: 0; color: rgba(255,255,255,0.58); }
-@media (max-width: 860px) { .sidebar { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); transition: transform 220ms ease; } .sidebar.open { transform: translateX(0); } .topbar { height: 66px; padding: 0 14px; } .top-pill { display: none; } .chat-area, .page-view { height: calc(100vh - 66px); padding: 34px 14px 150px; } .hero-title h1, .view-header h1 { font-size: 36px; } .message-row { gap: 9px; } .bubble { max-width: 82vw; padding: 15px 16px; border-radius: 21px; font-size: 15px; } .emotion-grid { grid-template-columns: repeat(2, 1fr); } .feedback-row { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; } .feedback-row button { flex: 0 0 auto; } .composer { padding: 16px 12px 20px; } }
+@media (max-width: 860px) { .sidebar { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); transition: transform 220ms ease; } .sidebar.open { transform: translateX(0); } .topbar { height: 66px; padding: 0 14px; } .top-pill { display: none; } .chat-area, .page-view { height: calc(100vh - 66px); padding: 34px 14px 150px; } .hero-title h1, .view-header h1 { font-size: 36px; } .message-row { gap: 9px; } .bubble { max-width: 82vw; padding: 15px 16px; border-radius: 21px; font-size: 15px; } .emotion-grid { grid-template-columns: repeat(2, 1fr); } .suggestion-row { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; } .suggestion-row button { flex: 0 0 auto; } .composer { padding: 16px 12px 20px; } }
 `;
 
 
