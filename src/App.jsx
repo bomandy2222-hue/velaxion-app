@@ -1011,50 +1011,144 @@ function parseKoreanTimeExpression(raw) {
 
 function extractAvailableWindows(text) {
   const raw = String(text || "");
-  const compact = raw.replace(/\s+/g, " ");
-  const rangeRegex = /((?:오전|오후|아침|저녁|밤|새벽)?\s*\d{1,2}\s*(?::|시)\s*\d{0,2}\s*(?:분)?)[^\d가-힣a-zA-Z]{0,8}(?:부터|~|-|에서|부터\s*)\s*((?:오전|오후|아침|저녁|밤|새벽)?\s*\d{1,2}\s*(?::|시)\s*\d{0,2}\s*(?:분)?)/g;
   const windows = [];
-  let match;
 
-  while ((match = rangeRegex.exec(compact)) !== null) {
-    const start = parseKoreanTimeExpression(match[1]);
-    const end = parseKoreanTimeExpression(match[2]);
-    if (!start || !end) continue;
-    let startMin = parseTimeToMinutes(start);
-    let endMin = parseTimeToMinutes(end);
-    if (endMin <= startMin) endMin += 12 * 60;
-    if (endMin - startMin >= 15) {
-      windows.push({ start: minutesToTime(startMin), end: minutesToTime(Math.min(endMin, 23 * 60 + 59)) });
+  const mentionRegex = /(오전|오후|아침|저녁|밤|새벽)?\s*\d{1,2}\s*(?::|시)\s*\d{0,2}\s*(?:분)?/g;
+  const mentions = [];
+  let match;
+  let lastPeriod = "";
+
+  while ((match = mentionRegex.exec(raw)) !== null) {
+    const period = match[1] || lastPeriod;
+    if (match[1]) lastPeriod = match[1];
+    const time = parseKoreanTimeExpression(`${period || ""}${match[0]}`);
+    if (time) mentions.push({ time, index: match.index, text: match[0], period });
+  }
+
+  for (let i = 0; i < mentions.length - 1; i += 2) {
+    const start = mentions[i];
+    const end = mentions[i + 1];
+    let startMin = parseTimeToMinutes(start.time);
+    let endMin = parseTimeToMinutes(end.time);
+
+    if (endMin <= startMin) {
+      if (!end.period && start.period && ["오후", "저녁", "밤"].includes(start.period)) {
+        endMin += 12 * 60;
+      } else {
+        endMin += 12 * 60;
+      }
+    }
+
+    const duration = endMin - startMin;
+    if (duration >= 15) {
+      windows.push({
+        start: minutesToTime(startMin),
+        end: minutesToTime(Math.min(endMin, 23 * 60 + 59)),
+      });
     }
   }
 
+  if (!windows.length && mentions.length === 1) {
+    const oneTime = mentions[0].time;
+    windows.push({ start: oneTime, end: minutesToTime(parseTimeToMinutes(oneTime) + 90) });
+  }
+
   if (!windows.length) {
-    const oneTime = extractStartTime(raw);
+    const oneTime = extractStartTime(raw || "20:00");
     windows.push({ start: oneTime, end: minutesToTime(parseTimeToMinutes(oneTime) + 90) });
   }
 
   return windows;
 }
 
+function getAvailabilityMinutes(timeText) {
+  return extractAvailableWindows(timeText).reduce((sum, window) => {
+    return sum + Math.max(0, parseTimeToMinutes(window.end) - parseTimeToMinutes(window.start));
+  }, 0);
+}
+
+function getPlanCountFromAvailability(timeText) {
+  const total = getAvailabilityMinutes(timeText);
+  if (total <= 30) return 1;
+  if (total <= 75) return 2;
+  if (total <= 120) return 3;
+  if (total <= 210) return 5;
+  if (total <= 360) return 7;
+  if (total <= 480) return 9;
+  return 10;
+}
+
 function buildScheduleTimes(timeText, desiredCount = 6) {
   const windows = extractAvailableWindows(timeText);
+  const totalAvailable = windows.reduce((sum, window) => {
+    return sum + Math.max(0, parseTimeToMinutes(window.end) - parseTimeToMinutes(window.start));
+  }, 0);
+
+  const count = Math.max(1, desiredCount);
   const times = [];
 
-  windows.forEach((window) => {
-    let current = parseTimeToMinutes(window.start);
+  windows.forEach((window, windowIndex) => {
+    const start = parseTimeToMinutes(window.start);
     const end = parseTimeToMinutes(window.end);
-    while (current <= end - 15 && times.length < desiredCount) {
+    const duration = Math.max(0, end - start);
+    if (duration < 15) return;
+
+    const windowCount = Math.max(
+      1,
+      Math.round((duration / Math.max(totalAvailable, 1)) * count)
+    );
+
+    if (duration <= 35) {
+      times.push(minutesToTime(start));
+      return;
+    }
+
+    const step = Math.max(20, Math.floor(duration / Math.max(windowCount, 1)));
+    let current = start;
+
+    for (let i = 0; i < windowCount && current <= end - 15; i += 1) {
       times.push(minutesToTime(current));
-      current += 25;
+      current += step;
     }
   });
 
-  while (times.length < desiredCount) {
-    const last = times.length ? parseTimeToMinutes(times[times.length - 1]) + 25 : parseTimeToMinutes(extractStartTime(timeText || "20:00"));
+  while (times.length < count) {
+    const last = times.length
+      ? parseTimeToMinutes(times[times.length - 1]) + 30
+      : parseTimeToMinutes(extractStartTime(timeText || "20:00"));
     times.push(minutesToTime(last));
   }
 
-  return times.slice(0, desiredCount);
+  return [...new Set(times)].slice(0, count);
+}
+
+function expandActionsForAvailableTime(actions, profile, desiredCount) {
+  const goal = goalLabel(profile);
+  const dream = String(profile.dream || "");
+  const joined = [profile.dream, profile.why, profile.bestMoment, profile.strength, profile.habit].filter(Boolean).join(" ");
+  const prefersAnalysis = includesAny(joined, ["분석", "패턴", "심리", "숫자", "자료", "전략", "비교"]);
+  const prefersPeople = includesAny(joined, ["사람", "대화", "소통", "협업", "팀", "고객"]);
+
+  const extra = [
+    `${goal}를 이루는 데 필요한 핵심 능력 1개를 정하고 오늘 기준으로 정의하기`,
+    prefersAnalysis
+      ? `${goal}와 관련된 실제 사례 1개를 보고 성공 이유와 실패 위험을 각각 2개씩 적기`
+      : `${goal}와 관련된 기본 자료 1개를 보고 내가 바로 따라 할 부분 1개 고르기`,
+    `${goal}를 이미 해낸 사람의 행동 1개를 내 상황에 맞게 바꾸기`,
+    `${goal}를 위해 오늘 직접 만들 수 있는 작은 결과물 1개 만들기`,
+    prefersPeople
+      ? `내 목표를 설명할 사람 1명을 정하고 물어볼 질문 3개 만들기`
+      : `혼자 확인할 수 있는 기준 3개를 정하고 현재 내 상태를 체크하기`,
+    `오늘 한 행동에서 배운 점 3줄 기록하기`,
+    `내일 바로 이어갈 첫 행동 1개를 정하고 인증 사진 남기기`,
+  ];
+
+  const merged = [...actions];
+  extra.forEach((item) => {
+    if (merged.length < desiredCount && !merged.includes(item)) merged.push(item);
+  });
+
+  return merged.slice(0, desiredCount);
 }
 
 function goalLabel(profile) {
@@ -1070,8 +1164,6 @@ function makeConcreteActionPlan(profile) {
   const habit = String(profile.habit || "");
   const joined = `${dream} ${why} ${like} ${dislike} ${strength} ${habit}`;
   const goal = goalLabel(profile);
-  const times = buildScheduleTimes(profile.time || habit, 7);
-
   const prefersAnalysis = includesAny(joined, ["분석", "패턴", "심리", "생각", "자료", "주식", "부동산", "숫자", "전략"]);
   const prefersPeople = includesAny(joined, ["사람", "대화", "소통", "협업", "친구", "팀", "고객", "설득"]);
   const avoidsPeople = includesAny(dislike, ["사람", "평가", "앞", "부담", "낯", "시선"]);
@@ -1152,11 +1244,15 @@ function makeConcreteActionPlan(profile) {
     ];
   }
 
-  const adjusted = actions.map((action, index) => {
+  const desiredPlanCount = getPlanCountFromAvailability(profile.time || habit);
+  const expandedActions = expandActionsForAvailableTime(actions, profile, desiredPlanCount);
+  const times = buildScheduleTimes(profile.time || habit, expandedActions.length);
+
+  const adjusted = expandedActions.map((action, index) => {
     let title = action;
     if (index === 0 && likesCompetition) title = `${action} — 성공 기준 1개 정하기`;
     if (index === 0 && prefersAnalysis) title = `${action}`;
-    return makePlanItem(times[index] || addMinutes(times[0], index * 25), title, index === 0 ? "open" : "locked");
+    return makePlanItem(times[index] || addMinutes(times[0], index * 30), title, index === 0 ? "open" : "locked");
   });
 
   return unlockPlan(adjusted);
@@ -1413,54 +1509,17 @@ function NoahApp({ onBack }) {
       nextStep = "dislike";
     } else if (step === "dislike") {
       nextProfile.dislike = value;
-      if (isNoPreferenceAnswer(value)) {
-        nextProfile.dislike = "아직 뚜렷하게 싫어하는 방식은 없음";
-        noahReply =
-          "좋아. 딱히 싫어하는 방식이 아직 없다면 괜찮아.
-" +
-          "처음부터 억지로 정할 필요는 없어.
-
-" +
-          "대신 계획을 실행하면서 네가 빨리 지치는 방식은 내가 계속 확인해볼게.
-
-" +
-          "이번엔 네가 가진 쪽을 보자.
-" +
-          "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?
-" +
-          "아주 작은 것도 괜찮아.";
-      } else {
-        noahReply =
-          `좋아. ${value} 같은 방식은 계획에서 최대한 피할게.
-
-` +
-          "이번엔 네가 가진 쪽을 볼게.
-" +
-          "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?";
-      }
+      noahReply =
+        `좋아. 싫어하는 방식은 계획에서 최대한 피할게.\n\n` +
+        "이번엔 네가 가진 쪽을 볼게.\n" +
+        "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?";
       nextStep = "strength";
     } else if (step === "strength") {
       nextProfile.strength = value;
-      if (isNoPreferenceAnswer(value)) {
-        nextProfile.strength = "아직 스스로 확실히 아는 강점은 없음";
-        noahReply =
-          "괜찮아. 아직 스스로 잘하는 걸 모를 수도 있어.
-" +
-          "그럼 계획을 짜면서 네가 잘 버티는 방식, 빨리 배우는 방식, 덜 지치는 방식을 찾아볼게.
-
-" +
-          "평소 습관도 중요해.
-" +
-          "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
-      } else {
-        noahReply =
-          `좋아. ${value} 이 부분은 직접 말로 칭찬하기보다 계획 안에 녹일게.
-
-` +
-          "평소 습관도 중요해.
-" +
-          "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
-      }
+      noahReply =
+        `좋아. 그건 직접 말로 칭찬하기보다 계획 안에 녹일게.\n\n` +
+        "평소 습관도 중요해.\n" +
+        "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
       nextStep = "habit";
     } else if (step === "habit") {
       nextProfile.habit = value;
