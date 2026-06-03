@@ -1122,140 +1122,184 @@ function buildScheduleTimes(timeText, desiredCount = 6) {
   return [...new Set(times)].slice(0, count);
 }
 
-function expandActionsForAvailableTime(actions, profile, desiredCount) {
-  const goal = goalLabel(profile);
-  const dream = String(profile.dream || "");
-  const joined = [profile.dream, profile.why, profile.bestMoment, profile.strength, profile.habit].filter(Boolean).join(" ");
-  const prefersAnalysis = includesAny(joined, ["분석", "패턴", "심리", "숫자", "자료", "전략", "비교"]);
-  const prefersPeople = includesAny(joined, ["사람", "대화", "소통", "협업", "팀", "고객"]);
 
-  const extra = [
-    `${goal}를 이루는 데 필요한 핵심 능력 1개를 정하고 오늘 기준으로 정의하기`,
-    prefersAnalysis
-      ? `${goal}와 관련된 실제 사례 1개를 보고 성공 이유와 실패 위험을 각각 2개씩 적기`
-      : `${goal}와 관련된 기본 자료 1개를 보고 내가 바로 따라 할 부분 1개 고르기`,
-    `${goal}를 이미 해낸 사람의 행동 1개를 내 상황에 맞게 바꾸기`,
-    `${goal}를 위해 오늘 직접 만들 수 있는 작은 결과물 1개 만들기`,
-    prefersPeople
-      ? `내 목표를 설명할 사람 1명을 정하고 물어볼 질문 3개 만들기`
-      : `혼자 확인할 수 있는 기준 3개를 정하고 현재 내 상태를 체크하기`,
-    `오늘 한 행동에서 배운 점 3줄 기록하기`,
-    `내일 바로 이어갈 첫 행동 1개를 정하고 인증 사진 남기기`,
-  ];
-
-  const merged = [...actions];
-  extra.forEach((item) => {
-    if (merged.length < desiredCount && !merged.includes(item)) merged.push(item);
-  });
-
-  return merged.slice(0, desiredCount);
+function cleanGoalText(value) {
+  return String(value || "")
+    .replace(/나는|내가|되고\s*싶어|되고싶어|하고\s*싶어|하고싶어|꿈이야|꿈|목표야|목표/g, "")
+    .replace(/\s+/g, " ")
+    .trim() || "목표";
 }
 
 function goalLabel(profile) {
-  return String(profile.dream || "목표").replace(/나는|내가|되고\s*싶어|되고싶어|싶어|꿈이야|꿈/g, "").trim() || "목표";
+  return cleanGoalText(profile?.dream || "목표");
+}
+
+function compactAction(text) {
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .replace(/조사하기/g, "찾아보고 3줄 적기")
+    .replace(/분석하기/g, "좋은 점 1개와 부족한 점 1개 적기")
+    .replace(/공부하기/g, "핵심 3줄 읽고 직접 써보기")
+    .replace(/생각하기/g, "한 줄로 적기")
+    .trim();
+}
+
+function hasMeaningfulPreference(value) {
+  return !isNoPreferenceAnswer(value);
+}
+
+function actionForGenericGoal(goal, profile) {
+  const joined = [profile.dream, profile.why, profile.bestMoment, profile.strength, profile.habit, profile.dislike]
+    .filter(Boolean)
+    .join(" ");
+  const prefersAnalysis = includesAny(joined, ["분석", "패턴", "숫자", "자료", "전략", "비교", "주식", "부동산", "심리"]);
+  const prefersPeople = includesAny(joined, ["사람", "대화", "소통", "팀", "협업", "고객", "설득"]);
+  const avoidsPeople = includesAny(profile.dislike, ["사람", "평가", "앞", "부담", "낯", "시선"]);
+  const likesCreate = includesAny(joined, ["만들", "창작", "서비스", "브랜드", "콘텐츠", "기획", "아이디어"]);
+
+  const base = [
+    `${goal}를 이루려면 먼저 필요한 능력 3가지를 적기`,
+    `${goal}를 이미 이룬 사람 1명을 고르고, 오늘 따라 할 행동 1개 적기`,
+    prefersAnalysis
+      ? `${goal} 관련 실제 사례 1개를 보고 성공 이유 2개와 실패 위험 1개 적기`
+      : `${goal}에 가까워지는 작은 행동 1개를 20분 동안 직접 해보기`,
+    likesCreate
+      ? `작은 결과물 초안 1개 만들기. 완벽하지 않아도 됨`
+      : `오늘 배운 내용을 내 말로 3줄 정리하기`,
+    prefersPeople && !avoidsPeople
+      ? `${goal}와 관련해 물어볼 사람 1명 정하고 질문 3개 적기`
+      : `혼자 확인할 기준 3개 만들고 지금 내 상태 표시하기`,
+    `오늘 한 행동을 사진으로 인증하기`,
+    `내일 바로 이어갈 첫 행동 1개 정하기`,
+  ];
+  return base;
+}
+
+function buildBusinessActions(profile) {
+  const joined = [profile.bestMoment, profile.strength, profile.habit, profile.dislike].join(" ");
+  const prefersPeople = includesAny(joined, ["사람", "대화", "소통", "고객", "설득", "함께"]);
+  const avoidsPeople = includesAny(profile.dislike, ["사람", "평가", "앞", "부담", "낯", "시선"]);
+  return [
+    "내가 만들고 싶은 서비스나 상품을 한 줄로 적기",
+    "그 서비스를 가장 필요로 할 사람을 한 명 떠올리고, 나이/상황/불편함을 적기",
+    "그 사람이 오늘 겪을 문제 3가지를 적기",
+    prefersPeople && !avoidsPeople
+      ? "그 사람과 비슷한 사람에게 물어볼 질문 5개 만들기"
+      : "커뮤니티 글이나 댓글 5개를 보고 사람들이 반복해서 말하는 불편함 표시하기",
+    "내 서비스가 해결할 문제 1개만 고르기",
+    "그 문제를 해결하는 가장 작은 기능이나 제안 1개 적기",
+    "오늘 만든 내용을 사진으로 인증하고 내일 검증할 질문 1개 남기기",
+  ];
+}
+
+function buildRealEstateActions(profile) {
+  return [
+    "내가 원하는 월세 수입 목표를 숫자로 적기",
+    "관심 지역 1곳을 고르고, 왜 그 지역인지 교통/일자리/수요 중 2개로 적기",
+    "그 지역 매물 2개를 찾아 가격과 예상 월세를 나란히 적기",
+    "월세에서 대출이자와 관리비를 빼고 실제 남는 돈 계산하기",
+    "손해 볼 수 있는 이유 3가지를 적기",
+    "내가 지금부터 쌓아야 할 능력 1개를 고르기. 예: 자금관리, 지역분석, 협상",
+    "오늘 조사한 표를 사진으로 인증하고 내일 볼 지역 1곳 정하기",
+  ];
+}
+
+function buildGamerActions(profile) {
+  const joined = [profile.bestMoment, profile.strength, profile.habit].join(" ");
+  const analysis = includesAny(joined, ["심리", "상대", "읽", "패턴", "분석", "전략"]);
+  const mechanic = includesAny(joined, ["피지컬", "반응", "컨트롤", "손", "에임", "정확"]);
+  return [
+    "프로 경기 1판 보기",
+    analysis ? "상대가 움직이기 전 보인 신호 3개 적기" : mechanic ? "주력 캐릭터 손풀기 루틴 15분 하기" : "내가 자주 지는 상황 1개 고르기",
+    "직접 게임 1판 하기. 방금 본 장면 하나만 의식해서 적용하기",
+    "리플레이에서 진 장면 1개 멈춰놓고 왜 졌는지 3줄 적기",
+    "같은 상황을 다시 만났을 때 할 행동 1개 정하기",
+    "그 행동만 생각하고 짧게 1판 더 적용하기",
+    "오늘 결과를 사진으로 인증하고 내일 첫 연습 규칙 1개 남기기",
+  ];
+}
+
+function buildStudyActions(profile) {
+  return [
+    "오늘 점수를 가장 빨리 올릴 단원 1개 고르기",
+    "그 단원에서 자주 틀리는 문제 유형 3개 적기",
+    "첫 번째 유형 문제 3개 풀기",
+    "틀린 이유를 지식 부족/실수/시간 부족 중 하나로 표시하기",
+    "틀린 문제 1개를 다시 풀고 풀이 과정을 사진으로 남기기",
+    "내일 처음 풀 문제 1개를 미리 정하기",
+    "오늘 공부한 흔적을 사진으로 인증하기",
+  ];
+}
+
+function buildFitnessActions(profile) {
+  return [
+    "오늘 몸 상태를 1분 확인하고 통증/피로/가능한 운동 적기",
+    "목표와 연결된 기본 동작 1개 고르기",
+    "정확한 자세로 3세트만 하기",
+    "가장 힘든 구간과 쉬운 구간을 각각 1개 적기",
+    "내일 같은 운동을 계속하기 쉽게 강도 1단계 낮춰 적기",
+    "운동 흔적을 사진으로 인증하기",
+    "오늘 컨디션 점수 1~10으로 남기기",
+  ];
+}
+
+function buildMoneyActions(profile) {
+  return [
+    "내가 원하는 경제적 자유 숫자를 적기. 월 얼마가 필요한지 쓰기",
+    "현재 수입/지출/저축을 각각 한 줄로 적기",
+    "돈을 버는 방식 3개를 적고, 시간형/기술형/자산형으로 나누기",
+    "관심 있는 수익 방법 1개를 고르고 필요한 첫 능력 1개 적기",
+    "이번 주에 실제 돈의 흐름을 만들 수 있는 작은 행동 1개 정하기",
+    "오늘 배운 내용을 3줄로 기록하기",
+    "내일 확인할 돈 질문 1개 남기고 사진 인증하기",
+  ];
+}
+
+function chooseActionTemplate(profile) {
+  const dream = String(profile.dream || "");
+  if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크"])) return buildGamerActions(profile);
+  if (includesAny(dream, ["건물주", "부동산", "임대", "월세", "상가", "아파트"])) return buildRealEstateActions(profile);
+  if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업", "사업가"])) return buildBusinessActions(profile);
+  if (includesAny(dream, ["돈", "부자", "경제", "투자", "주식", "수익", "자산", "경제적 자유"])) return buildMoneyActions(profile);
+  if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) return buildStudyActions(profile);
+  if (includesAny(dream, ["운동", "몸", "헬스", "다이어트", "체력", "근육"])) return buildFitnessActions(profile);
+  return actionForGenericGoal(goalLabel(profile), profile);
 }
 
 function makeConcreteActionPlan(profile) {
-  const dream = String(profile.dream || "");
-  const why = String(profile.why || "");
-  const like = String(profile.bestMoment || "");
-  const dislike = String(profile.dislike || "");
-  const strength = String(profile.strength || "");
-  const habit = String(profile.habit || "");
-  const joined = `${dream} ${why} ${like} ${dislike} ${strength} ${habit}`;
-  const goal = goalLabel(profile);
-  const prefersAnalysis = includesAny(joined, ["분석", "패턴", "심리", "생각", "자료", "주식", "부동산", "숫자", "전략"]);
-  const prefersPeople = includesAny(joined, ["사람", "대화", "소통", "협업", "친구", "팀", "고객", "설득"]);
-  const avoidsPeople = includesAny(dislike, ["사람", "평가", "앞", "부담", "낯", "시선"]);
-  const likesCompetition = includesAny(joined, ["경쟁", "이기", "랭크", "승부", "1등", "증명"]);
-  const likesCreation = includesAny(joined, ["만들", "창작", "기획", "아이디어", "서비스", "브랜드", "콘텐츠"]);
+  const desiredPlanCount = getPlanCountFromAvailability(profile.time || profile.habit || "20:00");
+  const baseActions = chooseActionTemplate(profile).map(compactAction);
+  const expandedActions = expandSimpleActions(baseActions, profile, desiredPlanCount);
+  const times = buildScheduleTimes(profile.time || profile.habit || "20:00", expandedActions.length);
 
-  let actions;
-
-  if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크"])) {
-    actions = [
-      "프로 경기 1판 보기 — 내가 자주 지는 상황과 비슷한 장면 3개 표시하기",
-      prefersAnalysis ? "상대가 움직이기 전 신호 3개 기록하기" : "내 주력 포지션 기본 루틴 15분 정확도 기준으로 하기",
-      "직접 1판 플레이하기 — 방금 본 장면 하나만 의식해서 적용하기",
-      "리플레이 보기 — 진 장면 1개를 멈춰놓고 원인 3줄 적기",
-      "같은 상황을 다시 만들기 위한 연습 10분 하기",
-      "오늘 배운 포인트 1개를 내일 첫 연습 규칙으로 저장하기",
-      "인증 사진 남기고 결과를 한 문장으로 기록하기",
-    ];
-  } else if (includesAny(dream, ["건물주", "부동산", "임대", "월세", "상가", "아파트"])) {
-    actions = [
-      "건물주가 되기 위한 현재 기준 정하기 — 목표 금액, 기간, 가능한 월 저축액 적기",
-      "관심 지역 1곳 고르기 — 왜 그 지역인지 교통/일자리/수요 3가지로 보기",
-      "매물 2개 비교하기 — 가격, 월세, 관리비, 공실 위험을 표로 적기",
-      "수익률 직접 계산하기 — 월세와 대출이자를 넣고 남는 돈 확인하기",
-      "실패 사례 1개 보기 — 왜 손해가 났는지 원인 3줄 적기",
-      avoidsPeople ? "혼자 할 수 있는 조사 루틴 만들기 — 매일 볼 지표 3개 정하기" : "부동산/투자 경험자에게 물어볼 질문 3개 만들기",
-      "오늘 조사한 내용을 사진으로 인증하고 내일 확인할 지역 1곳 정하기",
-    ];
-  } else if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업", "사업가"])) {
-    actions = [
-      "내가 만들고 싶은 사업의 고객 1명을 한 사람처럼 구체적으로 적기",
-      "그 고객이 오늘도 겪는 불편함 5개 적기",
-      prefersPeople && !avoidsPeople ? "그 고객과 비슷한 사람 1명에게 물어볼 질문 5개 만들기" : "커뮤니티/후기/댓글에서 고객 불편 사례 5개 찾기",
-      likesCreation ? "해결 아이디어 3개 만들고 가장 작은 버전 1개 고르기" : "비슷한 서비스 2개 비교하고 빈틈 1개 찾기",
-      "내 아이디어를 한 문장 제안으로 바꾸기 — '나는 ___한 사람에게 ___를 도와준다'",
-      "오늘 바로 검증할 행동 1개 하기 — 메시지 보내기, 페이지 수정, 설문 만들기 중 하나",
-      "결과를 사진으로 인증하고 내일 바꿀 점 1개 기록하기",
-    ];
-  } else if (includesAny(dream, ["돈", "부자", "경제", "투자", "주식", "수익", "자산", "경제적 자유"])) {
-    actions = [
-      "내가 원하는 경제적 자유 숫자 정하기 — 월 필요 금액과 이유 적기",
-      "현재 수입/지출/저축을 3줄로 정리하기",
-      "돈을 버는 방식 3개를 시간형/기술형/자산형으로 나누기",
-      prefersAnalysis ? "관심 투자 1개를 골라 수익 이유와 손실 위험을 각각 3개 적기" : "내가 팔 수 있는 작은 가치 1개 정하기",
-      "이번 주에 현금흐름을 만들 행동 1개 정하고 실행 준비하기",
-      "내일 이어갈 돈 공부 질문 1개 만들기",
-      "오늘 기록을 사진으로 인증하기",
-    ];
-  } else if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) {
-    actions = [
-      "오늘 가장 점수를 올릴 수 있는 약한 단원 1개 고르기",
-      "그 단원에서 틀리는 유형 3개 분류하기",
-      "첫 번째 유형 문제 3개만 풀기",
-      "틀린 문제의 원인을 지식 부족/실수/시간 부족으로 나누기",
-      "같은 유형 1문제를 다시 풀고 풀이 과정을 사진으로 남기기",
-      "내일 첫 문제 1개를 미리 정하기",
-      "오늘 공부 인증하기",
-    ];
-  } else if (includesAny(dream, ["운동", "몸", "헬스", "다이어트", "체력", "근육"])) {
-    actions = [
-      "오늘 몸 상태를 1분 확인하고 통증/피로/가능한 운동 적기",
-      "목표와 연결된 기본 동작 1개 고르기",
-      "정확한 자세로 3세트 실행하기",
-      "가장 힘든 구간과 쉬운 구간을 기록하기",
-      "내일 같은 동작을 조금 더 쉽게 반복할 방법 정하기",
-      "운동 흔적을 사진으로 인증하기",
-      "오늘 컨디션 점수 남기기",
-    ];
-  } else {
-    actions = [
-      `${goal}에 가까워지기 위해 필요한 능력 3개 적기`,
-      prefersAnalysis ? "그중 하나를 골라 잘하는 사람의 사례 1개 분석하기" : "그중 하나를 오늘 바로 해볼 수 있는 작은 행동으로 바꾸기",
-      likesCreation ? "작은 결과물 초안 1개 만들기" : "첫 행동을 20분 동안 직접 실행하기",
-      prefersPeople && !avoidsPeople ? "피드백 받을 사람 1명 정하고 물어볼 질문 3개 만들기" : "혼자 확인할 기준 3개 만들기",
-      dislike ? `싫어하는 방식(${dislike})을 피해서 계속할 수 있는 방식으로 다시 줄이기` : "계속할 수 있게 행동을 더 작게 줄이기",
-      "오늘 결과를 사진으로 인증하기",
-      "내일 이어갈 가장 작은 다음 행동 1개 정하기",
-    ];
-  }
-
-  const desiredPlanCount = getPlanCountFromAvailability(profile.time || habit);
-  const expandedActions = expandActionsForAvailableTime(actions, profile, desiredPlanCount);
-  const times = buildScheduleTimes(profile.time || habit, expandedActions.length);
-
-  const adjusted = expandedActions.map((action, index) => {
-    let title = action;
-    if (index === 0 && likesCompetition) title = `${action} — 성공 기준 1개 정하기`;
-    if (index === 0 && prefersAnalysis) title = `${action}`;
-    return makePlanItem(times[index] || addMinutes(times[0], index * 30), title, index === 0 ? "open" : "locked");
+  const items = expandedActions.map((action, index) => {
+    return makePlanItem(
+      times[index] || addMinutes(times[0] || "20:00", index * 30),
+      action,
+      index === 0 ? "open" : "locked"
+    );
   });
 
-  return unlockPlan(adjusted);
+  return unlockPlan(items);
+}
+
+function expandSimpleActions(actions, profile, desiredCount) {
+  const goal = goalLabel(profile);
+  const extras = [
+    `${goal}에 필요한 첫 능력 1개 적기`,
+    `그 능력을 오늘 20분 안에 연습할 방법 1개 적기`,
+    `실제로 20분 실행하기`,
+    `결과를 3줄로 기록하기`,
+    `부족했던 점 1개만 고르기`,
+    `내일 다시 할 행동 1개 정하기`,
+    `사진으로 인증하기`,
+  ];
+  const result = [];
+  [...actions, ...extras].forEach((action) => {
+    const clean = compactAction(action);
+    if (clean && !result.includes(clean) && result.length < desiredCount) result.push(clean);
+  });
+  return result;
 }
 
 
@@ -1451,7 +1495,7 @@ function NoahApp({ onBack }) {
   }, [profile, planItems.length, completedCount]);
 
   const getSuggestedReplies = () => {
-    if (step === "name") return ["내 이름부터 알려줄게", "이름을 말하고 시작할게", "그냥 바로 시작해볼게"];
+    if (step === "name") return ["내 이름은 예원이야", "나는 민준이야", "이름을 말하고 시작할게"];
     if (step === "dream") return ["나는 사업가가 되고 싶어", "프로게이머가 되고 싶어", "경제적으로 자유로워지고 싶어"];
     if (step === "why") return ["내 힘으로 결과를 만들고 싶어", "남들이 안 된다고 한 걸 증명하고 싶어", "이걸 할 때 내가 살아있는 느낌이 들어"];
     if (step === "bestMoment") return ["결과가 눈에 보일 때 좋아", "오래 파고들어서 실력이 늘 때 좋아", "상대의 생각을 읽고 이길 때 재밌어"];
@@ -1461,7 +1505,7 @@ function NoahApp({ onBack }) {
     if (step === "time") return ["오전 8시부터 8시 30분까지, 오후 4시부터 10시까지 가능해", "학교 끝나고 오후 6시부터 2시간 가능해", "하루에 30분 정도 가능해"];
     if (step === "execute") return ["오늘 계획을 더 구체적으로 다시 짜줘", "오늘은 조금 힘들어서 줄이고 싶어", "지금 계획이 나에게 맞는지 봐줘"];
     return [];
-  }
+  };
 
   const sendMessage = () => {
     const value = input.trim();
@@ -1481,7 +1525,6 @@ function NoahApp({ onBack }) {
       nextProfile.dream = value;
       noahReply =
         `좋아. ${nextProfile.name || "너"}, 그 꿈 기억할게.\n\n` +
-        `그 목표 혹은 꿈을 정말 이루고 싶은 거지?\n\n` +
         "가능해. 무조건 말이야.\n\n" +
         "내가 너를 거기에 좀 더 빠르게 데려다줄 뿐이지.\n" +
         "다시 한번 말해줄게.\n\n" +
@@ -1491,35 +1534,55 @@ function NoahApp({ onBack }) {
         "근데 바로 계획부터 짜지 않을게.\n" +
         "너한테 맞는 계획을 만들려면 먼저 너를 알아야 해.\n\n" +
         "그 꿈을 왜 이루고 싶어?\n" +
+        "돈, 자유, 인정, 재미, 증명하고 싶은 마음 전부 괜찮아.\n" +
         "진짜 이유를 편하게 말해줘.";
       nextStep = "why";
     } else if (step === "why") {
       nextProfile.why = value;
       noahReply =
-        `좋아. 네가 말한 이유를 기준으로 계획 방향을 잡을게.\n\n` +
-        `이번엔 ${nextProfile.dream || "그 꿈"}과 관련해서 네가 가장 재밌다고 느끼는 순간을 알고 싶어.\n` +
+        `${nextProfile.name || "좋아"}. 네가 말한 이유를 기준으로 계획 방향을 잡을게.\n\n` +
+        `${nextProfile.dream || "그 꿈"}과 관련해서 네가 가장 재미있거나 몰입되는 순간은 언제야?\n` +
         "잘한다는 느낌이 들거나, 시간이 빨리 가는 순간도 좋아.";
       nextStep = "bestMoment";
     } else if (step === "bestMoment") {
       nextProfile.bestMoment = value;
       noahReply =
-        `좋아. 그 지점은 네가 오래 갈 수 있는 방식일 가능성이 커.\n\n` +
+        "좋아. 그 지점은 네가 오래 갈 수 있는 방식일 가능성이 커.\n\n" +
         "반대로 싫어하는 방식도 알아야 해.\n" +
-        "어떤 방식으로 하면 금방 지치거나 하기 싫어져?";
+        "어떤 방식으로 하면 금방 지치거나 하기 싫어져?\n" +
+        "딱히 없으면 없다고 말해도 돼.";
       nextStep = "dislike";
     } else if (step === "dislike") {
       nextProfile.dislike = value;
-      noahReply =
-        `좋아. 싫어하는 방식은 계획에서 최대한 피할게.\n\n` +
-        "이번엔 네가 가진 쪽을 볼게.\n" +
-        "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?";
+      if (isNoPreferenceAnswer(value)) {
+        noahReply =
+          "좋아. 아직 뚜렷하게 싫은 방식이 없다면 계획을 너무 좁히지 않고 시작해볼게.\n\n" +
+          "대신 하면서 지치는 지점이 나오면 그때 바로 줄이면 돼.\n\n" +
+          "이번엔 네가 가진 쪽을 볼게.\n" +
+          "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?\n" +
+          "딱히 모르겠으면 그것도 괜찮아.";
+      } else {
+        noahReply =
+          "좋아. 그 방식은 계획에서 최대한 피할게.\n\n" +
+          "이번엔 네가 가진 쪽을 볼게.\n" +
+          "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?\n" +
+          "딱히 모르겠으면 그것도 괜찮아.";
+      }
       nextStep = "strength";
     } else if (step === "strength") {
       nextProfile.strength = value;
-      noahReply =
-        `좋아. 그건 직접 말로 칭찬하기보다 계획 안에 녹일게.\n\n` +
-        "평소 습관도 중요해.\n" +
-        "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
+      if (isNoPreferenceAnswer(value)) {
+        noahReply =
+          "괜찮아. 아직 강점이 선명하지 않은 사람도 많아.\n\n" +
+          "그럼 내가 계획 안에서 네가 잘 버티는 방식, 빨리 이해하는 방식, 오래 가는 방식을 찾아볼게.\n\n" +
+          "평소 습관을 알려줘.\n" +
+          "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
+      } else {
+        noahReply =
+          "좋아. 그건 직접 말로 칭찬하기보다 계획 안에 녹일게.\n\n" +
+          "평소 습관도 중요해.\n" +
+          "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
+      }
       nextStep = "habit";
     } else if (step === "habit") {
       nextProfile.habit = value;
@@ -1785,7 +1848,7 @@ button, textarea { font-family: inherit; }
 .aurora-two { right: 8%; top: 28%; background: rgba(125,211,252,0.22); animation-delay: 1.8s; }
 .stars { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255,255,255,0.55) 1px, transparent 1px), radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px); background-size: 120px 120px, 190px 190px; opacity: 0.16; pointer-events: none; }
 @keyframes float { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(22px,28px,0) scale(1.08); } }
-.chat-area, .page-view { flex: 1; height: calc(100vh - 72px); overflow-y: auto; padding: 44px 22px 150px; z-index: 2; }
+.chat-area, .page-view { scroll-behavior: auto; flex: 1; height: calc(100vh - 72px); overflow-y: auto; padding: 44px 22px 150px; z-index: 2; }
 .hero-title, .view-header { max-width: 860px; margin: 0 auto 28px; text-align: center; }
 .hero-title p, .view-header p { margin: 0 0 8px; color: rgba(255,255,255,0.48); letter-spacing: 0.35em; font-size: 13px; }
 .hero-title h1, .view-header h1 { margin: 0; font-size: clamp(34px,5vw,64px); letter-spacing: -0.06em; line-height: 1.05; }
@@ -1840,7 +1903,7 @@ button, textarea { font-family: inherit; }
 .empty-plan { max-width: 780px; margin: 0 auto; text-align: center; }
 .empty-plan h2 { margin: 0 0 10px; }
 .empty-plan p { margin: 0; color: rgba(255,255,255,0.58); }
-@media (max-width: 860px) { .sidebar { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); transition: transform 220ms ease; } .sidebar.open { transform: translateX(0); } .topbar { height: 66px; padding: 0 14px; } .top-pill { display: none; } .chat-area, .page-view { height: calc(100vh - 66px); padding: 34px 14px 150px; } .hero-title h1, .view-header h1 { font-size: 36px; } .message-row { gap: 9px; } .bubble { max-width: 82vw; padding: 15px 16px; border-radius: 21px; font-size: 15px; } .emotion-grid { grid-template-columns: repeat(2, 1fr); } .feedback-row { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; } .feedback-row button { flex: 0 0 auto; } .composer { padding: 16px 12px 20px; } }
+@media (max-width: 860px) { .sidebar { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); transition: transform 220ms ease; } .sidebar.open { transform: translateX(0); } .topbar { height: 66px; padding: 0 14px; } .top-pill { display: none; } .chat-area, .page-view { scroll-behavior: auto; height: calc(100vh - 66px); padding: 34px 14px 150px; } .hero-title h1, .view-header h1 { font-size: 36px; } .message-row { gap: 9px; } .bubble { max-width: 82vw; padding: 15px 16px; border-radius: 21px; font-size: 15px; } .emotion-grid { grid-template-columns: repeat(2, 1fr); } .feedback-row { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; } .feedback-row button { flex: 0 0 auto; } .composer { padding: 16px 12px 20px; } }
 `;
 
 
