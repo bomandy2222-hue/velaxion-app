@@ -1224,6 +1224,14 @@ function includesAny(text, words) {
   return words.some((word) => source.includes(word.toLowerCase()));
 }
 
+function isNoPreferenceAnswer(value) {
+  const text = String(value || "").replace(/\s/g, "").toLowerCase();
+  return (
+    /딱히없|별로없|잘모르|모르겠|생각안나|없어|없음|아직모르/.test(text) ||
+    text.length <= 3
+  );
+}
+
 function getDreamType(dream) {
   if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크", "프로 게임"])) return "gamer";
   if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업"])) return "business";
@@ -1351,7 +1359,7 @@ function NoahApp({ onBack }) {
     if (step === "dream") return ["나는 사업가가 되고 싶어", "프로게이머가 되고 싶어", "경제적으로 자유로워지고 싶어"];
     if (step === "why") return ["내 힘으로 결과를 만들고 싶어", "남들이 안 된다고 한 걸 증명하고 싶어", "이걸 할 때 내가 살아있는 느낌이 들어"];
     if (step === "bestMoment") return ["결과가 눈에 보일 때 좋아", "오래 파고들어서 실력이 늘 때 좋아", "상대의 생각을 읽고 이길 때 재밌어"];
-    if (step === "dislike") return ["너무 막연한 계획은 싫어", "의미 없이 반복하는 건 싫어", "사람들 앞에서 평가받는 건 부담돼"];
+    if (step === "dislike") return ["딱히 싫어하는 건 없어", "너무 막연한 계획은 싫어", "의미 없이 반복하는 건 싫어"];
     if (step === "strength") return ["분석하는 걸 잘해", "한번 꽂히면 오래 파고들어", "경쟁하면 집중이 잘돼"];
     if (step === "habit") return ["저녁에 집중이 잘돼", "혼자 할 때 더 몰입돼", "누가 같이 확인해주면 더 잘해"];
     if (step === "time") return ["오전 8시부터 8시 30분까지, 오후 4시부터 10시까지 가능해", "학교 끝나고 오후 6시부터 2시간 가능해", "하루에 30분 정도 가능해"];
@@ -1405,17 +1413,54 @@ function NoahApp({ onBack }) {
       nextStep = "dislike";
     } else if (step === "dislike") {
       nextProfile.dislike = value;
-      noahReply =
-        `좋아. 싫어하는 방식은 계획에서 최대한 피할게.\n\n` +
-        "이번엔 네가 가진 쪽을 볼게.\n" +
-        "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?";
+      if (isNoPreferenceAnswer(value)) {
+        nextProfile.dislike = "아직 뚜렷하게 싫어하는 방식은 없음";
+        noahReply =
+          "좋아. 딱히 싫어하는 방식이 아직 없다면 괜찮아.
+" +
+          "처음부터 억지로 정할 필요는 없어.
+
+" +
+          "대신 계획을 실행하면서 네가 빨리 지치는 방식은 내가 계속 확인해볼게.
+
+" +
+          "이번엔 네가 가진 쪽을 보자.
+" +
+          "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?
+" +
+          "아주 작은 것도 괜찮아.";
+      } else {
+        noahReply =
+          `좋아. ${value} 같은 방식은 계획에서 최대한 피할게.
+
+` +
+          "이번엔 네가 가진 쪽을 볼게.
+" +
+          "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?";
+      }
       nextStep = "strength";
     } else if (step === "strength") {
       nextProfile.strength = value;
-      noahReply =
-        `좋아. 그건 직접 말로 칭찬하기보다 계획 안에 녹일게.\n\n` +
-        "평소 습관도 중요해.\n" +
-        "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
+      if (isNoPreferenceAnswer(value)) {
+        nextProfile.strength = "아직 스스로 확실히 아는 강점은 없음";
+        noahReply =
+          "괜찮아. 아직 스스로 잘하는 걸 모를 수도 있어.
+" +
+          "그럼 계획을 짜면서 네가 잘 버티는 방식, 빨리 배우는 방식, 덜 지치는 방식을 찾아볼게.
+
+" +
+          "평소 습관도 중요해.
+" +
+          "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
+      } else {
+        noahReply =
+          `좋아. ${value} 이 부분은 직접 말로 칭찬하기보다 계획 안에 녹일게.
+
+` +
+          "평소 습관도 중요해.
+" +
+          "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
+      }
       nextStep = "habit";
     } else if (step === "habit") {
       nextProfile.habit = value;
