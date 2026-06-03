@@ -931,7 +931,7 @@ export default function App() {
 
 const emotionOptions = [
   { id: "calm", emoji: "🙂", label: "괜찮음", mode: "기본 그대로" },
-  { id: "fire", emoji: "🔥", label: "의욕 넘침", mode: "조금 더 도전" },
+  { id: "fire", emoji: "🔥", label: "의욕 넘침", mode: "조금 더 확장" },
   { id: "anxious", emoji: "😰", label: "불안함", mode: "부담 줄이기" },
   { id: "tired", emoji: "😴", label: "지침", mode: "최소 실행" },
   { id: "stress", emoji: "😵", label: "스트레스", mode: "하나만 실행" },
@@ -979,25 +979,23 @@ function normalizeTime(raw, previousHour = null) {
   if (!isAm && !isPm && previousHour !== null && previousHour >= 8 && hour > 0 && hour <= 11 && hour < previousHour) {
     hour += 12;
   }
-  hour = Math.max(0, Math.min(23, Number.isFinite(hour) ? hour : 20));
-  minute = Math.max(0, Math.min(59, Number.isFinite(minute) ? minute : 0));
+  hour = Math.max(0, Math.min(23, hour));
+  minute = Math.max(0, Math.min(59, minute));
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-function timeToMinutes(time) {
-  const [h, m] = String(time || "20:00").split(":").map(Number);
-  return (Number.isFinite(h) ? h : 20) * 60 + (Number.isFinite(m) ? m : 0);
-}
-
-function minutesToTime(total) {
-  const fixed = Math.max(0, Math.min(23 * 60 + 59, total));
-  const h = Math.floor(fixed / 60);
-  const m = fixed % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+function extractStartTime(text) {
+  const raw = String(text || "");
+  const match = raw.match(/(오전|오후|아침|저녁|밤|새벽)?\s*\d{1,2}\s*(?::|시)\s*\d{0,2}/);
+  return match ? normalizeTime(match[0]) : "20:00";
 }
 
 function addMinutes(time, minutes) {
-  return minutesToTime(timeToMinutes(time) + minutes);
+  const [h, m] = String(time || "20:00").split(":").map(Number);
+  const total = Math.max(0, Math.min(23 * 60 + 59, h * 60 + m + minutes));
+  const nh = Math.floor(total / 60);
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
 }
 
 function formatTimeKorean(time) {
@@ -1008,69 +1006,6 @@ function formatTimeKorean(time) {
   const displayHour = hour % 12 === 0 ? 12 : hour % 12;
   if (minute === 0) return `${period} ${displayHour}시`;
   return `${period} ${displayHour}시 ${minute}분`;
-}
-
-function extractName(raw) {
-  let text = String(raw || "").trim();
-  text = text
-    .replace(/^(내\s*)?이름(은|는)?\s*/g, "")
-    .replace(/^(나는|난|저는|전|제가|제)\s*/g, "")
-    .replace(/(이야|야|입니다|이에요|예요|라고\s*해|라고\s*합니다|라고\s*불러줘|라고\s*부르면\s*돼|이라고\s*해|이라\s*해)$/g, "")
-    .replace(/[.!?。]/g, "")
-    .trim();
-  const parts = text.split(/\s+/).filter(Boolean);
-  if (parts.length > 1) {
-    const likely = parts.find((part) => /^[가-힣]{2,4}$/.test(part));
-    if (likely) return likely;
-  }
-  return text || "너";
-}
-
-function extractTimeRanges(raw) {
-  const text = String(raw || "");
-  const ranges = [];
-  const pattern = /(오전|오후|아침|저녁|밤|새벽)?\s*(\d{1,2})\s*(?:[:시]\s*(\d{1,2})?)?\s*(?:분)?\s*(?:부터|~|-|에서)\s*(오전|오후|아침|저녁|밤|새벽)?\s*(\d{1,2})\s*(?:[:시]\s*(\d{1,2})?)?/g;
-  let match;
-  while ((match = pattern.exec(text)) !== null) {
-    const startPeriod = match[1] || "";
-    const endPeriod = match[4] || startPeriod;
-    const start = normalizeTime(`${startPeriod}${match[2]}시${match[3] || ""}`);
-    let end = normalizeTime(`${endPeriod}${match[5]}시${match[6] || ""}`, Number(start.slice(0, 2)));
-    if (timeToMinutes(end) <= timeToMinutes(start)) end = addMinutes(end, 12 * 60);
-    if (timeToMinutes(end) > timeToMinutes(start)) ranges.push({ start, end });
-  }
-
-  if (!ranges.length) {
-    const single = text.match(/(오전|오후|아침|저녁|밤|새벽)?\s*\d{1,2}\s*(?::|시)\s*\d{0,2}/);
-    const start = single ? normalizeTime(single[0]) : "20:00";
-    ranges.push({ start, end: addMinutes(start, 90) });
-  }
-
-  return ranges
-    .map((range) => ({ ...range, duration: timeToMinutes(range.end) - timeToMinutes(range.start) }))
-    .filter((range) => range.duration >= 10)
-    .sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
-}
-
-function makeSlotsFromRanges(ranges) {
-  const slots = [];
-  ranges.forEach((range) => {
-    const duration = range.duration;
-    let step = 35;
-    if (duration <= 35) step = duration;
-    else if (duration <= 90) step = 25;
-    else if (duration <= 180) step = 35;
-    else step = 45;
-
-    let current = timeToMinutes(range.start);
-    const end = timeToMinutes(range.end);
-    while (current < end - 5) {
-      slots.push(minutesToTime(current));
-      current += step;
-      if (slots.length >= 10) break;
-    }
-  });
-  return slots.length ? slots : ["20:00", "20:30", "21:00"];
 }
 
 function unlockPlan(items) {
@@ -1090,25 +1025,26 @@ function includesAny(text, words) {
   return words.some((word) => source.includes(word.toLowerCase()));
 }
 
+function getDreamType(dream) {
+  if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크", "프로 게임"])) return "gamer";
+  if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업"])) return "business";
+  if (includesAny(dream, ["돈", "부자", "경제", "투자", "주식", "수익", "자산"])) return "money";
+  if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) return "study";
+  if (includesAny(dream, ["운동", "몸", "헬스", "다이어트", "체력", "근육"])) return "fitness";
+  return "general";
+}
+
 function inferFocus(profile) {
   const joined = [profile.dream, profile.why, profile.bestMoment, profile.strength, profile.dislike, profile.habit]
     .filter(Boolean)
     .join(" ");
 
-  if (includesAny(joined, ["심리", "읽", "전략", "상대", "분석", "패턴", "생각"])) return "분석";
-  if (includesAny(joined, ["빠른", "피지컬", "반응", "손", "컨트롤", "에임", "기계적"])) return "반응/정확도";
-  if (includesAny(joined, ["사람", "팀", "대화", "리더", "함께", "소통", "협업"])) return "소통/협업";
-  if (includesAny(joined, ["창의", "만들", "아이디어", "기획", "표현", "콘텐츠"])) return "기획/창의";
+  if (includesAny(joined, ["심리", "읽", "전략", "상대", "분석", "패턴", "생각"])) return "분석과 패턴 읽기";
+  if (includesAny(joined, ["빠른", "피지컬", "반응", "손", "컨트롤", "에임", "기계적"])) return "반응 속도와 정확도";
+  if (includesAny(joined, ["사람", "팀", "대화", "리더", "함께", "소통"])) return "소통과 협업";
+  if (includesAny(joined, ["창의", "만들", "아이디어", "기획", "표현", "콘텐츠"])) return "기획과 창의력";
   if (includesAny(joined, ["꾸준", "오래", "반복", "성실", "루틴"])) return "꾸준함";
-  return "집중";
-}
-
-function inferAvoid(profile) {
-  const dislike = String(profile.dislike || "");
-  if (includesAny(dislike, ["유튜브", "쇼츠", "재밌", "딴짓", "귀찮"])) return "재미만 있는 딴짓으로 새지 않게 결과물을 남기는 방식";
-  if (includesAny(dislike, ["사람", "평가", "부담", "앞에서"])) return "혼자 확인하고 기록하는 방식";
-  if (includesAny(dislike, ["반복", "의미 없이", "막연"])) return "이유와 결과가 보이는 방식";
-  return "계속할 수 있게 작게 쪼개는 방식";
+  return "집중해서 깊게 파고드는 힘";
 }
 
 function makePlanItem(time, title, status = "locked") {
@@ -1121,113 +1057,205 @@ function makePlanItem(time, title, status = "locked") {
   };
 }
 
-function getGoalBlueprint(profile) {
+function extractNameFromText(value) {
+  let text = String(value || "").trim();
+  text = text
+    .replace(/^나는\s*/g, "")
+    .replace(/^저는\s*/g, "")
+    .replace(/^내\s*이름은\s*/g, "")
+    .replace(/^제\s*이름은\s*/g, "")
+    .replace(/^이름은\s*/g, "")
+    .replace(/이라고\s*해$/g, "")
+    .replace(/라고\s*해$/g, "")
+    .replace(/이야$/g, "")
+    .replace(/야$/g, "")
+    .replace(/입니다$/g, "")
+    .replace(/이에요$/g, "")
+    .replace(/예요$/g, "")
+    .replace(/[.!?。]/g, "")
+    .trim();
+
+  const parts = text.split(/\s+/).filter(Boolean);
+  return parts[0] || String(value || "").trim() || "너";
+}
+
+function timeToMinutes(time) {
+  const [h, m] = String(time || "20:00").split(":").map(Number);
+  return (Number.isFinite(h) ? h : 20) * 60 + (Number.isFinite(m) ? m : 0);
+}
+
+function minutesToTime(total) {
+  const safe = Math.max(0, Math.min(23 * 60 + 59, total));
+  const h = Math.floor(safe / 60);
+  const m = safe % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function parseKoreanTime(period, hourText, minuteText, fallbackPeriod = "") {
+  let hour = Number(hourText);
+  let minute = minuteText ? Number(minuteText) : 0;
+  const p = period || fallbackPeriod || "";
+
+  if ((p === "오후" || p === "저녁" || p === "밤") && hour < 12) hour += 12;
+  if ((p === "오전" || p === "아침" || p === "새벽") && hour === 12) hour = 0;
+
+  hour = Math.max(0, Math.min(23, Number.isFinite(hour) ? hour : 20));
+  minute = Math.max(0, Math.min(59, Number.isFinite(minute) ? minute : 0));
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function parseAvailableWindows(text) {
+  const raw = String(text || "");
+  const windows = [];
+  const rangeRegex = /(오전|오후|아침|저녁|밤|새벽)?\s*(\d{1,2})\s*(?:시|:)?\s*(\d{1,2})?\s*(?:분)?\s*(?:부터|~|-|에서)\s*(오전|오후|아침|저녁|밤|새벽)?\s*(\d{1,2})\s*(?:시|:)?\s*(\d{1,2})?\s*(?:분)?\s*(?:까지)?/g;
+
+  let match;
+  while ((match = rangeRegex.exec(raw)) !== null) {
+    const startPeriod = match[1] || "";
+    const endPeriod = match[4] || startPeriod;
+    let startTime = parseKoreanTime(startPeriod, match[2], match[3]);
+    let endTime = parseKoreanTime(endPeriod, match[5], match[6], startPeriod);
+
+    let startMin = timeToMinutes(startTime);
+    let endMin = timeToMinutes(endTime);
+
+    if (endMin <= startMin && !match[4] && startMin < 12 * 60) {
+      endMin += 12 * 60;
+      endTime = minutesToTime(endMin);
+    }
+    if (endMin > startMin + 10) {
+      windows.push({ start: startTime, end: minutesToTime(endMin), startMin, endMin });
+    }
+  }
+
+  if (windows.length) return windows.sort((a, b) => a.startMin - b.startMin);
+
+  const start = extractStartTime(raw);
+  const startMin = timeToMinutes(start);
+  return [{ start, end: minutesToTime(startMin + 90), startMin, endMin: startMin + 90 }];
+}
+
+function makeSlotsFromWindows(windows) {
+  const slots = [];
+  windows.forEach((window) => {
+    const length = window.endMin - window.startMin;
+    let gap = 35;
+    if (length >= 180) gap = 45;
+    if (length >= 300) gap = 55;
+    if (length <= 35) gap = length;
+
+    let cursor = window.startMin;
+    while (cursor < window.endMin - 5 && slots.length < 10) {
+      slots.push(minutesToTime(cursor));
+      cursor += gap;
+    }
+  });
+  return slots.length ? slots : ["20:00", "20:35", "21:10"];
+}
+
+function buildActionPool(profile) {
   const dream = String(profile.dream || "목표");
-  const joined = [profile.dream, profile.why, profile.bestMoment, profile.strength, profile.habit].join(" ");
+  const why = String(profile.why || "");
+  const best = String(profile.bestMoment || "");
+  const dislike = String(profile.dislike || "");
+  const strength = String(profile.strength || "");
+  const habit = String(profile.habit || "");
+  const all = `${dream} ${why} ${best} ${dislike} ${strength} ${habit}`;
   const focus = inferFocus(profile);
-  const avoid = inferAvoid(profile);
+  const avoidPeople = includesAny(dislike + habit, ["사람", "평가", "부담", "귀찮", "시끄", "유형거리", "유흥", "놀자"]);
+  const likesAnalysis = includesAny(all, ["분석", "자료", "주식", "공부", "읽", "정리", "파고", "패턴"]);
+  const likesCompetition = includesAny(all, ["경쟁", "이기", "승부", "랭크", "프로", "상대"]);
+  const likesMaking = includesAny(all, ["만들", "창업", "사업", "서비스", "앱", "콘텐츠", "브랜드", "아이디어"]);
 
-  if (includesAny(joined, ["프로게이머", "게임", "랭크", "e스포츠", "이스포츠"])) {
+  if (includesAny(dream, ["프로게이머", "게임", "이스포츠", "e스포츠", "랭크"])) {
     return [
-      `프로 경기 1판 시청 — 내가 이기고 싶은 포지션/상황만 정해서 보기`,
-      `상대 심리나 움직임이 읽힌 장면 3개 기록하기`,
-      `랭크 또는 연습 1판 진행 — 방금 본 장면 1개만 직접 적용하기`,
-      `내 리플레이에서 같은 상황 1개 캡처하고 실수 원인 적기`,
-      `실수 1개를 고쳐서 짧은 연습 10분 반복하기`,
-      `오늘 배운 플레이 원칙 1개를 내일 첫 경기 목표로 저장하기`,
+      "프로 경기 1판 시청 — 내가 맡을 포지션의 초반 선택 3개 기록하기",
+      "상대가 흔들린 장면 3개 찾기 — 왜 흔들렸는지 한 줄씩 적기",
+      "내 최근 플레이 1판 보기 — 같은 상황에서 내가 한 선택 표시하기",
+      "랭크 또는 연습 2판 하기 — 오늘 찾은 장면 1개만 의식해서 적용하기",
+      "실수 장면 1개 캡처 — 다음 판에서 바꿀 행동 1개 정하기",
+      "오늘 적용 결과 기록 — 이긴 이유/진 이유를 각각 한 줄로 남기기",
     ];
   }
 
-  if (includesAny(joined, ["건물주", "부동산", "월세", "임대", "상가", "아파트", "원룸"])) {
+  if (includesAny(dream, ["건물주", "부동산", "월세", "상가", "임대", "건물"])) {
     return [
-      `부동산 기본 구조 정리 — 매매가, 보증금, 월세, 대출이자 뜻을 내 말로 적기`,
-      `관심 지역 1곳 정하기 — 왜 그 지역을 볼지 이유 2개 적기`,
-      `그 지역 매물 3개 비교 — 가격, 보증금, 월세를 표로 적기`,
-      `월세 수익률 계산 1번 직접 해보기 — 수익과 비용을 나눠 보기`,
-      `공실/대출/세금 중 가장 위험한 것 1개를 골라 해결 방법 적기`,
-      `내가 모아야 할 자본 목표와 이번 달 준비 행동 1개 정하기`,
-      `오늘 분석한 매물 화면이나 계산 기록을 사진으로 인증하기`,
+      "내가 살고 싶은 지역 1곳 정하기 — 역, 학교, 상권 중 어떤 힘이 있는지 표시하기",
+      "그 지역 매물 3개 비교 — 가격, 월세, 관리비, 공실 위험을 표로 적기",
+      "월세 수익률 직접 계산 — 보증금/대출/이자까지 넣어서 숫자로 보기",
+      "성공 사례 1개 분석 — 왜 그 위치가 돈이 됐는지 3줄로 정리하기",
+      "실패 위험 3개 적기 — 공실, 금리, 수리비 중 나에게 가장 위험한 것 고르기",
+      "내 첫 부동산 공부 루틴 정하기 — 내일 확인할 지역/용어/계산 1개 남기기",
     ];
   }
 
-  if (includesAny(joined, ["사업", "창업", "브랜드", "서비스", "앱", "스타트업", "회사"])) {
+  if (includesAny(dream, ["사업", "사업가", "창업", "스타트업", "회사", "브랜드", "서비스", "앱"]) || likesMaking) {
+    const customerAction = avoidPeople
+      ? "온라인 후기 10개 읽기 — 사람들이 반복해서 불편해하는 말 3개 뽑기"
+      : "잠재 고객 1명에게 물어볼 질문 5개 만들기";
     return [
-      `내가 해결하고 싶은 고객 문제 1개를 한 문장으로 쓰기`,
-      `그 문제를 겪는 사람 3명을 구체적으로 적기`,
-      `경쟁 서비스 2개 분석 — 좋은 점 1개, 부족한 점 1개씩 적기`,
-      `내 서비스가 줄 수 있는 차이점 1개를 문장으로 만들기`,
-      `고객에게 물어볼 질문 5개 만들기`,
-      `오늘 바로 보여줄 수 있는 제안/화면/글 초안 1개 만들기`,
-      `결과물을 사진으로 인증하고 내일 검증할 사람 1명 정하기`,
+      "내가 해결하고 싶은 문제 1개를 한 문장으로 적기",
+      customerAction,
+      "경쟁 서비스 2개 비교 — 사람들이 좋아하는 점/싫어하는 점 각각 2개 적기",
+      "내 서비스가 더 낫게 만들 수 있는 차이점 1개 정하기",
+      "첫 제안 문장 만들기 — ‘누구의 어떤 문제를 어떻게 줄인다’로 쓰기",
+      "작은 검증 행동 1개 실행 — 글 작성, 설문, DM 초안, 화면 스케치 중 하나 남기기",
+      "오늘 배운 고객 문제를 사진으로 인증하고 내일 검증할 질문 1개 남기기",
     ];
   }
 
-  if (includesAny(joined, ["돈", "부자", "경제", "투자", "주식", "수익", "자산", "자유"])) {
+  if (includesAny(dream, ["돈", "부자", "경제", "자유", "투자", "주식", "수익", "자산"])) {
     return [
-      `내가 원하는 경제적 자유의 숫자 적기 — 월 얼마가 필요한지 계산하기`,
-      `수입을 만드는 방식 3개를 적고 노동형/자산형으로 나누기`,
-      `관심 투자 대상 1개를 고르고 돈이 벌리는 구조를 3줄로 설명하기`,
-      `그 투자에서 잃을 수 있는 이유 3개 적기`,
-      `오늘 당장 자산형 행동으로 연결되는 공부/기록 1개 하기`,
-      `이번 주 현금흐름을 늘릴 작은 행동 1개 정하기`,
-      `계산 또는 기록 화면을 사진으로 인증하기`,
+      "내가 원하는 돈의 목표를 숫자로 쓰기 — 월수입/자산/기간 중 하나 정하기",
+      "현재 돈이 나가는 곳 5개 적기 — 줄일 것과 키울 것을 나누기",
+      "관심 있는 수익 구조 1개 분석 — 왜 돈이 들어오는지 흐름으로 그리기",
+      "위험요소 3개 찾기 — 손실, 시간, 실력 부족 중 가장 큰 약점 고르기",
+      "이번 주에 현금흐름을 만들 작은 행동 1개 정하기",
+      "오늘 배운 숫자나 계산 결과를 사진으로 인증하기",
     ];
   }
 
-  if (includesAny(joined, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) {
+  if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) {
     return [
-      `가장 약한 단원 1개 고르기`,
-      `최근 틀린 문제 3개를 보고 틀린 이유를 유형별로 나누기`,
-      `같은 유형 문제 3개 다시 풀기`,
-      `틀린 이유를 한 문장으로 적고 다시 풀기`,
-      `내가 자주 틀리는 패턴 1개를 내일 첫 문제 목표로 정하기`,
-      `공부 흔적을 사진으로 인증하기`,
+      "가장 점수가 안 나오는 단원 1개 고르기",
+      "틀린 문제 3개 다시 보기 — 틀린 이유를 계산/개념/실수로 분류하기",
+      "같은 유형 문제 3개만 다시 풀기",
+      "틀린 이유를 한 문장으로 적고 다시 풀기",
+      "내일 처음 풀 문제 1개를 정하고 인증하기",
     ];
   }
 
-  if (includesAny(joined, ["운동", "헬스", "몸", "체력", "근육", "다이어트"])) {
+  if (includesAny(dream, ["운동", "몸", "헬스", "체력", "근육", "다이어트"])) {
     return [
-      `오늘 몸 상태 확인하기 — 통증/피로/가능한 강도 적기`,
-      `핵심 운동 1개 고르고 정확한 자세로 워밍업 하기`,
-      `본 세트 3세트 진행 — 무게보다 자세를 먼저 확인하기`,
-      `힘든 부위와 호흡 정도 기록하기`,
-      `다음 운동 때 올릴 것 1개만 정하기`,
-      `운동 인증 사진 남기기`,
+      "오늘 몸 상태 체크 — 통증/피로/가능 강도를 1~5로 표시하기",
+      "기본 동작 1개 선택 — 자세 영상 1개 보고 핵심 2개 적기",
+      "정확한 자세로 3세트 실행하기",
+      "숨이 찬 정도와 힘든 부위 기록하기",
+      "다음 운동 강도 1단계만 정하고 인증하기",
     ];
   }
 
-  if (includesAny(joined, ["그림", "음악", "작가", "영상", "디자인", "콘텐츠", "창작", "유튜브"])) {
-    return [
-      `${dream}과 관련해 내가 만들고 싶은 결과물 1개 정하기`,
-      `좋아하는 참고작 1개 분석 — 왜 좋은지 3줄 적기`,
-      `그 구조를 따라 내 버전 초안 1개 만들기`,
-      `마음에 안 드는 부분 1개만 고치기`,
-      `작게 공개하거나 저장할 수 있는 형태로 정리하기`,
-      `초안 사진 또는 화면을 인증하기`,
-    ];
-  }
-
-  return [
-    `${dream}을 이루려면 필요한 능력 3개 적기`,
-    `그중 오늘 가장 먼저 키워야 할 능력 1개 고르기`,
-    `${focus} 방식으로 관련 자료 1개를 보고 핵심 3줄 정리하기`,
-    `${avoid}으로 오늘 실행 행동 1개 직접 하기`,
-    `방금 한 행동에서 부족한 점 1개와 다음 행동 1개 적기`,
-    `오늘 결과물을 사진으로 인증하기`,
+  const base = [
+    `${dream}에 도달하려면 먼저 필요한 능력 3개 적기`,
+    `그중 오늘 키울 능력 1개 고르기 — ${focus}을 활용할 수 있는 쪽으로 선택하기`,
+    likesAnalysis ? "관련 사례 1개 분석 — 핵심 원리 3줄로 정리하기" : "작게 직접 해볼 행동 1개 만들기 — 결과가 눈에 보이게 남기기",
+    avoidPeople ? "혼자 할 수 있는 방식으로 첫 결과물 남기기" : "사람에게 보여줄 수 있는 작은 결과물 1개 만들기",
+    `싫어하는 방식${dislike ? `(${dislike})` : ""}은 피하고, 계속할 수 있는 루틴 1개로 줄이기`,
+    "오늘 결과를 사진으로 인증하고 내일 이어갈 질문 1개 남기기",
   ];
+  if (likesCompetition) base.splice(3, 0, "비교 기준 1개 정하기 — 어제의 나보다 나아졌는지 확인하기");
+  return base;
 }
 
 function buildPersonalPlan(profile) {
-  const ranges = extractTimeRanges(profile.time || profile.habit || "20:00부터 21:30까지");
-  const slots = makeSlotsFromRanges(ranges);
-  const blueprint = getGoalBlueprint(profile);
-  const count = Math.max(4, Math.min(Math.max(slots.length, 4), blueprint.length));
-  const items = [];
+  const windows = parseAvailableWindows(`${profile.time || ""} ${profile.habit || ""}`);
+  const slots = makeSlotsFromWindows(windows);
+  const actions = buildActionPool(profile);
+  const usableCount = Math.max(3, Math.min(actions.length, slots.length));
 
-  for (let index = 0; index < count; index += 1) {
-    const time = slots[index] || addMinutes(slots[slots.length - 1] || "20:00", (index - slots.length + 1) * 30);
-    items.push(makePlanItem(time, blueprint[index % blueprint.length], index === 0 ? "open" : "locked"));
-  }
+  const items = actions.slice(0, usableCount).map((action, index) => {
+    return makePlanItem(slots[index] || addMinutes(slots[0] || "20:00", index * 35), action, index === 0 ? "open" : "locked");
+  });
 
   return unlockPlan(items);
 }
@@ -1288,26 +1316,33 @@ function NoahApp({ onBack }) {
   const fileInputRef = useRef(null);
   const pendingProofIndexRef = useRef(null);
 
-  const scrollChatToBottom = (smooth = true) => {
-    if (activeView !== "chat") return;
-    const run = () => {
-      chatBottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "end" });
-      if (chatAreaRef.current) chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
-    };
-    run();
-    requestAnimationFrame(run);
-    setTimeout(run, 60);
-    setTimeout(run, 180);
-    setTimeout(run, 360);
-  };
-
   const completedCount = planItems.filter((item) => item.status === "done").length;
   const currentOpenIndex = planItems.findIndex((item) => item.status === "open");
 
   useEffect(() => {
     if (activeView !== "chat") return;
-    scrollChatToBottom(messages.length > 1);
-  }, [messages.length, activeView, input, step]);
+
+    const scrollToBottom = () => {
+      const area = chatAreaRef.current;
+      if (area) {
+        area.scrollTop = area.scrollHeight;
+      }
+      chatBottomRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+    };
+
+    scrollToBottom();
+    const rafOne = requestAnimationFrame(scrollToBottom);
+    const rafTwo = requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
+    const timerOne = setTimeout(scrollToBottom, 80);
+    const timerTwo = setTimeout(scrollToBottom, 220);
+
+    return () => {
+      cancelAnimationFrame(rafOne);
+      cancelAnimationFrame(rafTwo);
+      clearTimeout(timerOne);
+      clearTimeout(timerTwo);
+    };
+  }, [messages.length, activeView, input]);
 
   const progressText = useMemo(() => {
     if (!profile.name) return "처음 만나는 중";
@@ -1317,14 +1352,14 @@ function NoahApp({ onBack }) {
   }, [profile, planItems.length, completedCount]);
 
   const getSuggestedReplies = () => {
-    if (step === "name") return ["내 이름부터 알려줄게", "이름은 직접 입력할게"];
-    if (step === "dream") return ["프로게이머가 되고 싶어", "건물주가 되고 싶어", "사업으로 성공하고 싶어", "경제적으로 자유로워지고 싶어"];
-    if (step === "why") return ["내 힘으로 결과를 만들고 싶어", "남들이 안 된다고 한 걸 증명하고 싶어", "자유롭게 살 수 있는 기반을 만들고 싶어"];
+    if (step === "name") return ["내 이름부터 알려줄게", "나는 예원이야", "이름 먼저 말할게"];
+    if (step === "dream") return ["프로게이머가 되고 싶어", "사업으로 성공하고 싶어", "경제적으로 자유로워지고 싶어"];
+    if (step === "why") return ["이걸 할 때 내가 살아있는 느낌이 들어", "내 힘으로 결과를 만들고 싶어", "남들이 안 된다고 한 걸 증명하고 싶어"];
     if (step === "bestMoment") return ["상대의 생각을 읽고 이길 때 재밌어", "결과가 눈에 보일 때 좋아", "오래 파고들어서 실력이 늘 때 좋아"];
-    if (step === "dislike") return ["의미 없이 반복하는 건 싫어", "너무 막연한 계획은 싫어", "재밌는 딴짓으로 새는 게 싫어"];
+    if (step === "dislike") return ["의미 없이 반복하는 건 싫어", "너무 막연한 계획은 싫어", "사람들 앞에서 평가받는 건 부담돼"];
     if (step === "strength") return ["분석하는 걸 잘해", "한번 꽂히면 오래 파고들어", "경쟁하면 집중이 잘돼"];
     if (step === "habit") return ["저녁에 집중이 잘돼", "혼자 할 때 더 몰입돼", "누가 같이 확인해주면 더 잘해"];
-    if (step === "time") return ["오전 8시부터 8시 30분까지, 오후 4시부터 10시까지 가능해", "학교 끝나고 오후 6시부터 9시까지 가능해", "하루에 30분 정도 가능해"];
+    if (step === "time") return ["20:00부터 1시간 가능해", "학교 끝나고 18:00부터 가능해", "하루에 30분 정도 가능해"];
     if (step === "execute") return ["오늘 계획을 다시 다듬고 싶어", "오늘은 조금 힘들어서 줄이고 싶어", "지금 계획이 나에게 맞는지 봐줘"];
     return [];
   };
@@ -1339,42 +1374,17 @@ function NoahApp({ onBack }) {
     const nextProfile = { ...profile };
 
     if (step === "name") {
-      const cleanName = extractName(value);
-      nextProfile.name = cleanName;
-      noahReply = `좋네, ${cleanName}.
-이제 진짜 중요한 걸 물어볼게.
-
-너는 뭘 이루고 싶어?
-하고 싶은 게 뭐고, 달성하고 싶은 목표가 뭐야?
-아, 꿈은?`;
+      nextProfile.name = value;
+      noahReply = `좋네, ${value}.\n이제 진짜 중요한 걸 물어볼게.\n\n너는 뭘 이루고 싶어?\n하고 싶은 게 뭐고, 달성하고 싶은 목표가 뭐야?\n아, 꿈은?`;
       nextStep = "dream";
     } else if (step === "dream") {
       nextProfile.dream = value;
+      noahReply = `좋아. ${nextProfile.name}, 그 꿈 기억할게.\n\n그 목표 혹은 꿈을 정말 이루고 싶은 거지?`;
+      nextStep = "confirmDream";
+    } else if (step === "confirmDream") {
+      nextProfile.wantsIt = value;
       noahReply =
-        `좋아. ${nextProfile.name}, 그 꿈 기억할게.
-
-` +
-        "그 목표 혹은 꿈을 정말 이루고 싶은 거지?
-
-" +
-        "가능해. 무조건 말이야.
-
-" +
-        "내가 너를 거기에 좀 더 빠르게 데려다줄 뿐이지.
-다시 한번 말해줄게.
-
-" +
-        "너는 갈 수 있어.
-그 이유는 네가 이미 달라졌기 때문이야.
-나를 찾아왔잖아.
-
-" +
-        "근데 바로 계획부터 짜지 않을게.
-너한테 맞는 계획을 만들려면 먼저 너를 알아야 해.
-
-" +
-        "그 꿈을 왜 이루고 싶어?
-진짜 이유를 편하게 말해줘.";
+        "가능해. 무조건 말이야.\n\n내가 너를 거기에 좀 더 빠르게 데려다줄 뿐이지.\n다시 한번 말해줄게.\n\n너는 갈 수 있어.\n그 이유는 네가 이미 달라졌기 때문이야.\n나를 찾아왔잖아.\n\n근데 바로 계획부터 짜지 않을게.\n너한테 맞는 계획을 만들려면 먼저 너를 알아야 해.\n\n그 꿈을 왜 이루고 싶어?\n진짜 이유를 편하게 말해줘.";
       nextStep = "why";
     } else if (step === "why") {
       nextProfile.why = value;
