@@ -998,6 +998,16 @@ function addMinutes(time, minutes) {
   return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
 }
 
+function formatTimeKorean(time) {
+  const [rawHour, rawMinute] = String(time || "20:00").split(":").map(Number);
+  const hour = Number.isFinite(rawHour) ? rawHour : 20;
+  const minute = Number.isFinite(rawMinute) ? rawMinute : 0;
+  const period = hour < 12 ? "오전" : "오후";
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+  if (minute === 0) return `${period} ${displayHour}시`;
+  return `${period} ${displayHour}시 ${minute}분`;
+}
+
 function unlockPlan(items) {
   let opened = false;
   return items.map((item) => {
@@ -1065,45 +1075,45 @@ function buildPersonalPlan(profile) {
         : "내 주력 포지션에서 가장 자주 지는 상황 1개만 고르기";
 
     items = [
-      makePlanItem(start, `프로 경기나 상위권 플레이 1판을 보면서 ${gameFocus}`, "open"),
-      makePlanItem(addMinutes(start, 25), "직접 1판 플레이하면서 방금 찾은 장면 하나만 적용하기"),
-      makePlanItem(addMinutes(start, 55), "내 리플레이에서 같은 상황이 나온 장면 1개를 캡처하고 실수 원인 적기"),
-      makePlanItem(addMinutes(start, 75), "내일 반복할 연습 포인트 1개를 정하고 사진으로 인증하기"),
+      makePlanItem(start, `프로 경기나 상위권 플레이 1판 보기 — ${gameFocus}`, "open"),
+      makePlanItem(addMinutes(start, 25), "직접 1판 플레이하기 — 방금 찾은 장면 1개만 따라 해보기"),
+      makePlanItem(addMinutes(start, 55), "내 리플레이 확인하기 — 비슷한 장면 1개 캡처하고 왜 졌는지 한 줄 적기"),
+      makePlanItem(addMinutes(start, 75), "내일 다시 연습할 포인트 1개 정하고 인증 사진 남기기"),
     ];
   } else if (type === "business") {
     items = [
-      makePlanItem(start, `내가 만들고 싶은 서비스/상품의 고객 1명을 구체적으로 적기`, "open"),
-      makePlanItem(addMinutes(start, 20), `그 사람이 지금 겪는 불편함 3개 찾기`),
-      makePlanItem(addMinutes(start, 45), `비슷한 서비스 2개를 보고 좋은 점/아쉬운 점 각각 1개씩 적기`),
-      makePlanItem(addMinutes(start, 70), `내가 오늘 바로 검증할 수 있는 작은 제안 문장 1개 만들기`),
+      makePlanItem(start, `내가 도와주고 싶은 고객 1명을 구체적으로 정하기`, "open"),
+      makePlanItem(addMinutes(start, 20), `그 고객이 지금 불편해할 문제 3개 적기`),
+      makePlanItem(addMinutes(start, 45), `비슷한 서비스 2개 보기 — 좋은 점 1개, 아쉬운 점 1개씩 적기`),
+      makePlanItem(addMinutes(start, 70), `오늘 바로 물어볼 수 있는 제안 문장 1개 만들기`),
     ];
   } else if (type === "money") {
     items = [
-      makePlanItem(start, `내가 돈을 만들 수 있는 방식 3가지를 적고 시간 팔기/자산 쌓기로 나누기`, "open"),
-      makePlanItem(addMinutes(start, 25), `관심 있는 투자/수익 구조 1개를 골라 위험요소 3개 적기`),
-      makePlanItem(addMinutes(start, 50), `이번 주에 현금흐름을 만들 수 있는 가장 작은 행동 1개 정하기`),
-      makePlanItem(addMinutes(start, 70), `오늘 배운 내용 사진으로 인증하고 내일 확인할 질문 1개 남기기`),
+      makePlanItem(start, `내가 돈을 만들 수 있는 방법 3개 적기 — 당장 일하는 방식과 쌓이는 방식으로 나누기`, "open"),
+      makePlanItem(addMinutes(start, 25), `관심 있는 투자나 수익 구조 1개 고르기 — 위험한 점 3개 적기`),
+      makePlanItem(addMinutes(start, 50), `이번 주에 실제 돈의 흐름을 만들 수 있는 작은 행동 1개 정하기`),
+      makePlanItem(addMinutes(start, 70), `오늘 배운 내용 인증하고 내일 확인할 질문 1개 남기기`),
     ];
   } else if (type === "study") {
     items = [
-      makePlanItem(start, `오늘 가장 약한 단원 1개를 고르고 틀린 문제 유형을 분류하기`, "open"),
+      makePlanItem(start, `오늘 가장 약한 단원 1개 고르기 — 자주 틀리는 문제 유형을 나누기`, "open"),
       makePlanItem(addMinutes(start, 25), `같은 유형 문제 3개만 다시 풀기`),
       makePlanItem(addMinutes(start, 50), `틀린 이유를 한 문장으로 적고 다시 풀기`),
-      makePlanItem(addMinutes(start, 70), `공부한 흔적을 사진으로 인증하고 내일 첫 문제를 정하기`),
+      makePlanItem(addMinutes(start, 70), `공부한 흔적을 인증하고 내일 처음 풀 문제 1개 정하기`),
     ];
   } else if (type === "fitness") {
     items = [
-      makePlanItem(start, `오늘 몸 상태를 확인하고 가장 부담 없는 운동 1가지를 고르기`, "open"),
+      makePlanItem(start, `오늘 몸 상태 확인하기 — 가장 부담 없는 운동 1가지 고르기`, "open"),
       makePlanItem(addMinutes(start, 15), `정확한 자세로 기본 동작 3세트만 하기`),
-      makePlanItem(addMinutes(start, 40), `숨이 차는 정도와 힘든 부위를 기록하기`),
-      makePlanItem(addMinutes(start, 55), `운동 인증 사진을 남기고 다음 운동 강도 정하기`),
+      makePlanItem(addMinutes(start, 40), `숨이 차는 정도와 힘든 부위 기록하기`),
+      makePlanItem(addMinutes(start, 55), `운동 인증 사진 남기고 다음 운동 강도 정하기`),
     ];
   } else {
     items = [
-      makePlanItem(start, `${profile.dream || "꿈"}에 가까워지는 데 필요한 사람/자료/기술 중 하나를 고르기`, "open"),
-      makePlanItem(addMinutes(start, 20), `오늘 내가 잘 맞는 방식인 “${focus}”을 활용해 첫 자료 1개 분석하기`),
-      makePlanItem(addMinutes(start, 45), `싫어하는 방식${dislike ? `(${dislike})` : ""}은 피하고, 계속할 수 있는 방식으로 행동 1개 다시 줄이기`),
-      makePlanItem(addMinutes(start, 65), `오늘 한 행동을 사진으로 인증하고 내일 이어갈 질문 1개 남기기`),
+      makePlanItem(start, `${profile.dream || "꿈"}에 가까워지기 위해 오늘 필요한 것 1개 고르기`, "open"),
+      makePlanItem(addMinutes(start, 20), `내가 잘 맞는 방식으로 자료 1개 보기 — 핵심만 3줄로 정리하기`),
+      makePlanItem(addMinutes(start, 45), `하기 싫어지는 방식은 줄이고, 계속할 수 있는 작은 행동 1개로 바꾸기`),
+      makePlanItem(addMinutes(start, 65), `오늘 한 행동을 인증하고 내일 이어갈 질문 1개 남기기`),
     ];
   }
 
@@ -1249,10 +1259,10 @@ function NoahApp({ onBack }) {
       const personalPlan = buildPersonalPlan(nextProfile);
       setPlanItems(personalPlan);
       setActiveView("plan");
-      setShowEmotionPanel(true);
+      setShowEmotionPanel(false);
       noahReply =
-        "좋아. 이제 네가 말한 꿈, 좋아하는 방식, 싫어하는 방식, 집중되는 시간까지 보고 오늘 계획을 만들었어.\n\n기본 계획은 넣지 않았어.\n네가 말한 내용 안에서 바로 실행 가능한 순서로 정리했어.\n\n이제 오늘 계획 화면에서 확인하고, 그날 기분에 맞게 재배치한 다음 하나씩 인증하면서 가자.";
-      nextStep = "emotion";
+        "좋아. 이제 네가 말한 꿈, 좋아하는 방식, 싫어하는 방식, 집중되는 시간까지 보고 오늘 계획을 만들었어.\n\n기본 계획은 넣지 않았어.\n네가 말한 내용 안에서 바로 실행 가능한 순서로 정리했어.\n\n이제 오늘 계획 화면에서 먼저 오늘 기분을 고르고, 그 기분에 맞게 계획을 재배치한 다음 하나씩 인증하면서 가자.";
+      nextStep = "execute";
     } else {
       noahReply = "좋아. 지금 대화도 계획에 반영할 수 있어. 필요하면 오늘 계획 화면에서 다시 다듬고, 지금은 열린 계획부터 하나씩 가자.";
     }
@@ -1337,7 +1347,7 @@ function NoahApp({ onBack }) {
             </div>
             {currentOpenIndex >= 0 ? (
               <div className="mini-current">
-                <b>{planItems[currentOpenIndex].time}</b>
+                <b>{formatTimeKorean(planItems[currentOpenIndex].time)}</b>
                 <p>{planItems[currentOpenIndex].title}</p>
               </div>
             ) : (
@@ -1359,7 +1369,14 @@ function NoahApp({ onBack }) {
         <div className="stars" />
 
         {activeView === "plan" ? (
-          <PlanView planItems={planItems} completedCount={completedCount} onProof={openProofPicker} />
+          <PlanView
+            planItems={planItems}
+            completedCount={completedCount}
+            onProof={openProofPicker}
+            emotionOptions={emotionOptions}
+            activeEmotion={profile.emotion}
+            onEmotion={selectEmotion}
+          />
         ) : activeView === "settings" ? (
           <section className="page-view"><div className="view-card"><h1>설정</h1><p>노아 설정은 다음 단계에서 연결할게.</p></div></section>
         ) : (
@@ -1377,17 +1394,6 @@ function NoahApp({ onBack }) {
                 </div>
               ))}
             </div>
-
-            {showEmotionPanel && (
-              <div className="panel emotion-panel">
-                <div><h3>오늘 기분은 어때?</h3><p>기분에 따라 오늘 계획 강도를 조정할게.</p></div>
-                <div className="emotion-grid">
-                  {emotionOptions.map((emotion) => (
-                    <button key={emotion.id} onClick={() => selectEmotion(emotion.id)}><span>{emotion.emoji}</span><strong>{emotion.label}</strong><small>{emotion.mode}</small></button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {getSuggestedReplies().length ? (
               <div className="feedback-row">
@@ -1415,23 +1421,50 @@ function NoahApp({ onBack }) {
   );
 }
 
-function PlanView({ planItems, completedCount, onProof }) {
+function PlanView({ planItems, completedCount, onProof, emotionOptions, activeEmotion, onEmotion }) {
+  const emotion = getEmotionById(activeEmotion);
+
   return (
     <section className="page-view plan-view">
       <div className="view-header">
         <p>NOAH PLAN</p>
         <h1>오늘 계획</h1>
-        <span>채팅방과 별개로, 시간 순서대로 하나씩 인증하는 공간이야.</span>
+        <span>오늘 기분에 맞게 계획을 조정하고, 시간 순서대로 하나씩 인증하는 공간이야.</span>
       </div>
 
       {planItems.length === 0 ? (
         <div className="empty-plan"><h2>아직 오늘 계획이 없어.</h2><p>노아가 너를 먼저 알아본 뒤 여기에서 계획을 보여줄게.</p></div>
       ) : (
         <div className="plan-board">
+          <div className="plan-emotion-card">
+            <div>
+              <h2>오늘 기분은 어때?</h2>
+              <p>여기서 기분을 고르면, 목표는 그대로 두고 오늘 행동의 크기만 조정할게.</p>
+            </div>
+            <div className="emotion-grid">
+              {emotionOptions.map((item) => (
+                <button
+                  key={item.id}
+                  className={activeEmotion === item.id ? "selected" : ""}
+                  onClick={() => onEmotion(item.id)}
+                >
+                  <span>{item.emoji}</span>
+                  <strong>{item.label}</strong>
+                  <small>{item.mode}</small>
+                </button>
+              ))}
+            </div>
+            {activeEmotion ? (
+              <p className="emotion-result">
+                오늘 상태: {emotion.emoji} {emotion.label} — 계획을 오늘 컨디션에 맞게 조정했어.
+              </p>
+            ) : null}
+          </div>
+
           <div className="plan-progress"><span>오늘 인증</span><strong>{completedCount}/{planItems.length}</strong></div>
           {planItems.map((item, index) => (
             <article key={item.id} className={`plan-card ${item.status}`}>
-              <div className="plan-time"><strong>{item.time}</strong><span>{item.status === "done" ? "완료" : item.status === "open" ? "진행 가능" : "잠김"}</span></div>
+              <div className="plan-time"><strong>{formatTimeKorean(item.time)}</strong><span>{item.status === "done" ? "완료" : item.status === "open" ? "진행 가능" : "잠김"}</span></div>
               <p>{item.title}</p>
               {item.proofImage ? <img src={item.proofImage} alt="인증 사진" /> : null}
               <button disabled={item.status !== "open"} onClick={() => onProof(index)}>{item.status === "done" ? "인증 완료" : item.status === "open" ? "사진 인증" : "이전 계획 인증 필요"}</button>
@@ -1504,6 +1537,14 @@ button, textarea { font-family: inherit; }
 .input-shell textarea::placeholder { color: rgba(255,255,255,0.42); }
 .input-shell button { width: 46px; height: 46px; border: 0; border-radius: 18px; cursor: pointer; color: white; font-size: 20px; background: linear-gradient(135deg, rgba(168,85,247,0.95), rgba(96,165,250,0.9)); }
 .plan-board { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; }
+
+.plan-emotion-card { padding: 24px; border-radius: 28px; background: rgba(255,255,255,0.075); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(22px); }
+.plan-emotion-card h2 { margin: 0 0 8px; font-size: 24px; }
+.plan-emotion-card p { margin: 0; color: rgba(255,255,255,0.62); line-height: 1.65; }
+.plan-emotion-card .emotion-grid { margin-top: 18px; }
+.emotion-grid button.selected { border-color: rgba(96,165,250,0.75); background: rgba(96,165,250,0.18); box-shadow: 0 0 0 1px rgba(96,165,250,0.18) inset; }
+.emotion-result { margin-top: 14px !important; padding: 13px 14px; border-radius: 16px; background: rgba(96,165,250,0.09); border: 1px solid rgba(96,165,250,0.18); color: rgba(255,255,255,0.78) !important; }
+
 .plan-progress, .empty-plan, .view-card { padding: 24px; border-radius: 28px; background: rgba(255,255,255,0.075); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(22px); }
 .plan-progress { display: flex; justify-content: space-between; align-items: center; }
 .plan-progress span { color: rgba(255,255,255,0.6); }
