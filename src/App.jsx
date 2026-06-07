@@ -1519,6 +1519,114 @@ function adjustItemsByEmotion(items, emotionId) {
   }));
 }
 
+function getUserSignal(value) {
+  const text = String(value || "").replace(/\s/g, "").toLowerCase();
+  return {
+    noPreference: isNoPreferenceAnswer(value),
+    tired: /힘들|지쳤|피곤|귀찮|하기싫|무기력|졸려|쉬고싶/.test(text),
+    anxious: /불안|무서|걱정|망할|실패|두려|겁나|자신없/.test(text),
+    confused: /모르겠|어렵|헷갈|복잡|뭐라|어떻게|감이안/.test(text),
+    excited: /좋아|재밌|신나|기대|빨리|해볼|가보자|가능/.test(text),
+    frustrated: /짜증|답답|왜|안돼|별로|이상|싫어/.test(text),
+    question: /\?|왜|어떻게|뭐야|뭔데|가능해|할수/.test(text),
+  };
+}
+
+function pickNaturalLead(value, step, profile) {
+  const signal = getUserSignal(value);
+  const name = profile?.name || "너";
+
+  if (step === "name") return "";
+
+  if (signal.tired) {
+    return "그럴 수 있어. 하기 싫거나 지친 날은 의지가 약한 게 아니라, 지금 계획의 크기가 컨디션보다 클 수도 있어. 그래서 나는 너를 몰아붙이기보다 맞는 크기를 찾을게.\n\n";
+  }
+
+  if (signal.anxious) {
+    return "불안하다는 말도 중요한 정보야. 무서운 마음을 없애려고 하기보다, 그 마음이 있어도 움직일 수 있는 방식을 찾으면 돼.\n\n";
+  }
+
+  if (signal.confused) {
+    return "괜찮아. 처음부터 선명하게 말할 필요 없어. 애매한 답도 내가 방향을 찾는 데 쓸 수 있어.\n\n";
+  }
+
+  if (signal.frustrated) {
+    return "좋아, 그 불편함도 그냥 넘기지 않을게. 너한테 안 맞는 방식은 계획에서 줄여야 하니까.\n\n";
+  }
+
+  if (signal.excited) {
+    return "좋아. 그 에너지는 잘 쓰면 큰 힘이 돼. 대신 너무 크게 벌리지 말고, 실제로 해낼 수 있는 모양으로 바꿔볼게.\n\n";
+  }
+
+  if (step === "dream") {
+    return `${name}이 말한 꿈은 그냥 목표가 아니라, 앞으로 어떤 상황을 연습해야 하는지 정하는 기준이 될 거야.\n\n`;
+  }
+
+  if (step === "why") {
+    return "좋아. 지금 말한 이유는 단순한 동기부여 문장이 아니라, 네가 힘들 때 다시 붙잡을 기준이 될 수 있어.\n\n";
+  }
+
+  if (step === "bestMoment") {
+    return "좋아. 그 순간은 네가 억지로 버티는 방식이 아니라 자연스럽게 오래 갈 수 있는 방식과 연결돼.\n\n";
+  }
+
+  if (step === "dislike") {
+    return signal.noPreference
+      ? "좋아. 아직 싫어하는 방식이 뚜렷하지 않다면, 처음부터 좁히지 않고 해보면서 찾는 게 맞아.\n\n"
+      : "좋아. 그건 중요한 단서야. 싫어하는 방식을 계속 넣으면 계획이 아무리 좋아도 오래 못 가거든.\n\n";
+  }
+
+  if (step === "strength") {
+    return signal.noPreference
+      ? "괜찮아. 자기 강점을 바로 말할 수 있는 사람이 오히려 많지 않아. 그럼 내가 실전 훈련과 회고에서 너의 패턴을 찾아볼게.\n\n"
+      : "좋아. 그 강점은 직접 자랑하게 만들기보다, 오늘 계획과 실전 상황 안에서 자연스럽게 쓰이게 만들게.\n\n";
+  }
+
+  if (step === "habit") {
+    return "좋아. 습관은 계획의 현실성을 정하는 부분이야. 네가 언제 잘 움직이는지 알아야 억지 계획이 안 나와.\n\n";
+  }
+
+  if (step === "time") {
+    return "좋아. 이제 말이 아니라 실제 하루 안에 들어갈 수 있게 시간표로 바꿔볼게. 비는 시간은 그냥 두지 않고, 계획과 실전 체험으로 연결할게.\n\n";
+  }
+
+  return "좋아. 그 말도 흐름에서 중요해. 내가 지금 단계와 연결해서 받아볼게.\n\n";
+}
+
+function buildFlexibleNoahReply({ value, step, profile, coreReply }) {
+  return `${pickNaturalLead(value, step, profile)}${coreReply}`;
+}
+
+function getStepHint(step) {
+  const hints = {
+    dream: "이제 꿈이나 목표를 말해줘. 완벽한 문장 아니어도 돼.",
+    why: "이제 그 꿈을 왜 이루고 싶은지 편하게 말해줘.",
+    bestMoment: "이제 그 목표와 관련해서 재미있거나 몰입되는 순간을 말해줘.",
+    dislike: "이제 금방 지치거나 하기 싫어지는 방식을 말해줘. 딱히 없으면 없다고 해도 돼.",
+    strength: "이제 잘한다고 들었거나 스스로 조금 자신 있는 걸 말해줘. 모르겠어도 괜찮아.",
+    habit: "이제 언제 집중이 잘 되는지, 혼자가 편한지 같이 확인받는 게 좋은지 말해줘.",
+    time: "이제 실제로 쓸 수 있는 시간을 알려줘. 예: 오전 8시~8시 30분, 오후 4시~10시.",
+    execute: "이제 오늘 계획, 실전 체험, 회고 중 어디로 갈지 말해줘.",
+  };
+  return hints[step] || "";
+}
+
+function buildNaturalExecuteReply(value) {
+  if (includesAny(value, ["하기 싫", "힘들", "피곤", "지쳤", "무기력"])) {
+    return "그럴 수 있어. 오늘은 계획을 버리는 게 아니라 크기를 줄이면 돼. 오늘 계획 화면에서 감정을 고르고, 열린 항목 하나만 작게 실행하자.";
+  }
+  if (includesAny(value, ["실전", "체험", "연습", "상황"])) {
+    return "좋아. 실전 체험으로 넘어갈게. 오늘 계획을 기준으로 실제로 마주칠 수 있는 상대를 만들고, 그 사람이 돌발 질문을 던지는 방식으로 연습해보자.";
+  }
+  if (includesAny(value, ["회고", "어땠", "돌아", "느낀"])) {
+    return "좋아. 회고로 넘어가자. 오늘 잘한 점보다, 실제로 막힌 지점을 찾는 게 내일 계획을 더 강하게 만들어.";
+  }
+  if (includesAny(value, ["계획", "다시", "수정", "조정"])) {
+    return "좋아. 지금 말한 걸 다음 계획에 반영할게. 오늘 계획에서 너무 추상적인 건 더 작고 눈에 보이는 행동으로 바꾸면 돼.";
+  }
+  return "좋아. 그 말도 다음 계획에 반영할 수 있어. 지금은 오늘 계획이나 실전 체험에서 바로 이어가면 좋아.";
+}
+
 function getEmotionById(id) {
   return emotionOptions.find((item) => item.id === id) || emotionOptions[0];
 }
@@ -1581,8 +1689,10 @@ function NoahExperienceApp({ onBack }) {
   const sendMessage = () => {
     const value = input.trim();
     if (!value) return;
+
     const nextMessages = [...messages, makeUserMessage(value)];
     const nextProfile = { ...profile };
+    let coreReply = "";
     let noahReply = "";
     let nextStep = step;
 
@@ -1593,7 +1703,7 @@ function NoahExperienceApp({ onBack }) {
       nextStep = "dream";
     } else if (step === "dream") {
       nextProfile.dream = value;
-      noahReply =
+      coreReply =
         `좋아. ${nextProfile.name || "너"}, 그 꿈 기억할게.\n\n` +
         "가능해. 무조건 말이야.\n\n" +
         "내가 너를 거기에 좀 더 빠르게 데려다줄 뿐이지.\n" +
@@ -1601,54 +1711,56 @@ function NoahExperienceApp({ onBack }) {
         "그 이유는 네가 이미 달라졌기 때문이야. 나를 찾아왔잖아.\n\n" +
         "근데 바로 계획부터 짜지 않을게.\n" +
         "너한테 맞는 계획과 실전 상황을 만들려면 먼저 너를 알아야 해.\n\n" +
-        "그 꿈을 왜 이루고 싶어?\n돈, 자유, 인정, 재미, 증명하고 싶은 마음 전부 괜찮아.";
+        "그 꿈을 왜 이루고 싶어?\n" +
+        "돈, 자유, 인정, 재미, 증명하고 싶은 마음 전부 괜찮아.";
+      noahReply = buildFlexibleNoahReply({ value, step, profile: nextProfile, coreReply });
       nextStep = "why";
     } else if (step === "why") {
       nextProfile.why = value;
-      noahReply = `${nextProfile.name || "좋아"}. 네가 말한 이유를 기준으로 방향을 잡을게.\n\n${nextProfile.dream || "그 꿈"}과 관련해서 네가 가장 재미있거나 몰입되는 순간은 언제야?`;
+      coreReply = `${nextProfile.dream || "그 꿈"}과 관련해서 네가 가장 재미있거나 몰입되는 순간은 언제야?\n잘한다는 느낌이 들거나, 시간이 빨리 가는 순간도 좋아.`;
+      noahReply = buildFlexibleNoahReply({ value, step, profile: nextProfile, coreReply });
       nextStep = "bestMoment";
     } else if (step === "bestMoment") {
       nextProfile.bestMoment = value;
-      noahReply = "좋아. 그 지점은 네가 오래 갈 수 있는 방식일 가능성이 커.\n\n반대로 싫어하는 방식도 알아야 해. 어떤 방식으로 하면 금방 지치거나 하기 싫어져? 딱히 없으면 없다고 말해도 돼.";
+      coreReply = "반대로 싫어하는 방식도 알아야 해.\n어떤 방식으로 하면 금방 지치거나 하기 싫어져?\n딱히 없으면 없다고 말해도 돼.";
+      noahReply = buildFlexibleNoahReply({ value, step, profile: nextProfile, coreReply });
       nextStep = "dislike";
     } else if (step === "dislike") {
       nextProfile.dislike = value;
-      noahReply = isNoPreferenceAnswer(value)
-        ? "좋아. 아직 뚜렷하게 싫은 방식이 없다면 넓게 시작해볼게. 하면서 지치는 지점이 나오면 바로 줄이면 돼.\n\n이번엔 네가 가진 쪽을 볼게. 주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?"
-        : "좋아. 그 방식은 계획에서 최대한 피할게.\n\n이번엔 네가 가진 쪽을 볼게. 주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?";
+      coreReply = "이번엔 네가 가진 쪽을 볼게.\n주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?\n딱히 모르겠으면 그것도 괜찮아.";
+      noahReply = buildFlexibleNoahReply({ value, step, profile: nextProfile, coreReply });
       nextStep = "strength";
     } else if (step === "strength") {
       nextProfile.strength = value;
-      noahReply = isNoPreferenceAnswer(value)
-        ? "괜찮아. 아직 강점이 선명하지 않은 사람도 많아. 그럼 실전 훈련 안에서 네가 잘 버티는 방식과 빨리 이해하는 방식을 찾아볼게.\n\n평소 습관을 알려줘. 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?"
-        : "좋아. 그건 말로 칭찬하기보다 계획과 실전 상황 안에 녹일게.\n\n평소 습관도 중요해. 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
+      coreReply = "평소 습관도 중요해.\n너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
+      noahReply = buildFlexibleNoahReply({ value, step, profile: nextProfile, coreReply });
       nextStep = "habit";
     } else if (step === "habit") {
       nextProfile.habit = value;
-      noahReply = "좋아. 마지막으로 현실 시간을 맞춰보자.\n오늘 또는 평소에 이 꿈을 위해 실제로 쓸 수 있는 시간은 언제야?\n예: 오전 8시부터 8시 30분까지, 오후 4시부터 10시까지";
+      coreReply = "마지막으로 현실 시간을 맞춰보자.\n오늘 또는 평소에 이 꿈을 위해 실제로 쓸 수 있는 시간은 언제야?\n예: 오전 8시부터 8시 30분까지, 오후 4시부터 10시까지";
+      noahReply = buildFlexibleNoahReply({ value, step, profile: nextProfile, coreReply });
       nextStep = "time";
     } else if (step === "time") {
       nextProfile.time = value;
       const plan = buildExperiencePlan(nextProfile);
       setPlanItems(plan);
       setActiveView("plan");
-      noahReply =
-        "좋아. 이제 네 답변을 바탕으로 오늘 계획을 만들었어.\n\n" +
+      coreReply =
+        "이제 네 답변을 바탕으로 오늘 계획을 만들었어.\n\n" +
         "이번 구조는 단순 체크가 아니야.\n" +
         "오늘 계획 안에 실전 체험이 들어가 있어.\n\n" +
         "흐름은 이렇게 갈 거야.\n꿈 → 오늘 계획 → 실전 시뮬레이션 → 실행 → 인증 → 회고 → 다음 계획.\n\n" +
         "오늘 계획 화면에서 먼저 확인하고, 실전 체험 버튼을 눌러 상황 안으로 들어가자.";
+      noahReply = buildFlexibleNoahReply({ value, step, profile: nextProfile, coreReply });
       nextStep = "execute";
     } else {
-      if (includesAny(value, ["실전", "체험", "연습"])) {
-        setActiveView("simulation");
-        noahReply = "좋아. 실전 체험으로 넘어갈게. 내가 상황을 만들고 상대 역할을 할게.";
-      } else if (includesAny(value, ["회고", "돌아", "어땠"])) {
-        setActiveView("review");
-        noahReply = "좋아. 오늘 경험을 회고하면서 내일 계획으로 연결해보자.";
-      } else {
-        noahReply = "좋아. 지금 말한 것도 다음 계획에 반영할 수 있어. 오늘 계획이나 실전 체험에서 바로 이어가자.";
-      }
+      noahReply = buildNaturalExecuteReply(value);
+      if (includesAny(value, ["실전", "체험", "연습", "상황"])) setActiveView("simulation");
+      if (includesAny(value, ["회고", "돌아", "어땠", "느낀"])) setActiveView("review");
+    }
+
+    if (!noahReply && getStepHint(nextStep)) {
+      noahReply = getStepHint(nextStep);
     }
 
     setProfile(nextProfile);
