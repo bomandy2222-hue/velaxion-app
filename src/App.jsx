@@ -922,19 +922,16 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  if (page === "noah") {
-    return <NoahApp onBack={goHome} />;
-  }
-
+  if (page === "noah") return <NoahExperienceApp onBack={goHome} />;
   return <LandingPage onStart={openNoah} onCommunity={() => setPage("home")} />;
 }
 
 const emotionOptions = [
   { id: "calm", emoji: "🙂", label: "괜찮음", mode: "원래 계획 유지" },
-  { id: "fire", emoji: "🔥", label: "의욕 넘침", mode: "도전 과제 추가" },
-  { id: "anxious", emoji: "😰", label: "불안함", mode: "핵심만 남기기" },
-  { id: "tired", emoji: "😴", label: "지침", mode: "가장 작은 단계" },
-  { id: "stress", emoji: "😵", label: "스트레스", mode: "하나만 실행" },
+  { id: "fire", emoji: "🔥", label: "의욕 넘침", mode: "조금 더 도전" },
+  { id: "anxious", emoji: "😰", label: "불안함", mode: "부담 줄이기" },
+  { id: "tired", emoji: "😴", label: "지침", mode: "최소 실행" },
+  { id: "stress", emoji: "😵", label: "스트레스", mode: "하나만 남기기" },
   { id: "blur", emoji: "😶", label: "집중 안됨", mode: "시작만 하기" },
 ];
 
@@ -942,8 +939,6 @@ const firstNoahMessage = {
   role: "noah",
   text: "안녕. 만나서 반가워 🌙\n먼저 네 이름이 뭐야?",
 };
-
-const analysisSteps = ["name", "dream", "why", "bestMoment", "dislike", "strength", "habit", "time"];
 
 function makeNoahMessage(text) {
   return { role: "noah", text };
@@ -953,12 +948,10 @@ function makeUserMessage(text) {
   return { role: "user", text };
 }
 
-function getId(prefix = "item") {
+function getId(prefix = "id") {
   try {
     if (crypto?.randomUUID) return crypto.randomUUID();
-  } catch {
-    // ignore
-  }
+  } catch {}
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
@@ -967,29 +960,36 @@ function includesAny(text, words) {
   return words.some((word) => source.includes(String(word).toLowerCase()));
 }
 
+function isNoPreferenceAnswer(value) {
+  const text = String(value || "").replace(/\s/g, "").toLowerCase();
+  return /딱히없|별로없|잘모르|모르겠|생각안나|없어|없음|아직모르|상관없|아무거나/.test(text) || text.length <= 3;
+}
+
 function extractNameFromInput(value) {
   const raw = String(value || "").trim();
   const patterns = [
-    /(?:내\s*이름은|제\s*이름은|나는|난|이름은)\s*([가-힣a-zA-Z]{2,20})(?:이야|야|입니다|이에요|예요|라고\s*해|라고\s*합니다)?/,
+    /(?:내\s*이름은|제\s*이름은|나는|난)\s*([가-힣a-zA-Z]{2,20})(?:이야|야|입니다|이에요|예요|라고\s*해|라고\s*합니다)?/,
     /^([가-힣a-zA-Z]{2,20})(?:이야|야|입니다|이에요|예요)?$/,
   ];
-
   for (const pattern of patterns) {
     const match = raw.match(pattern);
     if (match?.[1]) return match[1].trim();
   }
-
-  return (
-    raw
-      .replace(/내\s*이름은|제\s*이름은|나는|난|이름은|입니다|이에요|예요|이야|야|라고\s*해|라고\s*합니다/g, "")
-      .replace(/[^가-힣a-zA-Z]/g, "")
-      .trim() || "친구"
-  );
+  return raw
+    .replace(/내\s*이름은|제\s*이름은|나는|난|입니다|이에요|예요|이야|야|라고\s*해|라고\s*합니다/g, "")
+    .replace(/[^가-힣a-zA-Z]/g, "")
+    .trim() || raw;
 }
 
-function isNoPreferenceAnswer(value) {
-  const text = String(value || "").replace(/\s/g, "").toLowerCase();
-  return /딱히없|별로없|잘모르|모르겠|생각안나|없어|없음|아직모르|없다/.test(text) || text.length <= 3;
+function cleanGoalText(value) {
+  return String(value || "")
+    .replace(/나는|내가|되고\s*싶어|되고싶어|하고\s*싶어|하고싶어|꿈이야|꿈|목표야|목표/g, "")
+    .replace(/\s+/g, " ")
+    .trim() || "목표";
+}
+
+function goalLabel(profile) {
+  return cleanGoalText(profile?.dream || "목표");
 }
 
 function parseTimeToMinutes(time) {
@@ -1004,18 +1004,15 @@ function minutesToTime(total) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-function parseKoreanTimeExpression(raw, fallbackPeriod = "") {
+function parseKoreanTimeExpression(raw) {
   const text = String(raw || "").replace(/\s/g, "");
   const match = text.match(/(오전|오후|아침|저녁|밤|새벽)?(\d{1,2})(?:[:시](\d{1,2})?)?/);
   if (!match) return null;
-
-  const period = match[1] || fallbackPeriod || "";
+  const period = match[1] || "";
   let hour = Number(match[2]);
   const minute = match[3] ? Number(match[3]) : 0;
-
   if ((period === "오후" || period === "저녁" || period === "밤") && hour < 12) hour += 12;
   if ((period === "오전" || period === "아침" || period === "새벽") && hour === 12) hour = 0;
-
   return minutesToTime(hour * 60 + minute);
 }
 
@@ -1030,8 +1027,8 @@ function extractAvailableWindows(text) {
   while ((match = mentionRegex.exec(raw)) !== null) {
     const period = match[1] || lastPeriod;
     if (match[1]) lastPeriod = match[1];
-    const time = parseKoreanTimeExpression(match[0], period);
-    if (time) mentions.push({ time, period, index: match.index });
+    const time = parseKoreanTimeExpression(`${period || ""}${match[0]}`);
+    if (time) mentions.push({ time, index: match.index, text: match[0], period });
   }
 
   for (let i = 0; i < mentions.length - 1; i += 2) {
@@ -1041,21 +1038,55 @@ function extractAvailableWindows(text) {
     let endMin = parseTimeToMinutes(end.time);
     if (endMin <= startMin) endMin += 12 * 60;
     const duration = endMin - startMin;
-    if (duration >= 15) {
-      windows.push({ start: minutesToTime(startMin), end: minutesToTime(Math.min(endMin, 23 * 60 + 59)) });
-    }
+    if (duration >= 15) windows.push({ start: minutesToTime(startMin), end: minutesToTime(Math.min(endMin, 23 * 60 + 59)) });
   }
 
   if (!windows.length && mentions.length === 1) {
     const one = mentions[0].time;
     windows.push({ start: one, end: minutesToTime(parseTimeToMinutes(one) + 90) });
   }
-
-  if (!windows.length) {
-    windows.push({ start: "20:00", end: "21:30" });
-  }
-
+  if (!windows.length) windows.push({ start: "20:00", end: "21:30" });
   return windows;
+}
+
+function getAvailabilityMinutes(timeText) {
+  return extractAvailableWindows(timeText).reduce((sum, window) => sum + Math.max(0, parseTimeToMinutes(window.end) - parseTimeToMinutes(window.start)), 0);
+}
+
+function getPlanCountFromAvailability(timeText) {
+  const total = getAvailabilityMinutes(timeText);
+  if (total <= 35) return 2;
+  if (total <= 90) return 3;
+  if (total <= 180) return 5;
+  if (total <= 360) return 7;
+  return 9;
+}
+
+function buildScheduleTimes(timeText, desiredCount = 6) {
+  const windows = extractAvailableWindows(timeText);
+  const totalAvailable = windows.reduce((sum, window) => sum + Math.max(0, parseTimeToMinutes(window.end) - parseTimeToMinutes(window.start)), 0);
+  const count = Math.max(1, desiredCount);
+  const times = [];
+
+  windows.forEach((window) => {
+    const start = parseTimeToMinutes(window.start);
+    const end = parseTimeToMinutes(window.end);
+    const duration = Math.max(0, end - start);
+    if (duration < 15) return;
+    const windowCount = Math.max(1, Math.round((duration / Math.max(totalAvailable, 1)) * count));
+    const step = Math.max(25, Math.floor(duration / Math.max(windowCount, 1)));
+    let current = start;
+    for (let i = 0; i < windowCount && current <= end - 10; i += 1) {
+      times.push(minutesToTime(current));
+      current += step;
+    }
+  });
+
+  while (times.length < count) {
+    const last = times.length ? parseTimeToMinutes(times[times.length - 1]) + 30 : parseTimeToMinutes("20:00");
+    times.push(minutesToTime(last));
+  }
+  return [...new Set(times)].slice(0, count);
 }
 
 function formatTimeKorean(time) {
@@ -1068,215 +1099,202 @@ function formatTimeKorean(time) {
   return `${period} ${displayHour}시 ${minute}분`;
 }
 
-function totalAvailableMinutes(timeText) {
-  return extractAvailableWindows(timeText).reduce((sum, window) => {
-    return sum + Math.max(0, parseTimeToMinutes(window.end) - parseTimeToMinutes(window.start));
-  }, 0);
-}
-
-function getPlanCountFromAvailability(timeText) {
-  const total = totalAvailableMinutes(timeText);
-  if (total <= 35) return 2;
-  if (total <= 90) return 3;
-  if (total <= 150) return 4;
-  if (total <= 240) return 6;
-  if (total <= 420) return 8;
-  return 10;
-}
-
-function buildScheduleTimes(timeText, desiredCount = 6) {
-  const windows = extractAvailableWindows(timeText);
-  const total = Math.max(1, totalAvailableMinutes(timeText));
-  const times = [];
-
-  windows.forEach((window) => {
-    const start = parseTimeToMinutes(window.start);
-    const end = parseTimeToMinutes(window.end);
-    const duration = Math.max(0, end - start);
-    if (duration < 15) return;
-    const countForWindow = Math.max(1, Math.round((duration / total) * desiredCount));
-    const step = Math.max(20, Math.floor(duration / countForWindow));
-    let current = start;
-    for (let i = 0; i < countForWindow && current <= end - 10; i += 1) {
-      times.push(minutesToTime(current));
-      current += step;
-    }
-  });
-
-  while (times.length < desiredCount) {
-    const last = times.length ? parseTimeToMinutes(times[times.length - 1]) + 30 : 20 * 60;
-    times.push(minutesToTime(last));
-  }
-
-  return [...new Set(times)].slice(0, desiredCount);
-}
-
-function cleanGoalText(value) {
-  return (
-    String(value || "")
-      .replace(/나는|내가|되고\s*싶어|되고싶어|하고\s*싶어|하고싶어|꿈이야|꿈|목표야|목표/g, "")
-      .replace(/\s+/g, " ")
-      .trim() || "목표"
-  );
-}
-
-function goalLabel(profile) {
-  return cleanGoalText(profile?.dream || "목표");
-}
-
-function compactAction(text) {
-  return String(text || "")
-    .replace(/\s+/g, " ")
-    .replace(/조사하기/g, "찾아보고 3줄 적기")
-    .replace(/분석하기/g, "좋은 점 1개와 부족한 점 1개 적기")
-    .replace(/공부하기/g, "핵심 3줄 읽고 직접 써보기")
-    .replace(/생각하기/g, "한 줄로 적기")
-    .trim();
-}
-
-function makePlanItem(time, title, status = "locked", kind = "action") {
-  return {
-    id: getId(kind),
-    time,
-    title: compactAction(title),
-    originalTitle: compactAction(title),
-    kind,
-    status,
-    proofImage: "",
-    note: "",
-    simulation: null,
-    reflection: "",
-  };
-}
-
-function chooseActions(profile) {
+function getScenarioType(profile) {
   const dream = String(profile.dream || "");
+  if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크"])) return "gamer";
+  if (includesAny(dream, ["건물주", "부동산", "임대", "월세", "상가", "아파트"])) return "realestate";
+  if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업", "사업가"])) return "business";
+  if (includesAny(dream, ["면접", "취업", "회사원", "직장", "입사"])) return "interview";
+  if (includesAny(dream, ["발표", "스피치", "유튜브", "콘텐츠", "크리에이터"])) return "presentation";
+  if (includesAny(dream, ["돈", "부자", "경제", "투자", "주식", "수익", "자산", "경제적 자유"])) return "money";
+  if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) return "study";
+  return "general";
+}
+
+function getScenario(profile) {
+  const type = getScenarioType(profile);
+  const goal = goalLabel(profile);
+  const map = {
+    business: {
+      type,
+      title: "카페에서 만난 첫 고객",
+      location: "작은 카페, 창가 자리",
+      role: "노아가 잠재 고객 역할",
+      video: "/videos/simulation-business.mp4",
+      poster: "/videos/simulation-business.jpg",
+      opening: "안녕하세요. 당신 서비스가 뭔지 궁금해서 왔어요. 제 시간을 써서 들어야 할 이유가 뭔가요?",
+      pressure: "좋아요. 그런데 제가 돈을 내야 할 만큼 아픈 문제인지 아직 모르겠어요. 더 쉽게 설명해줄 수 있나요?",
+      good: "고객 입장에서 이해되는 표현이 하나 생겼어. 다음에는 더 짧고 구체적으로 말하면 좋아.",
+    },
+    realestate: {
+      type,
+      title: "부동산 사무실 상담",
+      location: "중개사무소 상담 테이블",
+      role: "노아가 중개사 겸 투자자 역할",
+      video: "/videos/simulation-realestate.mp4",
+      poster: "/videos/simulation-realestate.jpg",
+      opening: "예산과 목표 월세가 어떻게 되나요? 이 매물을 왜 선택하려는지도 말해보세요.",
+      pressure: "좋습니다. 그런데 공실이 3개월 생기면 버틸 수 있나요? 위험을 어떻게 계산할 건가요?",
+      good: "좋아. 숫자로 판단하려는 방향이 생겼어. 감이 아니라 기준으로 보는 훈련을 계속하자.",
+    },
+    gamer: {
+      type,
+      title: "프로 경기 분석실",
+      location: "어두운 분석실, 경기 화면 앞",
+      role: "노아가 코치 역할",
+      video: "/videos/simulation-gamer.mp4",
+      poster: "/videos/simulation-gamer.jpg",
+      opening: "상대 핵심 선수가 지도에서 사라졌어. 지금 네가 확인해야 할 정보 3개를 말해봐.",
+      pressure: "좋아. 그런데 팀원이 무리하게 들어가려고 해. 넌 어떤 콜을 할 거야?",
+      good: "판단 순서가 생기고 있어. 상황을 보기 전에 먼저 확인할 기준을 정한 게 좋아.",
+    },
+    interview: {
+      type,
+      title: "실전 면접실",
+      location: "회의실, 면접관 맞은편",
+      role: "노아가 면접관 역할",
+      video: "/videos/simulation-interview.mp4",
+      poster: "/videos/simulation-interview.jpg",
+      opening: "자기소개를 해보세요. 그리고 왜 이 일을 하고 싶은지도 함께 말해주세요.",
+      pressure: "좋습니다. 그런데 다른 지원자 대신 당신을 뽑아야 하는 이유는 뭔가요?",
+      good: "답변의 뼈대가 생겼어. 다음에는 경험 하나를 붙이면 더 설득력 있어.",
+    },
+    presentation: {
+      type,
+      title: "작은 발표 무대",
+      location: "조용한 발표실, 앞에 청중 5명",
+      role: "노아가 청중 역할",
+      video: "/videos/simulation-presentation.mp4",
+      poster: "/videos/simulation-presentation.jpg",
+      opening: "지금부터 네 아이디어를 30초 안에 설명해줘. 듣는 사람이 바로 이해해야 해.",
+      pressure: "좋아요. 그런데 핵심이 조금 흐려요. 한 문장으로 다시 말하면 뭐예요?",
+      good: "핵심 문장을 줄이는 감각이 생겼어. 청중은 짧고 선명한 말을 기억해.",
+    },
+    money: {
+      type,
+      title: "투자 판단 회의",
+      location: "노트북 앞, 숫자와 차트가 열린 책상",
+      role: "노아가 리스크 질문자 역할",
+      video: "/videos/simulation-money.mp4",
+      poster: "/videos/simulation-money.jpg",
+      opening: "이 선택으로 돈을 벌 수 있다고 생각하는 이유를 말해봐. 숫자와 위험을 같이 말해야 해.",
+      pressure: "좋아. 그런데 네 예상이 틀렸을 때 가장 먼저 무너지는 지점은 어디야?",
+      good: "위험을 같이 보는 습관이 생기고 있어. 수익보다 먼저 생존을 보는 게 좋아.",
+    },
+    study: {
+      type,
+      title: "시험 직전 코칭룸",
+      location: "책상, 문제집과 타이머",
+      role: "노아가 시험 코치 역할",
+      video: "/videos/simulation-study.mp4",
+      poster: "/videos/simulation-study.jpg",
+      opening: "지금 이 문제를 틀렸다고 가정하자. 왜 틀렸는지 원인을 세 가지 중 하나로 골라봐. 지식 부족, 실수, 시간 부족.",
+      pressure: "좋아. 그럼 같은 실수를 줄이기 위해 다음 문제에서 어떤 확인을 먼저 할 거야?",
+      good: "틀린 이유를 나누는 습관이 생겼어. 이게 점수를 올리는 핵심이야.",
+    },
+    general: {
+      type,
+      title: `${goal} 실전 첫 장면`,
+      location: "현실처럼 구성된 연습 공간",
+      role: "노아가 상황 상대 역할",
+      video: "/videos/simulation-general.mp4",
+      poster: "/videos/simulation-general.jpg",
+      opening: `${goal}를 실제로 시작해야 하는 순간이야. 지금 가장 먼저 어떤 행동을 할 건지 말해봐.`,
+      pressure: "좋아. 그런데 예상과 다르게 막혔어. 다음 선택은 뭐야?",
+      good: "실제 상황에서 멈추지 않고 다음 행동을 고르는 힘이 생기고 있어.",
+    },
+  };
+  return map[type] || map.general;
+}
+
+function buildActions(profile) {
+  const type = getScenarioType(profile);
+  const goal = goalLabel(profile);
   const joined = [profile.dream, profile.why, profile.bestMoment, profile.strength, profile.habit, profile.dislike].join(" ");
-  const prefersPeople = includesAny(joined, ["사람", "대화", "소통", "고객", "설득", "팀", "협업"]);
-  const avoidsPeople = includesAny(profile.dislike, ["사람", "평가", "앞", "부담", "낯", "시선"]);
-  const goal = goalLabel(profile);
+  const analysis = includesAny(joined, ["분석", "패턴", "심리", "전략", "숫자", "비교"]);
+  const people = includesAny(joined, ["사람", "대화", "소통", "고객", "팀", "설득"]);
+  const avoidsPeople = includesAny(profile.dislike, ["사람", "평가", "시선", "부담"]);
 
-  if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크"])) {
-    return [
-      "프로 경기 1판 보기",
-      "잘한 장면 3개와 내가 따라 할 장면 1개 적기",
-      "실전 시뮬레이션: 상대가 압박하는 상황에서 판단 연습하기",
-      "직접 게임 1판 하기. 방금 정한 장면 하나만 의식해서 적용하기",
-      "리플레이에서 진 장면 1개 멈춰놓고 왜 졌는지 3줄 적기",
-      "같은 상황을 다시 만났을 때 할 행동 1개 정하기",
-      "오늘 결과를 사진으로 인증하기",
-      "오늘 가장 어려웠던 판단 1개 회고하기",
-    ];
-  }
-
-  if (includesAny(dream, ["건물주", "부동산", "임대", "월세", "상가", "아파트"])) {
-    return [
-      "내가 원하는 월세 수입 목표를 숫자로 적기",
-      "관심 지역 1곳을 고르고 교통/일자리/수요 중 2개로 이유 적기",
-      "매물 2개를 찾아 가격과 예상 월세를 나란히 적기",
-      "실전 시뮬레이션: 중개사가 추천한 매물을 바로 믿지 않고 질문하기",
-      "월세에서 대출이자와 관리비를 빼고 실제 남는 돈 계산하기",
-      "손해 볼 수 있는 이유 3가지를 적기",
-      "오늘 조사한 표를 사진으로 인증하기",
-      "내일 볼 지역 1곳 정하고 회고하기",
-    ];
-  }
-
-  if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업", "사업가"])) {
-    return [
+  const templates = {
+    business: [
       "내가 만들고 싶은 서비스나 상품을 한 줄로 적기",
-      "그 서비스를 가장 필요로 할 사람 1명을 떠올리고 상황/불편함 적기",
-      "그 사람이 오늘 겪을 문제 3가지를 적기",
-      prefersPeople && !avoidsPeople ? "실전 시뮬레이션: 고객에게 내 서비스를 설명해보기" : "실전 시뮬레이션: 고객이 돈을 내지 않겠다고 할 때 답하기",
-      prefersPeople && !avoidsPeople ? "그 고객과 비슷한 사람에게 물어볼 질문 5개 만들기" : "커뮤니티 글이나 댓글 5개에서 반복되는 불편함 표시하기",
-      "내 서비스가 해결할 문제 1개만 고르기",
-      "오늘 만든 내용을 사진으로 인증하기",
-      "내일 검증할 질문 1개 회고하기",
-    ];
-  }
+      "그 서비스를 가장 필요로 할 사람을 한 명 떠올리고, 상황과 불편함 적기",
+      people && !avoidsPeople ? "실전 체험에서 고객에게 서비스 설명 연습하기" : "실전 체험에서 고객 반박에 답하는 연습하기",
+      "실전에서 나온 질문을 바탕으로 제안 문장 한 줄 다시 쓰기",
+      "오늘 만든 제안 문장을 사진으로 인증하기",
+    ],
+    realestate: [
+      "내가 원하는 월세 수입 목표를 숫자로 적기",
+      "관심 지역 1곳과 매물 2개를 고르고 가격과 예상 월세 적기",
+      "실전 체험에서 중개사의 질문에 답하며 위험 계산 연습하기",
+      "월세에서 대출이자와 관리비를 빼고 실제 남는 돈 계산하기",
+      "오늘 조사표를 사진으로 인증하기",
+    ],
+    gamer: [
+      "프로 경기 1판 보기",
+      analysis ? "상대가 움직이기 전 보인 신호 3개 적기" : "내가 자주 지는 상황 1개 고르기",
+      "실전 체험에서 코치 질문에 답하며 판단 순서 연습하기",
+      "직접 1판 플레이하고 방금 정한 판단 하나만 적용하기",
+      "리플레이 장면을 사진으로 인증하고 실수 원인 1개 적기",
+    ],
+    interview: [
+      "자기소개 3문장 적기",
+      "내 경험 중 증명할 수 있는 사례 1개 고르기",
+      "실전 체험에서 면접관 질문에 답하기",
+      "막힌 질문을 다시 한 문장으로 고쳐 말하기",
+      "최종 답변을 사진으로 인증하기",
+    ],
+    presentation: [
+      "내 아이디어를 한 문장으로 적기",
+      "듣는 사람이 궁금해할 질문 3개 적기",
+      "실전 체험에서 30초 발표하기",
+      "노아가 물은 반박 질문에 다시 답하기",
+      "수정한 핵심 문장을 인증하기",
+    ],
+    money: [
+      "내가 원하는 경제적 자유 숫자를 적기",
+      "관심 있는 수익 방법 1개와 필요한 첫 능력 1개 적기",
+      "실전 체험에서 수익 이유와 위험을 말해보기",
+      "가장 큰 손실 위험 1개와 대비 행동 1개 적기",
+      "오늘 정리한 숫자를 사진으로 인증하기",
+    ],
+    study: [
+      "오늘 점수를 가장 빨리 올릴 약한 단원 1개 고르기",
+      "그 단원에서 자주 틀리는 유형 3개 적기",
+      "실전 체험에서 틀린 이유를 말로 설명하기",
+      "같은 유형 문제 3개 풀기",
+      "풀이 흔적을 사진으로 인증하기",
+    ],
+    general: [
+      `${goal}에 필요한 능력 3개 적기`,
+      `${goal}를 이미 해낸 사람의 행동 1개 고르기`,
+      "실전 체험에서 실제 상황 질문에 답하기",
+      "실전에서 막힌 부분을 다시 작은 행동 1개로 바꾸기",
+      "오늘 결과를 사진으로 인증하기",
+    ],
+  };
 
-  if (includesAny(dream, ["돈", "부자", "경제", "투자", "주식", "수익", "자산", "경제적 자유"])) {
-    return [
-      "내가 원하는 경제적 자유 숫자를 적기. 월 얼마가 필요한지 쓰기",
-      "현재 수입/지출/저축을 각각 한 줄로 적기",
-      "돈을 버는 방식 3개를 시간형/기술형/자산형으로 나누기",
-      "실전 시뮬레이션: 위험한 투자 제안을 받았을 때 판단하기",
-      "관심 있는 수익 방법 1개를 고르고 필요한 첫 능력 1개 적기",
-      "이번 주에 실제 돈의 흐름을 만들 수 있는 작은 행동 1개 정하기",
-      "오늘 배운 내용을 사진으로 인증하기",
-      "내일 확인할 돈 질문 1개 회고하기",
-    ];
-  }
-
-  if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) {
-    return [
-      "오늘 점수를 가장 빨리 올릴 단원 1개 고르기",
-      "그 단원에서 자주 틀리는 문제 유형 3개 적기",
-      "첫 번째 유형 문제 3개 풀기",
-      "실전 시뮬레이션: 시험장에서 시간이 부족한 상황 판단하기",
-      "틀린 이유를 지식 부족/실수/시간 부족 중 하나로 표시하기",
-      "틀린 문제 1개를 다시 풀고 풀이 과정을 사진으로 남기기",
-      "오늘 공부한 흔적을 사진으로 인증하기",
-      "내일 처음 풀 문제 1개 회고하기",
-    ];
-  }
-
-  if (includesAny(dream, ["운동", "몸", "헬스", "다이어트", "체력", "근육"])) {
-    return [
-      "오늘 몸 상태를 1분 확인하고 통증/피로/가능한 운동 적기",
-      "목표와 연결된 기본 동작 1개 고르기",
-      "정확한 자세로 3세트만 하기",
-      "실전 시뮬레이션: 운동을 포기하고 싶은 순간 대처하기",
-      "가장 힘든 구간과 쉬운 구간을 각각 1개 적기",
-      "운동 흔적을 사진으로 인증하기",
-      "오늘 컨디션 점수 1~10으로 남기기",
-      "내일 운동 강도 회고하기",
-    ];
-  }
-
-  return [
-    `${goal}를 이루기 위해 필요한 능력 3가지를 적기`,
-    `${goal}를 이미 이룬 사람 1명을 고르고 오늘 따라 할 행동 1개 적기`,
-    `${goal}에 가까워지는 작은 행동 1개를 20분 동안 직접 해보기`,
-    `실전 시뮬레이션: ${goal}를 실제 상황에서 설명하거나 선택해야 하는 장면 연습하기`,
-    `오늘 배운 내용을 내 말로 3줄 정리하기`,
-    `혼자 확인할 기준 3개 만들고 지금 내 상태 표시하기`,
-    `오늘 한 행동을 사진으로 인증하기`,
-    `내일 바로 이어갈 첫 행동 1개 회고하기`,
-  ];
+  return templates[type] || templates.general;
 }
 
-function buildPersonalPlan(profile) {
-  const desired = getPlanCountFromAvailability(profile.time || profile.habit || "20:00");
-  const baseActions = chooseActions(profile).map(compactAction);
-  const actions = expandActions(baseActions, profile, desired);
-  const times = buildScheduleTimes(profile.time || profile.habit || "20:00", actions.length);
-
-  return actions.map((action, index) => {
-    const kind = action.includes("실전 시뮬레이션") ? "simulation" : action.includes("인증") ? "proof" : action.includes("회고") ? "reflection" : "action";
-    return makePlanItem(times[index] || "20:00", action, index === 0 ? "open" : "locked", kind);
-  });
-}
-
-function expandActions(actions, profile, desiredCount) {
-  const goal = goalLabel(profile);
+function buildExperiencePlan(profile) {
+  const count = getPlanCountFromAvailability(profile.time || profile.habit || "20:00");
+  const base = buildActions(profile);
   const extras = [
-    `${goal}에 필요한 첫 능력 1개 적기`,
-    `그 능력을 오늘 20분 안에 연습할 방법 1개 적기`,
-    `실제로 20분 실행하기`,
-    `결과를 3줄로 기록하기`,
-    `부족했던 점 1개만 고르기`,
-    `실전 시뮬레이션: 예상되는 어려운 질문 1개에 답하기`,
-    `사진으로 인증하기`,
-    `내일 다시 할 행동 1개 정하기`,
+    `${goalLabel(profile)}를 위해 내일 이어갈 첫 행동 1개 정하기`,
+    "오늘 배운 점 3줄 기록하기",
+    "회고에서 가장 어려웠던 순간 1개 말하기",
   ];
-
-  const result = [];
-  [...actions, ...extras].forEach((action) => {
-    const clean = compactAction(action);
-    if (clean && !result.includes(clean) && result.length < desiredCount) result.push(clean);
-  });
-  return result;
+  const actions = [...base, ...extras].slice(0, Math.max(5, count));
+  const times = buildScheduleTimes(profile.time || profile.habit || "20:00", actions.length);
+  return actions.map((title, index) => ({
+    id: getId("plan"),
+    time: times[index] || minutesToTime(parseTimeToMinutes(times[0] || "20:00") + index * 30),
+    title,
+    phase: title.includes("실전 체험") ? "simulation" : index === actions.length - 1 ? "review" : "action",
+    status: index === 0 ? "open" : "locked",
+    proofImage: "",
+  }));
 }
 
 function unlockPlan(items) {
@@ -1291,78 +1309,25 @@ function unlockPlan(items) {
   });
 }
 
+function adjustItemsByEmotion(items, emotionId) {
+  return unlockPlan(items.map((item, index) => {
+    if (item.status === "done") return item;
+    const original = item.originalTitle || item.title;
+    let title = original;
+    if (emotionId === "fire" && item.phase !== "simulation") title = `${original} + 결과물 하나 더 남기기`;
+    if (emotionId === "anxious") title = item.phase === "simulation" ? original : `부담 줄여서 핵심만 하기: ${original}`;
+    if (emotionId === "tired") title = item.phase === "simulation" ? original : `가장 쉬운 첫 단계만 하기: ${original}`;
+    if (emotionId === "stress") title = item.phase === "simulation" ? original : `오늘은 이것 하나만 남기기: ${original}`;
+    if (emotionId === "blur") title = item.phase === "simulation" ? original : `타이머 5분 켜고 시작하기: ${original}`;
+    return { ...item, originalTitle: original, title };
+  }));
+}
+
 function getEmotionById(id) {
   return emotionOptions.find((item) => item.id === id) || emotionOptions[0];
 }
 
-function adjustItemsByEmotion(items, emotionId) {
-  const emotion = getEmotionById(emotionId);
-  return unlockPlan(
-    items.map((item, index) => {
-      if (item.status === "done") return item;
-      const original = item.originalTitle || item.title;
-      let title = original;
-      if (emotion.id === "fire") title = index === 0 ? `${original} + 결과물 하나 더 남기기` : original;
-      if (emotion.id === "anxious") title = index === 0 ? `부담을 낮춰서 핵심만 하기: ${original}` : original;
-      if (emotion.id === "tired") title = index === 0 ? `가장 쉬운 첫 단계만 하기: ${original}` : original;
-      if (emotion.id === "stress") title = index === 0 ? `오늘은 이것 하나만 남기기: ${original}` : original;
-      if (emotion.id === "blur") title = index === 0 ? `타이머 5분 켜고 시작하기: ${original}` : original;
-      return { ...item, originalTitle: original, title };
-    })
-  );
-}
-
-function buildSimulationScenario(profile, item) {
-  const dream = String(profile.dream || "");
-  if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업", "사업가"])) {
-    return {
-      role: "잠재 고객",
-      situation: "너는 지금 네 서비스를 처음 만난 고객에게 설명해야 해.",
-      firstQuestion: "좋아요. 그런데 제가 왜 그 서비스를 써야 하죠? 지금 쓰는 방법과 뭐가 다른가요?",
-      pressureQuestion: "그걸 돈 주고 써야 할 만큼 정말 필요한가요? 한 문장으로 설득해보세요.",
-    };
-  }
-  if (includesAny(dream, ["건물주", "부동산", "임대", "월세", "상가", "아파트"])) {
-    return {
-      role: "부동산 중개인",
-      situation: "중개인이 좋아 보이는 매물을 추천하고 있어. 바로 믿지 않고 판단해야 해.",
-      firstQuestion: "이 매물은 수익률이 좋아요. 바로 계약금 넣으셔도 됩니다. 어떤 걸 먼저 확인하실 건가요?",
-      pressureQuestion: "다른 사람이 먼저 계약할 수도 있어요. 그래도 확인해야 할 위험 3가지를 말해보세요.",
-    };
-  }
-  if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크"])) {
-    return {
-      role: "프로 코치",
-      situation: "상대가 예상 밖의 움직임을 보였고 팀원이 흔들리고 있어.",
-      firstQuestion: "상대 핵심 플레이어가 안 보입니다. 지금 너는 무엇을 확인하고 어떤 판단을 할 건가요?",
-      pressureQuestion: "팀원이 무리하게 들어가려고 합니다. 너라면 어떤 짧은 콜을 할 건가요?",
-    };
-  }
-  if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) {
-    return {
-      role: "시험 감독관",
-      situation: "시험 중 시간이 부족하고 어려운 문제가 나왔어.",
-      firstQuestion: "어려운 문제 하나에 시간이 오래 걸리고 있어요. 지금 넘길 건가요, 더 풀 건가요? 이유도 말해보세요.",
-      pressureQuestion: "남은 시간이 10분입니다. 점수를 최대한 지키기 위해 무엇부터 할 건가요?",
-    };
-  }
-  return {
-    role: "현실 상황의 상대역",
-    situation: `${goalLabel(profile)}를 실제로 해봐야 하는 상황이야. 내가 상대역이 될게.`,
-    firstQuestion: `좋아요. 지금 ${goalLabel(profile)}를 위해 무엇을 선택할 건가요? 이유도 말해보세요.`,
-    pressureQuestion: "현실에서는 시간이 부족하고 확신도 없습니다. 그래도 지금 할 첫 행동은 무엇인가요?",
-  };
-}
-
-function gradeSimulationAnswer(answer) {
-  const text = String(answer || "");
-  const score = Math.min(100, 35 + Math.min(text.length, 120) / 2 + (/[0-9]|첫|먼저|왜냐|이유|확인|기록|비교/.test(text) ? 20 : 0));
-  if (score >= 80) return "좋아. 답이 꽤 현실적이야. 특히 기준을 말한 점이 좋아.";
-  if (score >= 60) return "괜찮아. 방향은 맞아. 다만 더 구체적인 기준이나 숫자가 있으면 실전에서 흔들리지 않아.";
-  return "좋아, 시작은 했어. 이제 더 현실적으로 바꿔보자. ‘무엇을 확인할지’와 ‘왜 그렇게 할지’를 한 문장씩 넣으면 좋아.";
-}
-
-function NoahApp({ onBack }) {
+function NoahExperienceApp({ onBack }) {
   const [messages, setMessages] = useState([firstNoahMessage]);
   const [input, setInput] = useState("");
   const [step, setStep] = useState("name");
@@ -1370,17 +1335,17 @@ function NoahApp({ onBack }) {
   const [planItems, setPlanItems] = useState([]);
   const [activeView, setActiveView] = useState("chat");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeSimulationId, setActiveSimulationId] = useState("");
+  const [simulation, setSimulation] = useState({ started: false, turn: 0, messages: [] });
   const [simulationInput, setSimulationInput] = useState("");
-  const [reflectionInput, setReflectionInput] = useState("");
-  const chatBottomRef = useRef(null);
+  const [reviewText, setReviewText] = useState("");
   const chatAreaRef = useRef(null);
+  const chatBottomRef = useRef(null);
   const fileInputRef = useRef(null);
   const pendingProofIndexRef = useRef(null);
 
   const completedCount = planItems.filter((item) => item.status === "done").length;
   const currentOpenIndex = planItems.findIndex((item) => item.status === "open");
-  const activeSimulationItem = planItems.find((item) => item.id === activeSimulationId) || planItems.find((item) => item.kind === "simulation") || null;
+  const scenario = getScenario(profile);
 
   useEffect(() => {
     if (activeView !== "chat") return;
@@ -1392,16 +1357,13 @@ function NoahApp({ onBack }) {
     scrollToBottom();
     const timers = [0, 60, 160, 320].map((delay) => setTimeout(scrollToBottom, delay));
     const frame = requestAnimationFrame(scrollToBottom);
-    return () => {
-      timers.forEach(clearTimeout);
-      cancelAnimationFrame(frame);
-    };
+    return () => { timers.forEach(clearTimeout); cancelAnimationFrame(frame); };
   }, [messages.length, activeView, input, step]);
 
   const progressText = useMemo(() => {
     if (!profile.name) return "처음 만나는 중";
     if (!profile.dream) return `${profile.name}의 꿈을 찾는 중`;
-    if (planItems.length === 0) return "사용자 성향 파악 중";
+    if (!planItems.length) return "사용자 성향 파악 중";
     return `${completedCount}/${planItems.length} 완료`;
   }, [profile, planItems.length, completedCount]);
 
@@ -1414,6 +1376,7 @@ function NoahApp({ onBack }) {
     if (step === "strength") return ["분석하는 걸 잘해", "한번 꽂히면 오래 파고들어", "경쟁하면 집중이 잘돼"];
     if (step === "habit") return ["저녁에 집중이 잘돼", "혼자 할 때 더 몰입돼", "누가 같이 확인해주면 더 잘해"];
     if (step === "time") return ["오전 8시부터 8시 30분까지, 오후 4시부터 10시까지 가능해", "학교 끝나고 오후 6시부터 2시간 가능해", "하루에 30분 정도 가능해"];
+    if (step === "execute") return ["실전 체험부터 해볼래", "오늘 계획을 다시 조정해줘", "회고로 넘어가고 싶어"];
     return [];
   };
 
@@ -1421,9 +1384,9 @@ function NoahApp({ onBack }) {
     const value = input.trim();
     if (!value) return;
     const nextMessages = [...messages, makeUserMessage(value)];
+    const nextProfile = { ...profile };
     let noahReply = "";
     let nextStep = step;
-    const nextProfile = { ...profile };
 
     if (step === "name") {
       const cleanName = extractNameFromInput(value);
@@ -1436,14 +1399,15 @@ function NoahApp({ onBack }) {
         `좋아. ${nextProfile.name || "너"}, 그 꿈 기억할게.\n\n` +
         "가능해. 무조건 말이야.\n\n" +
         "내가 너를 거기에 좀 더 빠르게 데려다줄 뿐이지.\n" +
-        "다시 한번 말해줄게.\n\n" +
-        "너는 갈 수 있어.\n그 이유는 네가 이미 달라졌기 때문이야.\n나를 찾아왔잖아.\n\n" +
-        "근데 바로 계획부터 짜지 않을게.\n너한테 맞는 계획과 실전 훈련을 만들려면 먼저 너를 알아야 해.\n\n" +
-        "그 꿈을 왜 이루고 싶어?\n돈, 자유, 인정, 재미, 증명하고 싶은 마음 전부 괜찮아.\n진짜 이유를 편하게 말해줘.";
+        "다시 한번 말해줄게. 너는 갈 수 있어.\n" +
+        "그 이유는 네가 이미 달라졌기 때문이야. 나를 찾아왔잖아.\n\n" +
+        "근데 바로 계획부터 짜지 않을게.\n" +
+        "너한테 맞는 계획과 실전 상황을 만들려면 먼저 너를 알아야 해.\n\n" +
+        "그 꿈을 왜 이루고 싶어?\n돈, 자유, 인정, 재미, 증명하고 싶은 마음 전부 괜찮아.";
       nextStep = "why";
     } else if (step === "why") {
       nextProfile.why = value;
-      noahReply = `${nextProfile.name || "좋아"}. 그 이유를 기준으로 방향을 잡을게.\n\n${nextProfile.dream || "그 꿈"}과 관련해서 네가 가장 재미있거나 몰입되는 순간은 언제야?`;
+      noahReply = `${nextProfile.name || "좋아"}. 네가 말한 이유를 기준으로 방향을 잡을게.\n\n${nextProfile.dream || "그 꿈"}과 관련해서 네가 가장 재미있거나 몰입되는 순간은 언제야?`;
       nextStep = "bestMoment";
     } else if (step === "bestMoment") {
       nextProfile.bestMoment = value;
@@ -1452,14 +1416,14 @@ function NoahApp({ onBack }) {
     } else if (step === "dislike") {
       nextProfile.dislike = value;
       noahReply = isNoPreferenceAnswer(value)
-        ? "좋아. 아직 뚜렷하게 싫은 방식이 없다면 계획을 너무 좁히지 않고 시작해볼게.\n\n이번엔 네가 가진 쪽을 볼게. 주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야? 딱히 모르겠으면 그것도 괜찮아."
+        ? "좋아. 아직 뚜렷하게 싫은 방식이 없다면 넓게 시작해볼게. 하면서 지치는 지점이 나오면 바로 줄이면 돼.\n\n이번엔 네가 가진 쪽을 볼게. 주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?"
         : "좋아. 그 방식은 계획에서 최대한 피할게.\n\n이번엔 네가 가진 쪽을 볼게. 주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?";
       nextStep = "strength";
     } else if (step === "strength") {
       nextProfile.strength = value;
       noahReply = isNoPreferenceAnswer(value)
-        ? "괜찮아. 아직 강점이 선명하지 않아도 돼. 내가 계획과 실전 훈련 안에서 네가 잘 버티는 방식을 찾아볼게.\n\n평소 습관을 알려줘. 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?"
-        : "좋아. 그건 직접 말로 칭찬하기보다 계획 안에 녹일게.\n\n평소 습관도 중요해. 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
+        ? "괜찮아. 아직 강점이 선명하지 않은 사람도 많아. 그럼 실전 훈련 안에서 네가 잘 버티는 방식과 빨리 이해하는 방식을 찾아볼게.\n\n평소 습관을 알려줘. 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?"
+        : "좋아. 그건 말로 칭찬하기보다 계획과 실전 상황 안에 녹일게.\n\n평소 습관도 중요해. 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
       nextStep = "habit";
     } else if (step === "habit") {
       nextProfile.habit = value;
@@ -1467,16 +1431,26 @@ function NoahApp({ onBack }) {
       nextStep = "time";
     } else if (step === "time") {
       nextProfile.time = value;
-      const personalPlan = unlockPlan(buildPersonalPlan(nextProfile));
-      setPlanItems(personalPlan);
+      const plan = buildExperiencePlan(nextProfile);
+      setPlanItems(plan);
       setActiveView("plan");
       noahReply =
-        "좋아. 네가 말한 꿈, 이유, 좋아하는 방식, 싫어하는 방식, 가진 강점, 집중되는 시간까지 보고 오늘 흐름을 만들었어.\n\n" +
-        "이제 구조는 이렇게 갈 거야.\n\n꿈 → 사용자 분석 → 오늘 계획 → 실전 시뮬레이션 → 실행 → 인증 → 회고 → 다음 계획\n\n" +
-        "오늘 계획 화면에서 먼저 기분을 고르고, 실전 훈련까지 하나씩 진행하자.";
+        "좋아. 이제 네 답변을 바탕으로 오늘 계획을 만들었어.\n\n" +
+        "이번 구조는 단순 체크가 아니야.\n" +
+        "오늘 계획 안에 실전 체험이 들어가 있어.\n\n" +
+        "흐름은 이렇게 갈 거야.\n꿈 → 오늘 계획 → 실전 시뮬레이션 → 실행 → 인증 → 회고 → 다음 계획.\n\n" +
+        "오늘 계획 화면에서 먼저 확인하고, 실전 체험 버튼을 눌러 상황 안으로 들어가자.";
       nextStep = "execute";
     } else {
-      noahReply = "좋아. 지금 말한 것도 다음 계획과 실전 훈련에 반영할 수 있어. 오늘 계획에서 이어가자.";
+      if (includesAny(value, ["실전", "체험", "연습"])) {
+        setActiveView("simulation");
+        noahReply = "좋아. 실전 체험으로 넘어갈게. 내가 상황을 만들고 상대 역할을 할게.";
+      } else if (includesAny(value, ["회고", "돌아", "어땠"])) {
+        setActiveView("review");
+        noahReply = "좋아. 오늘 경험을 회고하면서 내일 계획으로 연결해보자.";
+      } else {
+        noahReply = "좋아. 지금 말한 것도 다음 계획에 반영할 수 있어. 오늘 계획이나 실전 체험에서 바로 이어가자.";
+      }
     }
 
     setProfile(nextProfile);
@@ -1489,14 +1463,8 @@ function NoahApp({ onBack }) {
     const emotion = getEmotionById(emotionId);
     setProfile((prev) => ({ ...prev, emotion: emotionId }));
     setPlanItems((prev) => adjustItemsByEmotion(prev, emotionId));
-    setMessages((prev) => [
-      ...prev,
-      makeNoahMessage(`오늘 기분을 ${emotion.emoji} ${emotion.label}로 반영했어. 목표는 유지하고 행동 크기만 조정했어.`),
-    ]);
-  };
-
-  const completeItem = (index, patch = {}) => {
-    setPlanItems((prev) => unlockPlan(prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch, status: "done" } : item))));
+    setMessages((prev) => [...prev, makeNoahMessage(`오늘 기분은 ${emotion.emoji} ${emotion.label}이구나. 오늘 계획 화면에서 행동 크기만 조정해뒀어.`)]);
+    setActiveView("plan");
   };
 
   const openProofPicker = (index) => {
@@ -1505,255 +1473,116 @@ function NoahApp({ onBack }) {
     fileInputRef.current?.click();
   };
 
+  const markSimulationDone = () => {
+    setPlanItems((prev) => {
+      const simIndex = prev.findIndex((item) => item.phase === "simulation" && item.status !== "done");
+      if (simIndex < 0) return prev;
+      return unlockPlan(prev.map((item, index) => index === simIndex ? { ...item, status: "done" } : item));
+    });
+    setActiveView("plan");
+  };
+
   const handleProofImage = (event) => {
     const file = event.target.files?.[0];
     const index = pendingProofIndexRef.current;
     if (!file || index === null || index === undefined) return;
     const url = URL.createObjectURL(file);
-    completeItem(index, { proofImage: url });
-    setMessages((prev) => [...prev, makeNoahMessage("좋아. 인증 완료. 다음 단계가 열렸어.")]);
+    setPlanItems((prev) => unlockPlan(prev.map((item, itemIndex) => itemIndex === index ? { ...item, status: "done", proofImage: url } : item)));
+    setMessages((prev) => [...prev, makeNoahMessage(index >= planItems.length - 1 ? "좋아. 오늘 계획을 전부 증명했어. 이제 회고로 넘어가자." : "좋아. 하나 인증했어. 다음 계획이 열렸어.")]);
     pendingProofIndexRef.current = null;
     event.target.value = "";
   };
 
-  const startSimulation = (item) => {
-    const scenario = buildSimulationScenario(profile, item);
-    setPlanItems((prev) => prev.map((target) => (target.id === item.id ? { ...target, simulation: scenario } : target)));
-    setActiveSimulationId(item.id);
-    setSimulationInput("");
-    setActiveView("simulation");
-  };
-
   const submitSimulation = () => {
-    if (!activeSimulationItem || !simulationInput.trim()) return;
-    const index = planItems.findIndex((item) => item.id === activeSimulationItem.id);
-    const feedback = gradeSimulationAnswer(simulationInput);
-    completeItem(index, { note: `${simulationInput}\n\n노아 피드백: ${feedback}` });
-    setMessages((prev) => [...prev, makeNoahMessage(`실전 훈련 완료.\n${feedback}\n\n오늘 계획에서 다음 실행으로 넘어가자.`)]);
+    const value = simulationInput.trim();
+    if (!value) return;
+    const nextTurn = simulation.turn + 1;
+    let aiText = "";
+    if (simulation.turn === 0) aiText = scenario.pressure;
+    else if (simulation.turn === 1) aiText = `${scenario.good}\n\n마지막으로, 지금 경험에서 실제 행동으로 옮길 한 가지를 말해봐.`;
+    else aiText = "좋아. 실전 체험은 여기까지야. 이제 오늘 계획으로 돌아가서 실제 실행과 인증을 하자.";
+    setSimulation((prev) => ({
+      started: true,
+      turn: nextTurn,
+      messages: [...prev.messages, { role: "user", text: value }, { role: "noah", text: aiText }],
+    }));
     setSimulationInput("");
-    setActiveView("plan");
+    if (nextTurn >= 3) markSimulationDone();
   };
 
-  const submitReflection = (item, index) => {
-    if (!reflectionInput.trim()) return;
-    completeItem(index, { reflection: reflectionInput });
-    setMessages((prev) => [
-      ...prev,
-      makeNoahMessage(`회고까지 완료했어.\n내일은 오늘 어려웠던 부분을 더 작게 쪼개서 이어가면 돼.`),
-    ]);
-    setReflectionInput("");
-    setActiveView("plan");
+  const startSimulation = () => {
+    setSimulation({ started: true, turn: 0, messages: [{ role: "noah", text: scenario.opening }] });
+  };
+
+  const submitReview = () => {
+    const text = reviewText.trim();
+    if (!text) return;
+    const nextAction = text.includes("어려") || text.includes("힘들") ? "내일은 오늘 막힌 부분 하나만 더 작게 쪼개서 다시 해보자." : "내일은 오늘 잘 된 행동을 한 번 더 반복해서 흐름을 만들자.";
+    setMessages((prev) => [...prev, makeUserMessage(`회고: ${text}`), makeNoahMessage(`좋아. 오늘 회고 기억할게.\n\n${nextAction}`)]);
+    setReviewText("");
+    setActiveView("chat");
   };
 
   return (
-    <div className="noah-app">
-      <style>{styles}</style>
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="side-logo">NOAH</div>
-        <button className={`side-item ${activeView === "chat" ? "active" : ""}`} onClick={() => setActiveView("chat")}>노아 채팅</button>
-        <button className={`side-item ${activeView === "plan" ? "active" : ""}`} onClick={() => setActiveView("plan")}>오늘 계획</button>
-        <button className={`side-item ${activeView === "simulation" ? "active" : ""}`} onClick={() => setActiveView("simulation")}>실전 훈련</button>
-        <button className={`side-item ${activeView === "reflect" ? "active" : ""}`} onClick={() => setActiveView("reflect")}>회고</button>
-        <div className="side-card"><span>현재 상태</span><strong>{progressText}</strong></div>
-        {planItems.length > 0 ? (
-          <div className="side-mini-plan">
-            <div className="side-mini-head"><span>다음 실행</span><strong>{completedCount}/{planItems.length}</strong></div>
-            {currentOpenIndex >= 0 ? <div className="mini-current"><b>{formatTimeKorean(planItems[currentOpenIndex].time)}</b><p>{planItems[currentOpenIndex].title}</p></div> : <div className="mini-current"><b>완료</b><p>오늘 흐름을 모두 끝냈어.</p></div>}
-          </div>
-        ) : null}
+    <div className="noah-experience-app">
+      <style>{experienceStyles}</style>
+      <aside className={`nx-sidebar ${sidebarOpen ? "open" : ""}`}>
+        <div className="nx-logo">NOAH</div>
+        <button className={`nx-side-item ${activeView === "chat" ? "active" : ""}`} onClick={() => setActiveView("chat")}>노아 채팅</button>
+        <button className={`nx-side-item ${activeView === "plan" ? "active" : ""}`} onClick={() => setActiveView("plan")}>오늘 계획</button>
+        <button className={`nx-side-item ${activeView === "simulation" ? "active" : ""}`} onClick={() => setActiveView("simulation")}>실전 체험</button>
+        <button className={`nx-side-item ${activeView === "review" ? "active" : ""}`} onClick={() => setActiveView("review")}>회고</button>
+        <div className="nx-side-card"><span>현재 상태</span><strong>{progressText}</strong></div>
+        {currentOpenIndex >= 0 ? <div className="nx-next"><span>다음 실행</span><b>{formatTimeKorean(planItems[currentOpenIndex]?.time)}</b><p>{planItems[currentOpenIndex]?.title}</p></div> : null}
       </aside>
 
-      <main className="main">
-        <header className="topbar">
-          <button className="icon-btn" onClick={() => setSidebarOpen((v) => !v)}>☰</button>
-          <div className="brand"><span>NOAH</span><small>AI 실전 훈련장</small></div>
-          <div className="top-actions"><div className="top-pill">꿈을 경험으로</div><button className="home-btn" onClick={onBack}>홈</button></div>
+      <main className="nx-main">
+        <header className="nx-topbar">
+          <button className="nx-icon" onClick={() => setSidebarOpen((v) => !v)}>☰</button>
+          <div className="nx-brand"><span>NOAH</span><small>AI 실전 훈련장</small></div>
+          <button className="nx-home" onClick={onBack}>홈</button>
         </header>
-        <div className="aurora aurora-one" /><div className="aurora aurora-two" /><div className="stars" />
 
         {activeView === "chat" ? (
-          <ChatView messages={messages} input={input} setInput={setInput} sendMessage={sendMessage} suggestions={getSuggestedReplies()} chatAreaRef={chatAreaRef} chatBottomRef={chatBottomRef} />
+          <section className="nx-chat" ref={chatAreaRef}>
+            <div className="nx-hero"><p>NOAH EXPERIENCE</p><h1>꿈을 말하고, 현실처럼 연습해</h1><span>계획만 주는 AI가 아니라 상황을 만들어 실전 경험까지 시켜줄게.</span></div>
+            <div className="nx-messages">
+              {messages.map((message, index) => <div key={index} className={`nx-message ${message.role}`}><div className="nx-avatar">{message.role === "noah" ? "🌙" : "나"}</div><div className="nx-bubble">{message.role === "noah" ? <div className="nx-label">NOAH · 경험 설계 중</div> : null}{message.text.split("\n").map((line, i) => <Fragment key={i}>{line}<br /></Fragment>)}</div></div>)}
+              {getSuggestedReplies().length ? <div className="nx-suggestions">{getSuggestedReplies().map((reply) => <button key={reply} onClick={() => setInput(reply)}>{reply}</button>)}</div> : null}
+              <div ref={chatBottomRef} />
+            </div>
+          </section>
+        ) : activeView === "plan" ? (
+          <PlanExperienceView planItems={planItems} completedCount={completedCount} onProof={openProofPicker} onSimulation={() => setActiveView("simulation")} emotionOptions={emotionOptions} activeEmotion={profile.emotion} onEmotion={selectEmotion} />
         ) : activeView === "simulation" ? (
-          <SimulationView item={activeSimulationItem} profile={profile} input={simulationInput} setInput={setSimulationInput} onSubmit={submitSimulation} />
-        ) : activeView === "reflect" ? (
-          <ReflectView planItems={planItems} input={reflectionInput} setInput={setReflectionInput} onSubmit={submitReflection} />
+          <SimulationView scenario={scenario} simulation={simulation} startSimulation={startSimulation} simulationInput={simulationInput} setSimulationInput={setSimulationInput} submitSimulation={submitSimulation} markSimulationDone={markSimulationDone} />
         ) : (
-          <PlanView planItems={planItems} completedCount={completedCount} emotionOptions={emotionOptions} activeEmotion={profile.emotion} onEmotion={selectEmotion} onProof={openProofPicker} onComplete={completeItem} onSimulation={startSimulation} onReflect={() => setActiveView("reflect")} />
+          <ReviewView reviewText={reviewText} setReviewText={setReviewText} submitReview={submitReview} profile={profile} planItems={planItems} />
         )}
 
-        {activeView === "chat" ? (
-          <footer className="composer"><div className="input-shell"><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="노아에게 말해보세요..." rows={1} /><button onClick={sendMessage}>➜</button></div></footer>
-        ) : null}
+        {activeView === "chat" ? <footer className="nx-composer"><div className="nx-input-shell"><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="노아에게 말해보세요..." rows={1} /><button onClick={sendMessage}>➜</button></div></footer> : null}
         <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleProofImage} hidden />
       </main>
     </div>
   );
 }
 
-function ChatView({ messages, input, setInput, sendMessage, suggestions, chatAreaRef, chatBottomRef }) {
-  return (
-    <section className="chat-area" ref={chatAreaRef}>
-      <div className="hero-title"><p>NOAH</p><h1>꿈을 오늘의 경험으로</h1><span>계획만 세우지 않고, 실전 상황까지 미리 연습해.</span></div>
-      <div className="messages">
-        {messages.map((message, index) => (
-          <div key={index} className={`message-row ${message.role}`}>
-            <div className="avatar">{message.role === "noah" ? "🌙" : "나"}</div>
-            <div className="bubble">{message.role === "noah" && <div className="bubble-label">NOAH · 함께 가는 중</div>}{message.text.split("\n").map((line, lineIndex) => <Fragment key={lineIndex}>{line}<br /></Fragment>)}</div>
-          </div>
-        ))}
-      </div>
-      {suggestions.length ? <div className="suggestion-row">{suggestions.map((reply) => <button key={reply} onClick={() => setInput(reply)}>{reply}</button>)}</div> : null}
-      <div ref={chatBottomRef} />
-    </section>
-  );
-}
-
-function PlanView({ planItems, completedCount, emotionOptions, activeEmotion, onEmotion, onProof, onComplete, onSimulation, onReflect }) {
+function PlanExperienceView({ planItems, completedCount, onProof, onSimulation, emotionOptions, activeEmotion, onEmotion }) {
   const emotion = getEmotionById(activeEmotion);
-  return (
-    <section className="page-view plan-view">
-      <div className="view-header"><p>NOAH FLOW</p><h1>오늘 계획</h1><span>오늘 계획 안에 실전 훈련, 실행, 인증, 회고가 순서대로 들어가 있어.</span></div>
-      {planItems.length === 0 ? (
-        <div className="empty-plan"><h2>아직 오늘 계획이 없어.</h2><p>노아 채팅에서 꿈과 시간을 알려주면 여기에서 계획이 만들어져.</p></div>
-      ) : (
-        <div className="plan-board">
-          <div className="plan-emotion-card"><div><h2>오늘 기분은 어때?</h2><p>기분을 고르면 목표는 그대로 두고 오늘 행동 크기만 조정할게.</p></div><div className="emotion-grid">{emotionOptions.map((item) => <button key={item.id} className={activeEmotion === item.id ? "selected" : ""} onClick={() => onEmotion(item.id)}><span>{item.emoji}</span><strong>{item.label}</strong><small>{item.mode}</small></button>)}</div>{activeEmotion ? <p className="emotion-result">오늘 상태: {emotion.emoji} {emotion.label} — 계획을 조정했어.</p> : null}</div>
-          <div className="plan-progress"><span>오늘 완료</span><strong>{completedCount}/{planItems.length}</strong></div>
-          {planItems.map((item, index) => <PlanCard key={item.id} item={item} index={index} onProof={onProof} onComplete={onComplete} onSimulation={onSimulation} onReflect={onReflect} />)}
-        </div>
-      )}
-    </section>
-  );
+  return <section className="nx-page"><div className="nx-page-head"><p>TODAY PLAN</p><h1>오늘 계획</h1><span>오늘 계획 안에 실전 체험이 들어가 있어. 연습하고, 실행하고, 인증하고, 회고까지 이어가.</span></div>{planItems.length === 0 ? <div className="nx-empty"><h2>아직 오늘 계획이 없어.</h2><p>노아 채팅에서 꿈과 시간을 말하면 계획과 실전 상황을 만들어줄게.</p></div> : <div className="nx-plan-board"><div className="nx-emotion-card"><div><h2>오늘 기분은 어때?</h2><p>목표는 그대로 두고 오늘 행동의 크기만 조정할게.</p></div><div className="nx-emotion-grid">{emotionOptions.map((item) => <button key={item.id} className={activeEmotion === item.id ? "selected" : ""} onClick={() => onEmotion(item.id)}><span>{item.emoji}</span><strong>{item.label}</strong><small>{item.mode}</small></button>)}</div>{activeEmotion ? <p className="nx-emotion-result">오늘 상태: {emotion.emoji} {emotion.label}</p> : null}</div><div className="nx-progress"><span>오늘 완료</span><strong>{completedCount}/{planItems.length}</strong></div>{planItems.map((item, index) => <article key={item.id} className={`nx-plan-card ${item.status} ${item.phase}`}><div className="nx-plan-time"><strong>{formatTimeKorean(item.time)}</strong><span>{item.phase === "simulation" ? "실전 체험" : item.phase === "review" ? "회고" : "실행"}</span></div><p>{item.title}</p>{item.proofImage ? <img src={item.proofImage} alt="인증 사진" /> : null}{item.phase === "simulation" ? <button disabled={item.status === "locked"} onClick={onSimulation}>{item.status === "done" ? "실전 완료" : item.status === "open" ? "실전 체험 시작" : "이전 계획 필요"}</button> : <button disabled={item.status !== "open"} onClick={() => onProof(index)}>{item.status === "done" ? "인증 완료" : item.status === "open" ? "사진 인증" : "이전 계획 인증 필요"}</button>}</article>)}</div>}</section>;
 }
 
-function PlanCard({ item, index, onProof, onComplete, onSimulation, onReflect }) {
-  const labelMap = { action: "실행", simulation: "실전 훈련", proof: "인증", reflection: "회고" };
-  return (
-    <article className={`plan-card ${item.status} ${item.kind}`}>
-      <div className="plan-time"><strong>{formatTimeKorean(item.time)}</strong><span>{labelMap[item.kind] || "실행"} · {item.status === "done" ? "완료" : item.status === "open" ? "진행 가능" : "잠김"}</span></div>
-      <p>{item.title}</p>
-      {item.note ? <div className="plan-note">{item.note}</div> : null}
-      {item.proofImage ? <img src={item.proofImage} alt="인증 사진" /> : null}
-      {item.kind === "simulation" ? <button disabled={item.status !== "open"} onClick={() => onSimulation(item)}>실전 훈련 시작</button> : null}
-      {item.kind === "proof" ? <button disabled={item.status !== "open"} onClick={() => onProof(index)}>{item.status === "done" ? "인증 완료" : "사진 인증"}</button> : null}
-      {item.kind === "reflection" ? <button disabled={item.status !== "open"} onClick={onReflect}>회고 작성</button> : null}
-      {item.kind === "action" ? <button disabled={item.status !== "open"} onClick={() => onComplete(index, { note: "실행 완료" })}>{item.status === "done" ? "완료" : "실행 완료"}</button> : null}
-    </article>
-  );
+function SimulationView({ scenario, simulation, startSimulation, simulationInput, setSimulationInput, submitSimulation, markSimulationDone }) {
+  return <section className="nx-page nx-sim-page"><div className="nx-page-head"><p>REALISTIC SIMULATION</p><h1>실전 체험</h1><span>상황을 영상처럼 보여주고, 노아가 실제 상대 역할을 하면서 질문해.</span></div><div className="nx-sim-grid"><div className="nx-scene"><video autoPlay muted loop playsInline poster={scenario.poster}><source src={scenario.video} type="video/mp4" /></video><div className="nx-scene-fallback"><div className="nx-scene-orb" /><h2>{scenario.title}</h2><p>{scenario.location}</p></div><div className="nx-scene-caption"><span>{scenario.role}</span><strong>{scenario.title}</strong><p>{scenario.location}</p></div></div><div className="nx-roleplay"><div className="nx-role-head"><span>상황 상대</span><strong>{scenario.role}</strong></div>{!simulation.started ? <div className="nx-start-box"><p>{scenario.opening}</p><button onClick={startSimulation}>실전 시작</button></div> : <div className="nx-sim-chat">{simulation.messages.map((message, index) => <div key={index} className={`nx-sim-msg ${message.role}`}><span>{message.role === "noah" ? "상대" : "나"}</span><p>{message.text}</p></div>)}<div className="nx-sim-input"><textarea value={simulationInput} onChange={(e) => setSimulationInput(e.target.value)} placeholder="실제 상황이라고 생각하고 답해봐..." rows={3} /><button onClick={submitSimulation}>답변</button></div><button className="nx-secondary" onClick={markSimulationDone}>실전 체험 완료 처리</button></div>}</div></div></section>;
 }
 
-function SimulationView({ item, profile, input, setInput, onSubmit }) {
-  const scenario = item?.simulation || buildSimulationScenario(profile, item || {});
-  return (
-    <section className="page-view simulation-view">
-      <div className="view-header"><p>NOAH SIMULATION</p><h1>실전 훈련</h1><span>노아가 현실 상황의 상대역이 되어줘. 답해보면 피드백을 받고 다음 실행으로 넘어가.</span></div>
-      <div className="simulation-card">
-        <div className="scenario-badge">{scenario.role}</div>
-        <h2>{scenario.situation}</h2>
-        <div className="scenario-question"><strong>상황 질문</strong><p>{scenario.firstQuestion}</p><p>{scenario.pressureQuestion}</p></div>
-        <textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="여기에 실제로 대답하듯이 써봐..." />
-        <button onClick={onSubmit}>실전 답변 제출</button>
-      </div>
-    </section>
-  );
+function ReviewView({ reviewText, setReviewText, submitReview, profile, planItems }) {
+  const done = planItems.filter((item) => item.status === "done").length;
+  return <section className="nx-page"><div className="nx-page-head"><p>REVIEW</p><h1>회고</h1><span>실전에서 막힌 지점이 다음 계획의 재료가 돼.</span></div><div className="nx-review-card"><h2>{profile.name || "우리"}, 오늘 어땠어?</h2><p>완료한 것: {done}개. 가장 어려웠던 순간, 잘 된 점, 내일 바꿀 점을 편하게 적어줘.</p><textarea value={reviewText} onChange={(e) => setReviewText(e.target.value)} placeholder="예: 고객 질문에 답하는 게 어려웠어. 다음엔 더 짧게 말하고 싶어." rows={6} /><button onClick={submitReview}>회고 저장하고 다음 계획으로 연결</button></div></section>;
 }
 
-function ReflectView({ planItems, input, setInput, onSubmit }) {
-  const targetIndex = planItems.findIndex((item) => item.kind === "reflection" && item.status === "open");
-  const target = targetIndex >= 0 ? planItems[targetIndex] : null;
-  return (
-    <section className="page-view reflect-view">
-      <div className="view-header"><p>NOAH REFLECTION</p><h1>회고</h1><span>오늘 경험에서 배운 것을 내일 계획으로 이어가는 단계야.</span></div>
-      <div className="simulation-card">
-        {target ? <><h2>오늘 가장 어려웠던 건 뭐였어?</h2><p>잘 된 점 1개, 어려웠던 점 1개, 내일 바꿀 점 1개를 적어줘.</p><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="예: 고객에게 설명하는 게 어려웠어. 내일은 한 문장으로 줄여볼게." /><button onClick={() => onSubmit(target, targetIndex)}>회고 완료</button></> : <><h2>아직 회고 단계가 열리지 않았어.</h2><p>오늘 계획을 순서대로 진행하면 회고가 열려.</p></>}
-      </div>
-    </section>
-  );
-}
-
-const styles = `
-* { box-sizing: border-box; }
-html, body, #root { width: 100%; height: 100%; min-height: 100%; margin: 0; overflow: hidden; }
-body { background: #080a14; font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-button, textarea { font-family: inherit; }
-.noah-app { height: 100vh; color: rgba(255,255,255,0.92); background: radial-gradient(circle at 22% 8%, rgba(168,85,247,0.22), transparent 28%), radial-gradient(circle at 78% 10%, rgba(96,165,250,0.18), transparent 30%), linear-gradient(180deg, #080a14 0%, #0b1020 46%, #101322 100%); display: flex; overflow: hidden; position: relative; }
-.sidebar { width: 290px; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid rgba(255,255,255,0.08); background: rgba(8,10,20,0.78); backdrop-filter: blur(22px); z-index: 10; }
-.side-logo { letter-spacing: 0.35em; font-size: 18px; font-weight: 900; margin: 0 0 34px 8px; }
-.side-item { width: 100%; border: 0; color: rgba(255,255,255,0.72); background: transparent; text-align: left; padding: 15px 16px; border-radius: 16px; cursor: pointer; margin-bottom: 8px; font-weight: 800; }
-.side-item.active, .side-item:hover { background: rgba(255,255,255,0.09); color: white; }
-.side-card, .side-mini-plan { margin-top: 26px; padding: 18px; border-radius: 22px; background: linear-gradient(135deg, rgba(168,85,247,0.22), rgba(96,165,250,0.14)); border: 1px solid rgba(255,255,255,0.1); }
-.side-card span, .side-mini-head span { display: block; font-size: 12px; color: rgba(255,255,255,0.58); margin-bottom: 8px; }
-.side-card strong, .side-mini-head strong { font-size: 16px; }
-.side-mini-plan { background: rgba(255,255,255,0.055); }
-.side-mini-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.mini-current { border: 1px solid rgba(125,211,252,0.22); background: rgba(96,165,250,0.08); border-radius: 18px; padding: 14px; }
-.mini-current b { display: block; margin-bottom: 8px; }
-.mini-current p { margin: 0; color: rgba(255,255,255,0.76); font-size: 13px; line-height: 1.55; }
-.main { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-.topbar { height: 72px; flex: 0 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; z-index: 5; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(8,10,20,0.42); backdrop-filter: blur(18px); }
-.icon-btn { width: 42px; height: 42px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; border-radius: 14px; cursor: pointer; }
-.brand { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.brand span { letter-spacing: 0.28em; font-weight: 900; }
-.brand small { color: rgba(255,255,255,0.48); font-size: 12px; }
-.top-actions { display: flex; align-items: center; gap: 10px; }
-.top-pill, .home-btn { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.78); font-size: 13px; border: 1px solid rgba(255,255,255,0.09); }
-.home-btn { cursor: pointer; font-weight: 800; }
-.aurora { position: absolute; width: 420px; height: 420px; border-radius: 999px; filter: blur(70px); opacity: 0.42; animation: float 11s ease-in-out infinite alternate; pointer-events: none; }
-.aurora-one { left: 16%; top: 8%; background: rgba(168,85,247,0.34); }
-.aurora-two { right: 8%; top: 28%; background: rgba(125,211,252,0.22); animation-delay: 1.8s; }
-.stars { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255,255,255,0.55) 1px, transparent 1px), radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px); background-size: 120px 120px, 190px 190px; opacity: 0.16; pointer-events: none; }
-@keyframes float { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(22px,28px,0) scale(1.08); } }
-.chat-area, .page-view { flex: 1; height: calc(100vh - 72px); overflow-y: auto; padding: 44px 22px 150px; z-index: 2; }
-.hero-title, .view-header { max-width: 900px; margin: 0 auto 28px; text-align: center; }
-.hero-title p, .view-header p { margin: 0 0 8px; color: rgba(255,255,255,0.48); letter-spacing: 0.35em; font-size: 13px; }
-.hero-title h1, .view-header h1 { margin: 0; font-size: clamp(34px,5vw,64px); letter-spacing: -0.06em; line-height: 1.05; }
-.hero-title span, .view-header span { display: block; margin-top: 16px; color: rgba(255,255,255,0.58); }
-.messages { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
-.message-row { display: flex; gap: 12px; align-items: flex-start; }
-.message-row.user { flex-direction: row-reverse; }
-.avatar { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 14px; display: grid; place-items: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08); font-size: 14px; }
-.bubble { max-width: min(680px,78vw); padding: 18px 20px; border-radius: 24px; line-height: 1.75; color: rgba(255,255,255,0.88); white-space: normal; }
-.message-row.noah .bubble { background: linear-gradient(135deg, rgba(255,255,255,0.09), rgba(168,85,247,0.09)); border: 1px solid rgba(255,255,255,0.09); backdrop-filter: blur(18px); box-shadow: 0 24px 80px rgba(0,0,0,0.18); }
-.message-row.user .bubble { background: rgba(255,255,255,0.14); }
-.bubble-label { font-size: 12px; color: rgba(255,255,255,0.44); margin-bottom: 8px; }
-.suggestion-row { max-width: 860px; margin: 18px auto 0; display: flex; gap: 10px; flex-wrap: wrap; }
-.suggestion-row button { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); border-radius: 999px; padding: 11px 14px; cursor: pointer; }
-.composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 22px 28px; background: linear-gradient(180deg, transparent, rgba(8,10,20,0.88) 34%, rgba(8,10,20,0.98)); z-index: 6; }
-.input-shell { max-width: 860px; margin: 0 auto; min-height: 62px; border-radius: 26px; padding: 10px 10px 10px 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; gap: 12px; backdrop-filter: blur(22px); box-shadow: 0 24px 80px rgba(0,0,0,0.25); }
-.input-shell textarea { flex: 1; resize: none; border: 0; outline: none; color: white; background: transparent; font-size: 16px; line-height: 1.45; max-height: 120px; }
-.input-shell textarea::placeholder { color: rgba(255,255,255,0.42); }
-.input-shell button { width: 46px; height: 46px; border: 0; border-radius: 18px; cursor: pointer; color: white; font-size: 20px; background: linear-gradient(135deg, rgba(168,85,247,0.95), rgba(96,165,250,0.9)); }
-.plan-board { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; }
-.plan-progress, .empty-plan, .view-card, .plan-emotion-card, .simulation-card { padding: 24px; border-radius: 28px; background: rgba(255,255,255,0.075); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(22px); }
-.plan-emotion-card h2, .simulation-card h2 { margin: 0 0 8px; }
-.plan-emotion-card p, .simulation-card p { margin: 0; color: rgba(255,255,255,0.66); line-height: 1.7; }
-.emotion-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.emotion-grid button { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.07); color: white; border-radius: 20px; padding: 16px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: transform 160ms ease, background 160ms ease; }
-.emotion-grid button.selected, .emotion-grid button:hover { transform: translateY(-2px); background: rgba(255,255,255,0.12); }
-.emotion-grid span { font-size: 24px; }
-.emotion-grid small { color: rgba(255,255,255,0.48); }
-.emotion-result { margin-top: 14px !important; color: rgba(255,255,255,0.78) !important; }
-.plan-progress { display: flex; justify-content: space-between; align-items: center; }
-.plan-progress span { color: rgba(255,255,255,0.6); }
-.plan-progress strong { font-size: 24px; }
-.plan-card { padding: 22px; border-radius: 26px; background: rgba(255,255,255,0.065); border: 1px solid rgba(255,255,255,0.09); }
-.plan-card.open { border-color: rgba(96,165,250,0.52); background: rgba(96,165,250,0.10); }
-.plan-card.done { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.08); }
-.plan-card.locked { opacity: 0.56; }
-.plan-card.simulation.open { border-color: rgba(168,85,247,0.55); background: rgba(168,85,247,0.1); }
-.plan-time { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.plan-time strong { font-size: 22px; }
-.plan-time span { color: rgba(255,255,255,0.58); font-size: 13px; }
-.plan-card p { margin: 0 0 16px; line-height: 1.7; color: rgba(255,255,255,0.84); }
-.plan-note { white-space: pre-line; padding: 14px; border-radius: 16px; background: rgba(0,0,0,0.22); color: rgba(255,255,255,0.74); margin-bottom: 14px; line-height: 1.6; }
-.plan-card img { width: 120px; height: 120px; border-radius: 20px; object-fit: cover; display: block; margin-bottom: 14px; }
-.plan-card button, .simulation-card button { width: 100%; border: 0; background: linear-gradient(135deg, rgba(168,85,247,0.9), rgba(96,165,250,0.86)); color: white; padding: 14px 16px; border-radius: 16px; cursor: pointer; font-weight: 900; }
-.plan-card button:disabled { cursor: not-allowed; background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.42); }
-.simulation-card { max-width: 900px; margin: 0 auto; }
-.scenario-badge { display: inline-flex; padding: 8px 12px; border-radius: 999px; background: rgba(168,85,247,0.2); color: white; font-weight: 900; margin-bottom: 16px; }
-.scenario-question { margin: 18px 0; padding: 18px; border-radius: 20px; background: rgba(0,0,0,0.18); }
-.simulation-card textarea { width: 100%; min-height: 160px; resize: vertical; border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; background: rgba(255,255,255,0.08); color: white; padding: 16px; outline: none; margin: 18px 0; line-height: 1.6; }
-@media (max-width: 860px) { .noah-app { display: block; overflow: auto; } .sidebar { width: 100%; height: auto; max-height: 260px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.08); } .main { height: calc(100vh - 260px); min-height: 620px; } .top-pill { display: none; } .emotion-grid { grid-template-columns: repeat(2, 1fr); } .bubble { max-width: 82vw; } }
+const experienceStyles = `
+*{box-sizing:border-box}html,body,#root{width:100%;height:100%;margin:0;overflow:hidden}body{background:#080a14;font-family:Inter,Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,textarea{font-family:inherit}.noah-experience-app{height:100vh;color:rgba(255,255,255,.92);background:radial-gradient(circle at 22% 8%,rgba(168,85,247,.22),transparent 28%),radial-gradient(circle at 78% 10%,rgba(96,165,250,.18),transparent 30%),linear-gradient(180deg,#080a14 0%,#0b1020 46%,#101322 100%);display:flex;overflow:hidden}.nx-sidebar{width:292px;height:100vh;overflow-y:auto;padding:24px 18px;border-right:1px solid rgba(255,255,255,.08);background:rgba(8,10,20,.78);backdrop-filter:blur(22px);z-index:10}.nx-logo{letter-spacing:.35em;font-size:18px;font-weight:900;margin:0 0 34px 8px}.nx-side-item{width:100%;border:0;color:rgba(255,255,255,.72);background:transparent;text-align:left;padding:15px 16px;border-radius:16px;cursor:pointer;margin-bottom:8px;font-weight:850}.nx-side-item.active,.nx-side-item:hover{background:rgba(255,255,255,.09);color:white}.nx-side-card,.nx-next{margin-top:24px;padding:18px;border-radius:22px;background:linear-gradient(135deg,rgba(168,85,247,.22),rgba(96,165,250,.14));border:1px solid rgba(255,255,255,.1)}.nx-side-card span,.nx-next span{display:block;font-size:12px;color:rgba(255,255,255,.58);margin-bottom:8px}.nx-next{background:rgba(255,255,255,.055)}.nx-next b{display:block;margin:8px 0}.nx-next p{margin:0;color:rgba(255,255,255,.76);font-size:13px;line-height:1.55}.nx-main{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;height:100vh;overflow:hidden}.nx-topbar{height:72px;flex:0 0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;z-index:5;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(8,10,20,.42);backdrop-filter:blur(18px)}.nx-icon{width:42px;height:42px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:white;border-radius:14px;cursor:pointer}.nx-brand{display:flex;flex-direction:column;align-items:center;gap:2px}.nx-brand span{letter-spacing:.28em;font-weight:900}.nx-brand small{color:rgba(255,255,255,.48);font-size:12px}.nx-home{padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.07);color:rgba(255,255,255,.78);font-size:13px;border:1px solid rgba(255,255,255,.09);cursor:pointer;font-weight:800}.nx-chat{flex:1;overflow-y:auto;padding:34px 22px 150px;scroll-behavior:smooth}.nx-hero{max-width:880px;margin:0 auto 28px;text-align:center}.nx-hero p,.nx-page-head p{margin:0 0 8px;color:rgba(255,255,255,.48);letter-spacing:.28em;font-size:12px;font-weight:900}.nx-hero h1,.nx-page-head h1{margin:0;font-size:clamp(34px,5vw,62px);letter-spacing:-.06em;line-height:1.05}.nx-hero span,.nx-page-head span{display:block;margin-top:14px;color:rgba(255,255,255,.58)}.nx-messages{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:18px}.nx-message{display:flex;gap:12px;align-items:flex-start}.nx-message.user{flex-direction:row-reverse}.nx-avatar{flex:0 0 auto;width:38px;height:38px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);font-size:14px}.nx-bubble{max-width:min(720px,78vw);padding:18px 20px;border-radius:24px;line-height:1.78;color:rgba(255,255,255,.9);background:rgba(255,255,255,.14)}.nx-message.noah .nx-bubble{background:linear-gradient(135deg,rgba(255,255,255,.09),rgba(168,85,247,.09));border:1px solid rgba(255,255,255,.09);backdrop-filter:blur(18px)}.nx-label{font-size:12px;color:rgba(255,255,255,.44);margin-bottom:8px}.nx-suggestions{display:flex;gap:10px;flex-wrap:wrap;padding-left:50px}.nx-suggestions button{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:rgba(255,255,255,.8);border-radius:999px;padding:11px 14px;cursor:pointer}.nx-composer{position:absolute;left:0;right:0;bottom:0;padding:20px 22px 28px;background:linear-gradient(180deg,transparent,rgba(8,10,20,.88) 34%,rgba(8,10,20,.98));z-index:6}.nx-input-shell{max-width:900px;margin:0 auto;min-height:62px;border-radius:26px;padding:10px 10px 10px 20px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:12px;backdrop-filter:blur(22px);box-shadow:0 24px 80px rgba(0,0,0,.25)}.nx-input-shell textarea{flex:1;resize:none;border:0;outline:none;color:white;background:transparent;font-size:16px;line-height:1.45;max-height:120px}.nx-input-shell button,.nx-plan-card button,.nx-start-box button,.nx-sim-input button,.nx-review-card button{border:0;border-radius:18px;cursor:pointer;color:white;font-weight:900;background:linear-gradient(135deg,rgba(168,85,247,.95),rgba(96,165,250,.9));padding:14px 18px}.nx-page{flex:1;overflow-y:auto;padding:40px 34px 80px}.nx-page-head{max-width:1080px;margin:0 auto 24px}.nx-empty,.nx-plan-board,.nx-review-card{max-width:1080px;margin:0 auto;padding:24px;border-radius:30px;background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(22px)}.nx-emotion-card{padding:20px;border-radius:24px;background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.08);margin-bottom:18px}.nx-emotion-card h2{margin:0 0 8px}.nx-emotion-card p{margin:0;color:rgba(255,255,255,.62);line-height:1.65}.nx-emotion-grid{margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.nx-emotion-grid button{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.07);color:white;border-radius:18px;padding:14px 10px;cursor:pointer;display:flex;flex-direction:column;gap:4px}.nx-emotion-grid button.selected{background:rgba(96,165,250,.18);border-color:rgba(96,165,250,.45)}.nx-progress{display:flex;justify-content:space-between;align-items:center;margin:18px 0;color:rgba(255,255,255,.7)}.nx-plan-card{padding:18px;border-radius:24px;background:rgba(255,255,255,.065);border:1px solid rgba(255,255,255,.09);margin-bottom:14px}.nx-plan-card.open{border-color:rgba(96,165,250,.45);background:rgba(96,165,250,.09)}.nx-plan-card.done{border-color:rgba(52,211,153,.42);background:rgba(52,211,153,.08)}.nx-plan-card.locked{opacity:.45}.nx-plan-time{display:flex;justify-content:space-between;align-items:center;gap:12px}.nx-plan-time strong{font-size:18px}.nx-plan-time span{font-size:12px;color:rgba(255,255,255,.58)}.nx-plan-card p{line-height:1.65;color:rgba(255,255,255,.84)}.nx-plan-card img{width:90px;height:90px;object-fit:cover;border-radius:18px;display:block;margin-bottom:12px}.nx-plan-card button:disabled{opacity:.42;cursor:not-allowed;background:rgba(255,255,255,.14)}.nx-sim-grid{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:22px}.nx-scene,.nx-roleplay{border-radius:30px;background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.1);overflow:hidden;min-height:520px;position:relative}.nx-scene video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}.nx-scene-fallback{position:absolute;inset:0;display:grid;place-items:center;text-align:center;background:radial-gradient(circle at 50% 28%,rgba(96,165,250,.34),transparent 32%),linear-gradient(135deg,rgba(15,23,42,.95),rgba(88,28,135,.52),rgba(8,10,20,.95))}.nx-scene-orb{width:160px;height:160px;border-radius:999px;background:rgba(255,255,255,.12);filter:blur(10px);box-shadow:0 0 90px rgba(125,211,252,.32);margin:auto}.nx-scene-fallback h2{position:absolute;bottom:110px;left:28px;right:28px;font-size:38px;letter-spacing:-.04em}.nx-scene-fallback p{position:absolute;bottom:82px;left:28px;right:28px;color:rgba(255,255,255,.68)}.nx-scene-caption{position:absolute;left:22px;right:22px;bottom:22px;padding:18px;border-radius:22px;background:rgba(0,0,0,.32);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.12)}.nx-scene-caption span{color:rgba(255,255,255,.58);font-size:12px}.nx-scene-caption strong{display:block;margin:6px 0;font-size:20px}.nx-scene-caption p{margin:0;color:rgba(255,255,255,.68)}.nx-roleplay{padding:22px;overflow-y:auto}.nx-role-head span{display:block;color:rgba(255,255,255,.5);font-size:12px;margin-bottom:6px}.nx-role-head strong{font-size:22px}.nx-start-box{margin-top:24px;padding:20px;border-radius:24px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08)}.nx-start-box p{line-height:1.75}.nx-sim-chat{margin-top:22px;display:flex;flex-direction:column;gap:14px}.nx-sim-msg{padding:14px 16px;border-radius:20px;background:rgba(255,255,255,.08)}.nx-sim-msg.user{background:rgba(96,165,250,.14)}.nx-sim-msg span{display:block;font-size:12px;color:rgba(255,255,255,.5);margin-bottom:6px}.nx-sim-msg p{margin:0;line-height:1.65}.nx-sim-input{display:flex;gap:10px;align-items:flex-end}.nx-sim-input textarea,.nx-review-card textarea{flex:1;width:100%;resize:vertical;border:1px solid rgba(255,255,255,.1);outline:none;color:white;background:rgba(255,255,255,.07);border-radius:18px;padding:14px;font-size:15px;line-height:1.55}.nx-secondary{background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.12)!important}.nx-review-card h2{font-size:28px;margin:0 0 10px}.nx-review-card p{color:rgba(255,255,255,.66);line-height:1.7}.nx-review-card textarea{margin:18px 0}@media(max-width:920px){.noah-experience-app{display:block;overflow:auto}.nx-sidebar{width:100%;height:auto;max-height:280px;border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}.nx-main{height:calc(100vh - 280px);min-height:650px}.nx-sim-grid{grid-template-columns:1fr}.nx-scene,.nx-roleplay{min-height:390px}.nx-emotion-grid{grid-template-columns:repeat(2,1fr)}.nx-chat{padding:28px 14px 150px}.nx-bubble{max-width:82vw}.nx-suggestions{padding-left:0}}
 `;
 
 
