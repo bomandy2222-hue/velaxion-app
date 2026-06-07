@@ -1208,118 +1208,197 @@ function getScenario(profile) {
 }
 
 
-function makeUnexpectedSimulationSteps(type, planTitle, goal) {
-  const cleanPlan = String(planTitle || "오늘 계획").replace(/\s+/g, " ").trim();
-  const cleanGoal = String(goal || "목표").replace(/\s+/g, " ").trim();
+function inferSimulationKind(profile, planTitle = "") {
+  const dream = String(profile?.dream || "");
+  const plan = String(planTitle || "");
+  const joined = `${dream} ${plan}`;
 
-  if (type === "business") {
-    return [
-      `안녕하세요. 저는 잠재 고객이에요. 지금 계획이 “${cleanPlan}” 맞죠? 먼저 당신이 하려는 걸 한 문장으로 설명해보세요.`,
-      "잠깐만요. 저는 그걸 왜 써야 하는지 아직 잘 모르겠어요. 제 불편함을 기준으로 다시 말해줄래요?",
-      "가격이 있거나 시간이 들어간다면 망설일 것 같아요. 제가 지금 바로 관심 가져야 할 이유 하나만 말해보세요.",
-      "좋아요. 그런데 비슷한 걸 이미 본 적이 있어요. 당신 방식이 다른 점은 뭐예요?",
-      "마지막으로, 이 대화를 끝내고 실제 행동으로 옮길 다음 한 가지를 말해보세요.",
-    ];
+  if (includesAny(joined, ["부지", "매물", "아파트", "상가", "월세", "임대", "공실", "수익률", "대출", "중개", "부동산", "건물주"])) return "realestate";
+  if (includesAny(joined, ["고객", "서비스", "상품", "창업", "사업", "제안", "인터뷰", "문제", "불편", "구매", "가격"])) return "business";
+  if (includesAny(joined, ["프로 경기", "게임", "랭크", "리플레이", "상대", "정글", "포지션", "캐릭터", "판", "코치"])) return "gamer";
+  if (includesAny(joined, ["면접", "자기소개", "지원", "회사", "입사", "취업", "직무"])) return "interview";
+  if (includesAny(joined, ["발표", "스피치", "청중", "콘텐츠", "유튜브", "설명", "무대"])) return "presentation";
+  if (includesAny(joined, ["투자", "주식", "수익", "손실", "자산", "경제", "돈", "현금흐름", "리스크"])) return "money";
+  if (includesAny(joined, ["문제", "단원", "시험", "공부", "풀이", "오답", "성적", "자격증"])) return "study";
+  return getScenarioType(profile);
+}
+
+function getPlanDetail(planTitle = "", goal = "목표") {
+  const plan = String(planTitle || "오늘 계획").replace(/\s+/g, " ").trim();
+  const lower = plan.toLowerCase();
+
+  if (includesAny(plan, ["부지", "매물", "아파트", "상가", "지역", "월세", "공실", "수익률", "대출", "관리비"])) {
+    return {
+      title: "중개사와 현장 판단 대화",
+      location: "부동산 중개사무소 / 현장 답사 자리",
+      role: "상대방(중개사)",
+      issue: "좋아 보이는 매물 안에 숨어 있는 공실, 접근성, 비용 문제를 짚어내는 상황",
+      first: `이 매물은 위치는 괜찮아 보이지만, 주변 상권이 약하고 공실 위험이 있습니다. 그래도 ${plan}을 진행하려는 이유가 있으신가요?`,
+      steps: [
+        `이 매물은 위치는 괜찮아 보이지만, 주변 상권이 약하고 공실 위험이 있습니다. 그래도 ${plan}을 진행하려는 이유가 있으신가요?`,
+        "만약 예상보다 월세가 낮게 잡히면 수익률이 바로 흔들릴 수 있습니다. 어떤 숫자를 먼저 다시 확인하시겠습니까?",
+        "도로 접근성은 괜찮지만 유동인구가 적은 시간대가 있습니다. 직접 확인한다면 무엇을 보시겠습니까?",
+        "매도자는 장점만 말하고 있습니다. 투자자로서 반드시 물어봐야 할 불편한 질문 2가지는 무엇입니까?",
+        "좋습니다. 그럼 오늘 실제 조사로 가져갈 판단 기준 한 문장을 말해보세요.",
+      ],
+    };
   }
 
-  if (type === "realestate" || type === "money") {
-    return [
-      `좋아요. 지금 계획이 “${cleanPlan}”이죠. 저는 보수적인 투자자 역할을 할게요. 이 선택을 왜 검토하려는지 말해보세요.`,
-      "예상과 다르게 비용이 더 나왔어요. 어떤 숫자를 먼저 다시 확인할 건가요?",
-      "수익이 좋아 보여도 위험이 숨어 있을 수 있어요. 가장 먼저 의심해야 할 부분은 뭐라고 봐요?",
-      "만약 오늘 결정하지 못한다면, 내일 판단을 위해 꼭 확인해야 할 자료 하나는 뭐예요?",
-      "마지막으로, 감이 아니라 기준으로 남길 판단 문장 하나를 말해보세요.",
-    ];
+  if (includesAny(plan, ["고객", "서비스", "상품", "제안", "인터뷰", "불편", "문제", "가격", "구매", "팔", "사업"])) {
+    return {
+      title: "잠재 고객과 첫 대화",
+      location: "카페 / DM / 고객 인터뷰 상황",
+      role: "상대방(잠재 고객)",
+      issue: "고객이 관심은 있지만 돈과 시간을 쓸 이유를 아직 못 느끼는 상황",
+      first: `말은 좋은데, 제가 왜 굳이 이걸 써야 하죠? ${plan}을 제 입장에서 쉽게 설명해보세요.`,
+      steps: [
+        `말은 좋은데, 제가 왜 굳이 이걸 써야 하죠? ${plan}을 제 입장에서 쉽게 설명해보세요.`,
+        "제가 지금 겪는 불편함이 뭔지 정확히 짚어주지 못하면 관심이 안 생길 것 같아요. 제 문제를 한 문장으로 말해볼래요?",
+        "비슷한 서비스가 이미 있다면 당신 방식이 다른 점은 뭔가요?",
+        "가격을 내야 한다면 망설여질 것 같아요. 제가 돈을 낼 이유 하나만 더 구체적으로 말해주세요.",
+        "좋아요. 이 대화 뒤에 실제로 고객에게 물어볼 질문 1개를 정해보세요.",
+      ],
+    };
   }
 
-  if (type === "gamer") {
-    return [
-      `지금은 경기 중이라고 생각해요. 오늘 계획 “${cleanPlan}”을 실제 상황에 적용해야 해요. 상대가 예상 밖으로 움직였어요. 먼저 뭘 확인할 건가요?`,
-      "팀원이 무리하게 들어가려 해요. 지금 어떤 콜을 할 건가요?",
-      "방금 판단이 틀렸다고 가정해볼게요. 다음에는 어떤 정보가 더 필요했을까요?",
-      "같은 상황이 다시 나오면 바로 할 행동 하나를 짧게 말해보세요.",
-      "마지막으로, 오늘 실전 게임에서 의식할 규칙 하나를 정해보세요.",
-    ];
+  if (includesAny(plan, ["프로 경기", "경기", "리플레이", "상대", "판", "게임", "랭크", "코치", "포지션", "캐릭터"])) {
+    return {
+      title: "경기 중 돌발 판단 상황",
+      location: "경기 분석실 / 실제 게임 상황",
+      role: "상대방(코치)",
+      issue: "연습한 장면과 다르게 상대가 움직여서 즉시 판단해야 하는 상황",
+      first: `방금 ${plan}을 했다고 치자. 그런데 실제 경기에서 상대가 예상과 다르게 움직였어. 지금 가장 먼저 확인할 정보 3개는 뭐야?`,
+      steps: [
+        `방금 ${plan}을 했다고 치자. 그런데 실제 경기에서 상대가 예상과 다르게 움직였어. 지금 가장 먼저 확인할 정보 3개는 뭐야?`,
+        "팀원이 무리하게 들어가려고 해. 네가 지금 바로 해야 할 콜은 뭐야?",
+        "방금 판단이 틀렸다고 가정해보자. 부족했던 정보는 무엇이었을까?",
+        "같은 상황이 다시 나오면 3초 안에 할 행동 하나만 말해봐.",
+        "좋아. 오늘 실제 플레이에서 의식할 규칙 한 문장으로 정리해봐.",
+      ],
+    };
   }
 
-  if (type === "interview") {
-    return [
-      `면접실이라고 생각해요. 오늘 계획 “${cleanPlan}”을 바탕으로 답해볼게요. 먼저 자기소개처럼 짧게 말해보세요.`,
-      "좋아요. 그런데 면접관인 제가 보기엔 아직 근거가 부족해요. 실제 경험 하나를 붙여 말해보세요.",
-      "다른 지원자와 비교해서 당신을 뽑아야 하는 이유는 뭐예요?",
-      "답변이 길어졌어요. 핵심만 한 문장으로 다시 말해보세요.",
-      "마지막으로, 실제 면접에서 가장 먼저 꺼낼 문장 하나를 말해보세요.",
-    ];
+  if (includesAny(plan, ["면접", "자기소개", "지원", "직무", "회사", "경험", "이력서"])) {
+    return {
+      title: "면접관의 압박 질문",
+      location: "면접실",
+      role: "상대방(면접관)",
+      issue: "준비한 답변을 말했지만 면접관이 근거와 차별점을 더 요구하는 상황",
+      first: `${plan}을 준비했다고 들었습니다. 그럼 먼저 30초 안에 말해보세요. 왜 당신이어야 합니까?`,
+      steps: [
+        `${plan}을 준비했다고 들었습니다. 그럼 먼저 30초 안에 말해보세요. 왜 당신이어야 합니까?`,
+        "말은 이해했습니다. 그런데 실제 경험이 부족해 보입니다. 근거가 되는 경험 하나를 붙여 말해주세요.",
+        "다른 지원자와 비교해서 당신이 더 나은 점은 무엇입니까?",
+        "답변이 조금 길어졌습니다. 핵심만 한 문장으로 다시 말해보세요.",
+        "좋습니다. 실제 면접에서 첫 문장으로 쓸 말을 정리해보세요.",
+      ],
+    };
   }
 
-  if (type === "presentation") {
-    return [
-      `작은 발표장이라고 생각해요. 오늘 계획 “${cleanPlan}”을 바탕으로 20초 안에 설명해보세요.`,
-      "청중이 고개를 갸웃했어요. 더 쉬운 말로 다시 설명해보세요.",
-      "누군가 이렇게 묻습니다. '그래서 그게 나한테 왜 중요한데요?' 답해보세요.",
-      "지금 말에서 핵심 단어 3개만 남긴다면 뭐예요?",
-      "마지막으로, 실제 발표 첫 문장을 정해보세요.",
-    ];
+  if (includesAny(plan, ["발표", "설명", "청중", "스피치", "콘텐츠", "영상", "말하기"])) {
+    return {
+      title: "청중의 돌발 질문",
+      location: "작은 발표장",
+      role: "상대방(청중)",
+      issue: "설명은 했지만 듣는 사람이 핵심을 바로 이해하지 못한 상황",
+      first: `${plan}을 들었는데 아직 핵심이 잘 안 잡혀요. 저한테 왜 중요한지 쉬운 말로 다시 설명해줄래요?`,
+      steps: [
+        `${plan}을 들었는데 아직 핵심이 잘 안 잡혀요. 저한테 왜 중요한지 쉬운 말로 다시 설명해줄래요?`,
+        "좋아요. 그런데 너무 추상적이에요. 실제 예시 하나로 바꿔 말해주세요.",
+        "제가 딱 한 가지만 기억한다면 무엇을 기억해야 하나요?",
+        "반대 의견이 나온다면 어떻게 답할 건가요?",
+        "좋습니다. 실제 발표 첫 문장을 정해보세요.",
+      ],
+    };
   }
 
-  if (type === "study") {
-    return [
-      `공부방이라고 생각해요. 오늘 계획 “${cleanPlan}”을 실제 문제 상황에 적용할게요. 지금 막힌 문제가 나왔어요. 먼저 원인을 뭐로 볼 건가요?`,
-      "답을 봐도 비슷한 문제를 또 틀릴 수 있어요. 다음 문제에서 가장 먼저 확인할 기준은 뭐예요?",
-      "시간이 부족해졌어요. 지금 버릴 것과 끝까지 볼 것을 나눠보세요.",
-      "이 유형을 내일 다시 풀 때 첫 행동은 뭐예요?",
-      "마지막으로, 오늘 배운 내용을 한 문장으로 말해보세요.",
-    ];
+  if (includesAny(plan, ["투자", "수익", "손실", "주식", "돈", "자산", "위험", "현금흐름", "경제"])) {
+    return {
+      title: "보수적인 투자자의 질문",
+      location: "투자 판단 회의",
+      role: "상대방(보수적 투자자)",
+      issue: "수익 가능성보다 먼저 손실과 리스크를 검증해야 하는 상황",
+      first: `${plan}을 하려는 이유는 알겠습니다. 그런데 이 판단이 틀렸을 때 가장 먼저 무너지는 지점은 어디입니까?`,
+      steps: [
+        `${plan}을 하려는 이유는 알겠습니다. 그런데 이 판단이 틀렸을 때 가장 먼저 무너지는 지점은 어디입니까?`,
+        "좋습니다. 그럼 손실을 줄이기 위해 오늘 확인해야 할 숫자 하나는 무엇입니까?",
+        "다른 사람이 좋다고 말해도 따라가면 위험합니다. 당신만의 기준은 무엇입니까?",
+        "지금 당장 결정하지 않는다면, 다음 판단을 위해 무엇을 더 봐야 합니까?",
+        "좋아요. 감이 아니라 기준으로 남길 한 문장을 말해보세요.",
+      ],
+    };
   }
 
-  return [
-    `지금은 ${cleanGoal}로 가는 실제 상황이야. 오늘 계획 “${cleanPlan}”을 해야 하는 순간인데 예상치 못한 문제가 생겼어. 먼저 어떻게 시작할래?`,
-    "생각보다 반응이 없거나 결과가 안 나와요. 다음 선택은 뭐예요?",
-    "주변에서 다른 방식이 낫다고 말해요. 그래도 네 방식으로 밀고 갈 기준은 뭐예요?",
-    "지금 바로 줄여서 실행한다면 어떤 행동 하나만 남길 건가요?",
-    "마지막으로, 실제 행동으로 옮길 첫 문장 또는 첫 행동을 말해보세요.",
-  ];
+  if (includesAny(plan, ["공부", "문제", "단원", "오답", "시험", "풀이", "문제집", "암기"])) {
+    return {
+      title: "막힌 문제를 만난 상황",
+      location: "공부방 / 시험 직전 책상",
+      role: "상대방(시험 코치)",
+      issue: "아는 것 같았는데 실제 문제에서 막혀 원인을 찾아야 하는 상황",
+      first: `${plan}을 하다가 막힌 문제가 나왔다고 하자. 이건 지식 부족, 실수, 시간 부족 중 어디에 가까워? 이유도 말해봐.`,
+      steps: [
+        `${plan}을 하다가 막힌 문제가 나왔다고 하자. 이건 지식 부족, 실수, 시간 부족 중 어디에 가까워? 이유도 말해봐.`,
+        "답을 봐도 다음에 또 틀릴 수 있어. 같은 실수를 막으려면 문제를 풀기 전에 무엇을 확인해야 해?",
+        "시간이 부족해졌어. 지금 버릴 것과 끝까지 볼 것을 나눠봐.",
+        "이 유형을 내일 다시 풀 때 첫 행동은 뭐야?",
+        "좋아. 오늘 배운 내용을 한 문장으로 정리해봐.",
+      ],
+    };
+  }
+
+  return {
+    title: `${goal} 실전 돌발 상황`,
+    location: "현실처럼 구성된 연습 공간",
+    role: "상대방(현실 상황 상대)",
+    issue: "계획대로 흘러가지 않아 즉시 판단하고 행동을 줄여야 하는 상황",
+    first: `오늘 계획 “${plan}”을 실행하려는 순간, 예상과 다르게 막혔어. 그래도 ${goal}에 가까워지려면 지금 무엇부터 할래?`,
+    steps: [
+      `오늘 계획 “${plan}”을 실행하려는 순간, 예상과 다르게 막혔어. 그래도 ${goal}에 가까워지려면 지금 무엇부터 할래?`,
+      "생각보다 반응이 없거나 결과가 안 나와. 다음 선택은 뭐야?",
+      "주변에서 다른 방식이 낫다고 말해. 그래도 네 방식으로 밀고 갈 기준은 뭐야?",
+      "지금 바로 줄여서 실행한다면 어떤 행동 하나만 남길 거야?",
+      "좋아. 실제 행동으로 옮길 첫 문장 또는 첫 행동을 말해봐.",
+    ],
+  };
+}
+
+function makeUnexpectedSimulationSteps(type, planTitle, goal, profile = {}) {
+  return getPlanDetail(planTitle, goal).steps;
 }
 
 function getPlanBasedScenario(profile, planItem) {
-  const type = getScenarioType(profile);
   const goal = goalLabel(profile);
+  const planTitle = planItem?.title || "오늘 계획";
+  const type = inferSimulationKind(profile, planTitle);
   const base = getScenario(profile);
-  const planTitle = planItem?.title || base.title || "오늘 계획";
-  const steps = makeUnexpectedSimulationSteps(type, planTitle, goal);
+  const detail = getPlanDetail(planTitle, goal);
+  const steps = detail.steps;
 
-  const titleMap = {
-    business: "잠재 고객과 실제 대화",
-    realestate: "중개사와 투자 판단 대화",
-    gamer: "경기 중 예상 밖 상황",
-    interview: "실전 면접 압박 질문",
-    presentation: "청중 앞 돌발 질문",
-    money: "투자 리스크 점검 대화",
-    study: "막힌 문제 해결 훈련",
-    general: "예상치 못한 현실 상황",
+  const videoMap = {
+    business: ["/videos/simulation-business.mp4", "/videos/simulation-business.jpg"],
+    realestate: ["/videos/simulation-realestate.mp4", "/videos/simulation-realestate.jpg"],
+    gamer: ["/videos/simulation-gamer.mp4", "/videos/simulation-gamer.jpg"],
+    interview: ["/videos/simulation-interview.mp4", "/videos/simulation-interview.jpg"],
+    presentation: ["/videos/simulation-presentation.mp4", "/videos/simulation-presentation.jpg"],
+    money: ["/videos/simulation-money.mp4", "/videos/simulation-money.jpg"],
+    study: ["/videos/simulation-study.mp4", "/videos/simulation-study.jpg"],
+    general: ["/videos/simulation-general.mp4", "/videos/simulation-general.jpg"],
   };
-
-  const roleMap = {
-    business: "잠재 고객",
-    realestate: "중개사 / 투자자",
-    gamer: "코치 / 팀원",
-    interview: "면접관",
-    presentation: "청중",
-    money: "리스크 질문자",
-    study: "시험 코치",
-    general: "상황 상대",
-  };
+  const media = videoMap[type] || videoMap.general;
 
   return {
     ...base,
     type,
     planTitle,
-    title: titleMap[type] || titleMap.general,
-    role: roleMap[type] || roleMap.general,
-    location: `${goal}를 향해 가는 실제 상황`,
+    title: detail.title,
+    location: detail.location,
+    role: detail.role,
+    issue: detail.issue,
+    video: media[0],
+    poster: media[1],
     opening: steps[0],
     pressure: steps[1],
-    good: "좋아. 방금 답변에서 실제로 써먹을 수 있는 기준이 생겼어. 이제 말로 끝내지 말고 다음 행동으로 이어가자.",
+    good: "좋아. 방금 답변에서 실제 상황에 써먹을 기준이 생겼어. 이제 말로 끝내지 말고 오늘 계획으로 돌아가 실행하고 인증하자.",
     steps,
   };
 }
@@ -1752,12 +1831,12 @@ function SimulationView({ scenario, simulation, startSimulation, simulationInput
           <div className="nx-situation-card">
             <b>상황</b>
             <p>{scenario.title}</p>
-            <small>계획: {scenario.planTitle}</small>
+            <small>계획: {scenario.planTitle}<br />돌발 상황: {scenario.issue}</small>
           </div>
 
           {!simulation.started ? (
             <div className="nx-start-box nx-chat-start-box">
-              <p>지금부터 노아가 실제 상대 역할을 할게. 답을 맞히는 게 아니라, 현실에서 당황하지 않도록 미리 경험하는 거야.</p>
+              <p>지금부터 오늘 계획을 실행하다가 실제로 만날 수 있는 상대방이 등장해. 답을 맞히는 게 아니라, 현실에서 당황하지 않도록 미리 경험하는 거야.</p>
               <button onClick={startSimulation}>상대방과 대화 시작</button>
             </div>
           ) : (
