@@ -930,10 +930,10 @@ export default function App() {
 }
 
 const emotionOptions = [
-  { id: "calm", emoji: "🙂", label: "괜찮음", mode: "기본 그대로" },
-  { id: "fire", emoji: "🔥", label: "의욕 넘침", mode: "조금 더 도전" },
-  { id: "anxious", emoji: "😰", label: "불안함", mode: "부담 줄이기" },
-  { id: "tired", emoji: "😴", label: "지침", mode: "최소 실행" },
+  { id: "calm", emoji: "🙂", label: "괜찮음", mode: "원래 계획 유지" },
+  { id: "fire", emoji: "🔥", label: "의욕 넘침", mode: "도전 과제 추가" },
+  { id: "anxious", emoji: "😰", label: "불안함", mode: "핵심만 남기기" },
+  { id: "tired", emoji: "😴", label: "지침", mode: "가장 작은 단계" },
   { id: "stress", emoji: "😵", label: "스트레스", mode: "하나만 실행" },
   { id: "blur", emoji: "😶", label: "집중 안됨", mode: "시작만 하기" },
 ];
@@ -943,6 +943,8 @@ const firstNoahMessage = {
   text: "안녕. 만나서 반가워 🌙\n먼저 네 이름이 뭐야?",
 };
 
+const analysisSteps = ["name", "dream", "why", "bestMoment", "dislike", "strength", "habit", "time"];
+
 function makeNoahMessage(text) {
   return { role: "noah", text };
 }
@@ -951,11 +953,7 @@ function makeUserMessage(text) {
   return { role: "user", text };
 }
 
-function getEmotionById(id) {
-  return emotionOptions.find((item) => item.id === id) || emotionOptions[0];
-}
-
-function getId(prefix = "plan") {
+function getId(prefix = "item") {
   try {
     if (crypto?.randomUUID) return crypto.randomUUID();
   } catch {
@@ -964,11 +962,16 @@ function getId(prefix = "plan") {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function includesAny(text, words) {
+  const source = String(text || "").toLowerCase();
+  return words.some((word) => source.includes(String(word).toLowerCase()));
+}
+
 function extractNameFromInput(value) {
   const raw = String(value || "").trim();
   const patterns = [
-    /(?:내\s*이름은|제\s*이름은|나는|난)\s*([가-힣a-zA-Z]{2,20})(?:이야|야|입니다|이에요|예요|라고\s*해|라고\s*합니다)?/,
-    /^([가-힣a-zA-Z]{2,20})(?:이야|야|입니다|이에요|예요)$/,
+    /(?:내\s*이름은|제\s*이름은|나는|난|이름은)\s*([가-힣a-zA-Z]{2,20})(?:이야|야|입니다|이에요|예요|라고\s*해|라고\s*합니다)?/,
+    /^([가-힣a-zA-Z]{2,20})(?:이야|야|입니다|이에요|예요)?$/,
   ];
 
   for (const pattern of patterns) {
@@ -976,10 +979,17 @@ function extractNameFromInput(value) {
     if (match?.[1]) return match[1].trim();
   }
 
-  return raw
-    .replace(/내\s*이름은|제\s*이름은|나는|난|입니다|이에요|예요|이야|야|라고\s*해|라고\s*합니다/g, "")
-    .replace(/[^가-힣a-zA-Z]/g, "")
-    .trim() || raw;
+  return (
+    raw
+      .replace(/내\s*이름은|제\s*이름은|나는|난|이름은|입니다|이에요|예요|이야|야|라고\s*해|라고\s*합니다/g, "")
+      .replace(/[^가-힣a-zA-Z]/g, "")
+      .trim() || "친구"
+  );
+}
+
+function isNoPreferenceAnswer(value) {
+  const text = String(value || "").replace(/\s/g, "").toLowerCase();
+  return /딱히없|별로없|잘모르|모르겠|생각안나|없어|없음|아직모르|없다/.test(text) || text.length <= 3;
 }
 
 function parseTimeToMinutes(time) {
@@ -994,12 +1004,12 @@ function minutesToTime(total) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-function parseKoreanTimeExpression(raw) {
+function parseKoreanTimeExpression(raw, fallbackPeriod = "") {
   const text = String(raw || "").replace(/\s/g, "");
   const match = text.match(/(오전|오후|아침|저녁|밤|새벽)?(\d{1,2})(?:[:시](\d{1,2})?)?/);
   if (!match) return null;
 
-  const period = match[1] || "";
+  const period = match[1] || fallbackPeriod || "";
   let hour = Number(match[2]);
   const minute = match[3] ? Number(match[3]) : 0;
 
@@ -1012,7 +1022,6 @@ function parseKoreanTimeExpression(raw) {
 function extractAvailableWindows(text) {
   const raw = String(text || "");
   const windows = [];
-
   const mentionRegex = /(오전|오후|아침|저녁|밤|새벽)?\s*\d{1,2}\s*(?::|시)\s*\d{0,2}\s*(?:분)?/g;
   const mentions = [];
   let match;
@@ -1021,8 +1030,8 @@ function extractAvailableWindows(text) {
   while ((match = mentionRegex.exec(raw)) !== null) {
     const period = match[1] || lastPeriod;
     if (match[1]) lastPeriod = match[1];
-    const time = parseKoreanTimeExpression(`${period || ""}${match[0]}`);
-    if (time) mentions.push({ time, index: match.index, text: match[0], period });
+    const time = parseKoreanTimeExpression(match[0], period);
+    if (time) mentions.push({ time, period, index: match.index });
   }
 
   for (let i = 0; i < mentions.length - 1; i += 2) {
@@ -1030,104 +1039,85 @@ function extractAvailableWindows(text) {
     const end = mentions[i + 1];
     let startMin = parseTimeToMinutes(start.time);
     let endMin = parseTimeToMinutes(end.time);
-
-    if (endMin <= startMin) {
-      if (!end.period && start.period && ["오후", "저녁", "밤"].includes(start.period)) {
-        endMin += 12 * 60;
-      } else {
-        endMin += 12 * 60;
-      }
-    }
-
+    if (endMin <= startMin) endMin += 12 * 60;
     const duration = endMin - startMin;
     if (duration >= 15) {
-      windows.push({
-        start: minutesToTime(startMin),
-        end: minutesToTime(Math.min(endMin, 23 * 60 + 59)),
-      });
+      windows.push({ start: minutesToTime(startMin), end: minutesToTime(Math.min(endMin, 23 * 60 + 59)) });
     }
   }
 
   if (!windows.length && mentions.length === 1) {
-    const oneTime = mentions[0].time;
-    windows.push({ start: oneTime, end: minutesToTime(parseTimeToMinutes(oneTime) + 90) });
+    const one = mentions[0].time;
+    windows.push({ start: one, end: minutesToTime(parseTimeToMinutes(one) + 90) });
   }
 
   if (!windows.length) {
-    const oneTime = extractStartTime(raw || "20:00");
-    windows.push({ start: oneTime, end: minutesToTime(parseTimeToMinutes(oneTime) + 90) });
+    windows.push({ start: "20:00", end: "21:30" });
   }
 
   return windows;
 }
 
-function getAvailabilityMinutes(timeText) {
+function formatTimeKorean(time) {
+  const [rawHour, rawMinute] = String(time || "20:00").split(":").map(Number);
+  const hour = Number.isFinite(rawHour) ? rawHour : 20;
+  const minute = Number.isFinite(rawMinute) ? rawMinute : 0;
+  const period = hour < 12 ? "오전" : "오후";
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+  if (minute === 0) return `${period} ${displayHour}시`;
+  return `${period} ${displayHour}시 ${minute}분`;
+}
+
+function totalAvailableMinutes(timeText) {
   return extractAvailableWindows(timeText).reduce((sum, window) => {
     return sum + Math.max(0, parseTimeToMinutes(window.end) - parseTimeToMinutes(window.start));
   }, 0);
 }
 
 function getPlanCountFromAvailability(timeText) {
-  const total = getAvailabilityMinutes(timeText);
-  if (total <= 30) return 1;
-  if (total <= 75) return 2;
-  if (total <= 120) return 3;
-  if (total <= 210) return 5;
-  if (total <= 360) return 7;
-  if (total <= 480) return 9;
+  const total = totalAvailableMinutes(timeText);
+  if (total <= 35) return 2;
+  if (total <= 90) return 3;
+  if (total <= 150) return 4;
+  if (total <= 240) return 6;
+  if (total <= 420) return 8;
   return 10;
 }
 
 function buildScheduleTimes(timeText, desiredCount = 6) {
   const windows = extractAvailableWindows(timeText);
-  const totalAvailable = windows.reduce((sum, window) => {
-    return sum + Math.max(0, parseTimeToMinutes(window.end) - parseTimeToMinutes(window.start));
-  }, 0);
-
-  const count = Math.max(1, desiredCount);
+  const total = Math.max(1, totalAvailableMinutes(timeText));
   const times = [];
 
-  windows.forEach((window, windowIndex) => {
+  windows.forEach((window) => {
     const start = parseTimeToMinutes(window.start);
     const end = parseTimeToMinutes(window.end);
     const duration = Math.max(0, end - start);
     if (duration < 15) return;
-
-    const windowCount = Math.max(
-      1,
-      Math.round((duration / Math.max(totalAvailable, 1)) * count)
-    );
-
-    if (duration <= 35) {
-      times.push(minutesToTime(start));
-      return;
-    }
-
-    const step = Math.max(20, Math.floor(duration / Math.max(windowCount, 1)));
+    const countForWindow = Math.max(1, Math.round((duration / total) * desiredCount));
+    const step = Math.max(20, Math.floor(duration / countForWindow));
     let current = start;
-
-    for (let i = 0; i < windowCount && current <= end - 15; i += 1) {
+    for (let i = 0; i < countForWindow && current <= end - 10; i += 1) {
       times.push(minutesToTime(current));
       current += step;
     }
   });
 
-  while (times.length < count) {
-    const last = times.length
-      ? parseTimeToMinutes(times[times.length - 1]) + 30
-      : parseTimeToMinutes(extractStartTime(timeText || "20:00"));
+  while (times.length < desiredCount) {
+    const last = times.length ? parseTimeToMinutes(times[times.length - 1]) + 30 : 20 * 60;
     times.push(minutesToTime(last));
   }
 
-  return [...new Set(times)].slice(0, count);
+  return [...new Set(times)].slice(0, desiredCount);
 }
 
-
 function cleanGoalText(value) {
-  return String(value || "")
-    .replace(/나는|내가|되고\s*싶어|되고싶어|하고\s*싶어|하고싶어|꿈이야|꿈|목표야|목표/g, "")
-    .replace(/\s+/g, " ")
-    .trim() || "목표";
+  return (
+    String(value || "")
+      .replace(/나는|내가|되고\s*싶어|되고싶어|하고\s*싶어|하고싶어|꿈이야|꿈|목표야|목표/g, "")
+      .replace(/\s+/g, " ")
+      .trim() || "목표"
+  );
 }
 
 function goalLabel(profile) {
@@ -1144,146 +1134,131 @@ function compactAction(text) {
     .trim();
 }
 
-function hasMeaningfulPreference(value) {
-  return !isNoPreferenceAnswer(value);
+function makePlanItem(time, title, status = "locked", kind = "action") {
+  return {
+    id: getId(kind),
+    time,
+    title: compactAction(title),
+    originalTitle: compactAction(title),
+    kind,
+    status,
+    proofImage: "",
+    note: "",
+    simulation: null,
+    reflection: "",
+  };
 }
 
-function actionForGenericGoal(goal, profile) {
-  const joined = [profile.dream, profile.why, profile.bestMoment, profile.strength, profile.habit, profile.dislike]
-    .filter(Boolean)
-    .join(" ");
-  const prefersAnalysis = includesAny(joined, ["분석", "패턴", "숫자", "자료", "전략", "비교", "주식", "부동산", "심리"]);
-  const prefersPeople = includesAny(joined, ["사람", "대화", "소통", "팀", "협업", "고객", "설득"]);
-  const avoidsPeople = includesAny(profile.dislike, ["사람", "평가", "앞", "부담", "낯", "시선"]);
-  const likesCreate = includesAny(joined, ["만들", "창작", "서비스", "브랜드", "콘텐츠", "기획", "아이디어"]);
-
-  const base = [
-    `${goal}를 이루려면 먼저 필요한 능력 3가지를 적기`,
-    `${goal}를 이미 이룬 사람 1명을 고르고, 오늘 따라 할 행동 1개 적기`,
-    prefersAnalysis
-      ? `${goal} 관련 실제 사례 1개를 보고 성공 이유 2개와 실패 위험 1개 적기`
-      : `${goal}에 가까워지는 작은 행동 1개를 20분 동안 직접 해보기`,
-    likesCreate
-      ? `작은 결과물 초안 1개 만들기. 완벽하지 않아도 됨`
-      : `오늘 배운 내용을 내 말로 3줄 정리하기`,
-    prefersPeople && !avoidsPeople
-      ? `${goal}와 관련해 물어볼 사람 1명 정하고 질문 3개 적기`
-      : `혼자 확인할 기준 3개 만들고 지금 내 상태 표시하기`,
-    `오늘 한 행동을 사진으로 인증하기`,
-    `내일 바로 이어갈 첫 행동 1개 정하기`,
-  ];
-  return base;
-}
-
-function buildBusinessActions(profile) {
-  const joined = [profile.bestMoment, profile.strength, profile.habit, profile.dislike].join(" ");
-  const prefersPeople = includesAny(joined, ["사람", "대화", "소통", "고객", "설득", "함께"]);
-  const avoidsPeople = includesAny(profile.dislike, ["사람", "평가", "앞", "부담", "낯", "시선"]);
-  return [
-    "내가 만들고 싶은 서비스나 상품을 한 줄로 적기",
-    "그 서비스를 가장 필요로 할 사람을 한 명 떠올리고, 나이/상황/불편함을 적기",
-    "그 사람이 오늘 겪을 문제 3가지를 적기",
-    prefersPeople && !avoidsPeople
-      ? "그 사람과 비슷한 사람에게 물어볼 질문 5개 만들기"
-      : "커뮤니티 글이나 댓글 5개를 보고 사람들이 반복해서 말하는 불편함 표시하기",
-    "내 서비스가 해결할 문제 1개만 고르기",
-    "그 문제를 해결하는 가장 작은 기능이나 제안 1개 적기",
-    "오늘 만든 내용을 사진으로 인증하고 내일 검증할 질문 1개 남기기",
-  ];
-}
-
-function buildRealEstateActions(profile) {
-  return [
-    "내가 원하는 월세 수입 목표를 숫자로 적기",
-    "관심 지역 1곳을 고르고, 왜 그 지역인지 교통/일자리/수요 중 2개로 적기",
-    "그 지역 매물 2개를 찾아 가격과 예상 월세를 나란히 적기",
-    "월세에서 대출이자와 관리비를 빼고 실제 남는 돈 계산하기",
-    "손해 볼 수 있는 이유 3가지를 적기",
-    "내가 지금부터 쌓아야 할 능력 1개를 고르기. 예: 자금관리, 지역분석, 협상",
-    "오늘 조사한 표를 사진으로 인증하고 내일 볼 지역 1곳 정하기",
-  ];
-}
-
-function buildGamerActions(profile) {
-  const joined = [profile.bestMoment, profile.strength, profile.habit].join(" ");
-  const analysis = includesAny(joined, ["심리", "상대", "읽", "패턴", "분석", "전략"]);
-  const mechanic = includesAny(joined, ["피지컬", "반응", "컨트롤", "손", "에임", "정확"]);
-  return [
-    "프로 경기 1판 보기",
-    analysis ? "상대가 움직이기 전 보인 신호 3개 적기" : mechanic ? "주력 캐릭터 손풀기 루틴 15분 하기" : "내가 자주 지는 상황 1개 고르기",
-    "직접 게임 1판 하기. 방금 본 장면 하나만 의식해서 적용하기",
-    "리플레이에서 진 장면 1개 멈춰놓고 왜 졌는지 3줄 적기",
-    "같은 상황을 다시 만났을 때 할 행동 1개 정하기",
-    "그 행동만 생각하고 짧게 1판 더 적용하기",
-    "오늘 결과를 사진으로 인증하고 내일 첫 연습 규칙 1개 남기기",
-  ];
-}
-
-function buildStudyActions(profile) {
-  return [
-    "오늘 점수를 가장 빨리 올릴 단원 1개 고르기",
-    "그 단원에서 자주 틀리는 문제 유형 3개 적기",
-    "첫 번째 유형 문제 3개 풀기",
-    "틀린 이유를 지식 부족/실수/시간 부족 중 하나로 표시하기",
-    "틀린 문제 1개를 다시 풀고 풀이 과정을 사진으로 남기기",
-    "내일 처음 풀 문제 1개를 미리 정하기",
-    "오늘 공부한 흔적을 사진으로 인증하기",
-  ];
-}
-
-function buildFitnessActions(profile) {
-  return [
-    "오늘 몸 상태를 1분 확인하고 통증/피로/가능한 운동 적기",
-    "목표와 연결된 기본 동작 1개 고르기",
-    "정확한 자세로 3세트만 하기",
-    "가장 힘든 구간과 쉬운 구간을 각각 1개 적기",
-    "내일 같은 운동을 계속하기 쉽게 강도 1단계 낮춰 적기",
-    "운동 흔적을 사진으로 인증하기",
-    "오늘 컨디션 점수 1~10으로 남기기",
-  ];
-}
-
-function buildMoneyActions(profile) {
-  return [
-    "내가 원하는 경제적 자유 숫자를 적기. 월 얼마가 필요한지 쓰기",
-    "현재 수입/지출/저축을 각각 한 줄로 적기",
-    "돈을 버는 방식 3개를 적고, 시간형/기술형/자산형으로 나누기",
-    "관심 있는 수익 방법 1개를 고르고 필요한 첫 능력 1개 적기",
-    "이번 주에 실제 돈의 흐름을 만들 수 있는 작은 행동 1개 정하기",
-    "오늘 배운 내용을 3줄로 기록하기",
-    "내일 확인할 돈 질문 1개 남기고 사진 인증하기",
-  ];
-}
-
-function chooseActionTemplate(profile) {
+function chooseActions(profile) {
   const dream = String(profile.dream || "");
-  if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크"])) return buildGamerActions(profile);
-  if (includesAny(dream, ["건물주", "부동산", "임대", "월세", "상가", "아파트"])) return buildRealEstateActions(profile);
-  if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업", "사업가"])) return buildBusinessActions(profile);
-  if (includesAny(dream, ["돈", "부자", "경제", "투자", "주식", "수익", "자산", "경제적 자유"])) return buildMoneyActions(profile);
-  if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) return buildStudyActions(profile);
-  if (includesAny(dream, ["운동", "몸", "헬스", "다이어트", "체력", "근육"])) return buildFitnessActions(profile);
-  return actionForGenericGoal(goalLabel(profile), profile);
+  const joined = [profile.dream, profile.why, profile.bestMoment, profile.strength, profile.habit, profile.dislike].join(" ");
+  const prefersPeople = includesAny(joined, ["사람", "대화", "소통", "고객", "설득", "팀", "협업"]);
+  const avoidsPeople = includesAny(profile.dislike, ["사람", "평가", "앞", "부담", "낯", "시선"]);
+  const goal = goalLabel(profile);
+
+  if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크"])) {
+    return [
+      "프로 경기 1판 보기",
+      "잘한 장면 3개와 내가 따라 할 장면 1개 적기",
+      "실전 시뮬레이션: 상대가 압박하는 상황에서 판단 연습하기",
+      "직접 게임 1판 하기. 방금 정한 장면 하나만 의식해서 적용하기",
+      "리플레이에서 진 장면 1개 멈춰놓고 왜 졌는지 3줄 적기",
+      "같은 상황을 다시 만났을 때 할 행동 1개 정하기",
+      "오늘 결과를 사진으로 인증하기",
+      "오늘 가장 어려웠던 판단 1개 회고하기",
+    ];
+  }
+
+  if (includesAny(dream, ["건물주", "부동산", "임대", "월세", "상가", "아파트"])) {
+    return [
+      "내가 원하는 월세 수입 목표를 숫자로 적기",
+      "관심 지역 1곳을 고르고 교통/일자리/수요 중 2개로 이유 적기",
+      "매물 2개를 찾아 가격과 예상 월세를 나란히 적기",
+      "실전 시뮬레이션: 중개사가 추천한 매물을 바로 믿지 않고 질문하기",
+      "월세에서 대출이자와 관리비를 빼고 실제 남는 돈 계산하기",
+      "손해 볼 수 있는 이유 3가지를 적기",
+      "오늘 조사한 표를 사진으로 인증하기",
+      "내일 볼 지역 1곳 정하고 회고하기",
+    ];
+  }
+
+  if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업", "사업가"])) {
+    return [
+      "내가 만들고 싶은 서비스나 상품을 한 줄로 적기",
+      "그 서비스를 가장 필요로 할 사람 1명을 떠올리고 상황/불편함 적기",
+      "그 사람이 오늘 겪을 문제 3가지를 적기",
+      prefersPeople && !avoidsPeople ? "실전 시뮬레이션: 고객에게 내 서비스를 설명해보기" : "실전 시뮬레이션: 고객이 돈을 내지 않겠다고 할 때 답하기",
+      prefersPeople && !avoidsPeople ? "그 고객과 비슷한 사람에게 물어볼 질문 5개 만들기" : "커뮤니티 글이나 댓글 5개에서 반복되는 불편함 표시하기",
+      "내 서비스가 해결할 문제 1개만 고르기",
+      "오늘 만든 내용을 사진으로 인증하기",
+      "내일 검증할 질문 1개 회고하기",
+    ];
+  }
+
+  if (includesAny(dream, ["돈", "부자", "경제", "투자", "주식", "수익", "자산", "경제적 자유"])) {
+    return [
+      "내가 원하는 경제적 자유 숫자를 적기. 월 얼마가 필요한지 쓰기",
+      "현재 수입/지출/저축을 각각 한 줄로 적기",
+      "돈을 버는 방식 3개를 시간형/기술형/자산형으로 나누기",
+      "실전 시뮬레이션: 위험한 투자 제안을 받았을 때 판단하기",
+      "관심 있는 수익 방법 1개를 고르고 필요한 첫 능력 1개 적기",
+      "이번 주에 실제 돈의 흐름을 만들 수 있는 작은 행동 1개 정하기",
+      "오늘 배운 내용을 사진으로 인증하기",
+      "내일 확인할 돈 질문 1개 회고하기",
+    ];
+  }
+
+  if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) {
+    return [
+      "오늘 점수를 가장 빨리 올릴 단원 1개 고르기",
+      "그 단원에서 자주 틀리는 문제 유형 3개 적기",
+      "첫 번째 유형 문제 3개 풀기",
+      "실전 시뮬레이션: 시험장에서 시간이 부족한 상황 판단하기",
+      "틀린 이유를 지식 부족/실수/시간 부족 중 하나로 표시하기",
+      "틀린 문제 1개를 다시 풀고 풀이 과정을 사진으로 남기기",
+      "오늘 공부한 흔적을 사진으로 인증하기",
+      "내일 처음 풀 문제 1개 회고하기",
+    ];
+  }
+
+  if (includesAny(dream, ["운동", "몸", "헬스", "다이어트", "체력", "근육"])) {
+    return [
+      "오늘 몸 상태를 1분 확인하고 통증/피로/가능한 운동 적기",
+      "목표와 연결된 기본 동작 1개 고르기",
+      "정확한 자세로 3세트만 하기",
+      "실전 시뮬레이션: 운동을 포기하고 싶은 순간 대처하기",
+      "가장 힘든 구간과 쉬운 구간을 각각 1개 적기",
+      "운동 흔적을 사진으로 인증하기",
+      "오늘 컨디션 점수 1~10으로 남기기",
+      "내일 운동 강도 회고하기",
+    ];
+  }
+
+  return [
+    `${goal}를 이루기 위해 필요한 능력 3가지를 적기`,
+    `${goal}를 이미 이룬 사람 1명을 고르고 오늘 따라 할 행동 1개 적기`,
+    `${goal}에 가까워지는 작은 행동 1개를 20분 동안 직접 해보기`,
+    `실전 시뮬레이션: ${goal}를 실제 상황에서 설명하거나 선택해야 하는 장면 연습하기`,
+    `오늘 배운 내용을 내 말로 3줄 정리하기`,
+    `혼자 확인할 기준 3개 만들고 지금 내 상태 표시하기`,
+    `오늘 한 행동을 사진으로 인증하기`,
+    `내일 바로 이어갈 첫 행동 1개 회고하기`,
+  ];
 }
 
-function makeConcreteActionPlan(profile) {
-  const desiredPlanCount = getPlanCountFromAvailability(profile.time || profile.habit || "20:00");
-  const baseActions = chooseActionTemplate(profile).map(compactAction);
-  const expandedActions = expandSimpleActions(baseActions, profile, desiredPlanCount);
-  const times = buildScheduleTimes(profile.time || profile.habit || "20:00", expandedActions.length);
+function buildPersonalPlan(profile) {
+  const desired = getPlanCountFromAvailability(profile.time || profile.habit || "20:00");
+  const baseActions = chooseActions(profile).map(compactAction);
+  const actions = expandActions(baseActions, profile, desired);
+  const times = buildScheduleTimes(profile.time || profile.habit || "20:00", actions.length);
 
-  const items = expandedActions.map((action, index) => {
-    return makePlanItem(
-      times[index] || addMinutes(times[0] || "20:00", index * 30),
-      action,
-      index === 0 ? "open" : "locked"
-    );
+  return actions.map((action, index) => {
+    const kind = action.includes("실전 시뮬레이션") ? "simulation" : action.includes("인증") ? "proof" : action.includes("회고") ? "reflection" : "action";
+    return makePlanItem(times[index] || "20:00", action, index === 0 ? "open" : "locked", kind);
   });
-
-  return unlockPlan(items);
 }
 
-function expandSimpleActions(actions, profile, desiredCount) {
+function expandActions(actions, profile, desiredCount) {
   const goal = goalLabel(profile);
   const extras = [
     `${goal}에 필요한 첫 능력 1개 적기`,
@@ -1291,60 +1266,17 @@ function expandSimpleActions(actions, profile, desiredCount) {
     `실제로 20분 실행하기`,
     `결과를 3줄로 기록하기`,
     `부족했던 점 1개만 고르기`,
-    `내일 다시 할 행동 1개 정하기`,
+    `실전 시뮬레이션: 예상되는 어려운 질문 1개에 답하기`,
     `사진으로 인증하기`,
+    `내일 다시 할 행동 1개 정하기`,
   ];
+
   const result = [];
   [...actions, ...extras].forEach((action) => {
     const clean = compactAction(action);
     if (clean && !result.includes(clean) && result.length < desiredCount) result.push(clean);
   });
   return result;
-}
-
-
-function normalizeTime(raw, previousHour = null) {
-  const text = String(raw || "").replace(/\s/g, "");
-  let hour = 20;
-  let minute = 0;
-  const isPm = /오후|저녁|밤/.test(text);
-  const isAm = /오전|아침|새벽/.test(text);
-  const match = text.match(/(\d{1,2})(?:[:시](\d{1,2})?)?/);
-  if (match) {
-    hour = Number(match[1]);
-    minute = match[2] ? Number(match[2]) : 0;
-  }
-  if (isPm && hour < 12) hour += 12;
-  if (!isAm && !isPm && previousHour !== null && previousHour >= 8 && hour > 0 && hour <= 11 && hour < previousHour) {
-    hour += 12;
-  }
-  hour = Math.max(0, Math.min(23, hour));
-  minute = Math.max(0, Math.min(59, minute));
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-}
-
-function extractStartTime(text) {
-  const raw = String(text || "");
-  const match = raw.match(/(오전|오후|아침|저녁|밤|새벽)?\s*\d{1,2}\s*(?::|시)\s*\d{0,2}/);
-  return match ? normalizeTime(match[0]) : "20:00";
-}
-
-function addMinutes(time, minutes) {
-  const [h, m] = String(time || "20:00").split(":").map(Number);
-  const total = Math.max(0, Math.min(23 * 60 + 59, h * 60 + m + minutes));
-  const nh = Math.floor(total / 60);
-  const nm = total % 60;
-  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
-}
-
-function formatTimeKorean(time) {
-  const [rawHour, rawMinute] = String(time || "20:00").split(":").map(Number);
-  const hour = Number.isFinite(rawHour) ? rawHour : 20;
-  const minute = Number.isFinite(rawMinute) ? rawMinute : 0;
-  const period = hour < 12 ? "오전" : "오후";
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  if (minute === 0) return `${period} ${displayHour}시`;
-  return `${period} ${displayHour}시 ${minute}분`;
 }
 
 function unlockPlan(items) {
@@ -1359,107 +1291,88 @@ function unlockPlan(items) {
   });
 }
 
-function includesAny(text, words) {
-  const source = String(text || "").toLowerCase();
-  return words.some((word) => source.includes(word.toLowerCase()));
+function getEmotionById(id) {
+  return emotionOptions.find((item) => item.id === id) || emotionOptions[0];
 }
-
-function isNoPreferenceAnswer(value) {
-  const text = String(value || "").replace(/\s/g, "").toLowerCase();
-  return (
-    /딱히없|별로없|잘모르|모르겠|생각안나|없어|없음|아직모르/.test(text) ||
-    text.length <= 3
-  );
-}
-
-function getDreamType(dream) {
-  if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크", "프로 게임"])) return "gamer";
-  if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업"])) return "business";
-  if (includesAny(dream, ["돈", "부자", "경제", "투자", "주식", "수익", "자산"])) return "money";
-  if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) return "study";
-  if (includesAny(dream, ["운동", "몸", "헬스", "다이어트", "체력", "근육"])) return "fitness";
-  return "general";
-}
-
-function inferFocus(profile) {
-  const joined = [profile.dream, profile.why, profile.bestMoment, profile.strength, profile.dislike, profile.habit]
-    .filter(Boolean)
-    .join(" ");
-
-  if (includesAny(joined, ["심리", "읽", "전략", "상대", "분석", "패턴", "생각"])) return "분석과 패턴 읽기";
-  if (includesAny(joined, ["빠른", "피지컬", "반응", "손", "컨트롤", "에임", "기계적"])) return "반응 속도와 정확도";
-  if (includesAny(joined, ["사람", "팀", "대화", "리더", "함께", "소통"])) return "소통과 협업";
-  if (includesAny(joined, ["창의", "만들", "아이디어", "기획", "표현", "콘텐츠"])) return "기획과 창의력";
-  if (includesAny(joined, ["꾸준", "오래", "반복", "성실", "루틴"])) return "꾸준함";
-  return "집중해서 깊게 파고드는 힘";
-}
-
-function makePlanItem(time, title, status = "locked") {
-  return {
-    id: getId("plan"),
-    time,
-    title,
-    status,
-    proofImage: "",
-  };
-}
-
-function buildPersonalPlan(profile) {
-  return makeConcreteActionPlan(profile);
-}
-
 
 function adjustItemsByEmotion(items, emotionId) {
   const emotion = getEmotionById(emotionId);
-  return unlockPlan(items.map((item, index) => {
-    if (item.status === "done") return item;
-    const original = item.originalTitle || item.title;
-    let title = original;
+  return unlockPlan(
+    items.map((item, index) => {
+      if (item.status === "done") return item;
+      const original = item.originalTitle || item.title;
+      let title = original;
+      if (emotion.id === "fire") title = index === 0 ? `${original} + 결과물 하나 더 남기기` : original;
+      if (emotion.id === "anxious") title = index === 0 ? `부담을 낮춰서 핵심만 하기: ${original}` : original;
+      if (emotion.id === "tired") title = index === 0 ? `가장 쉬운 첫 단계만 하기: ${original}` : original;
+      if (emotion.id === "stress") title = index === 0 ? `오늘은 이것 하나만 남기기: ${original}` : original;
+      if (emotion.id === "blur") title = index === 0 ? `타이머 5분 켜고 시작하기: ${original}` : original;
+      return { ...item, originalTitle: original, title };
+    })
+  );
+}
 
-    if (emotion.id === "fire") {
-      title = index === 0 ? `${original} + 결과물 하나 더 남기기` : original;
-    }
+function buildSimulationScenario(profile, item) {
+  const dream = String(profile.dream || "");
+  if (includesAny(dream, ["사업", "창업", "회사", "브랜드", "서비스", "앱", "스타트업", "사업가"])) {
+    return {
+      role: "잠재 고객",
+      situation: "너는 지금 네 서비스를 처음 만난 고객에게 설명해야 해.",
+      firstQuestion: "좋아요. 그런데 제가 왜 그 서비스를 써야 하죠? 지금 쓰는 방법과 뭐가 다른가요?",
+      pressureQuestion: "그걸 돈 주고 써야 할 만큼 정말 필요한가요? 한 문장으로 설득해보세요.",
+    };
+  }
+  if (includesAny(dream, ["건물주", "부동산", "임대", "월세", "상가", "아파트"])) {
+    return {
+      role: "부동산 중개인",
+      situation: "중개인이 좋아 보이는 매물을 추천하고 있어. 바로 믿지 않고 판단해야 해.",
+      firstQuestion: "이 매물은 수익률이 좋아요. 바로 계약금 넣으셔도 됩니다. 어떤 걸 먼저 확인하실 건가요?",
+      pressureQuestion: "다른 사람이 먼저 계약할 수도 있어요. 그래도 확인해야 할 위험 3가지를 말해보세요.",
+    };
+  }
+  if (includesAny(dream, ["프로게이머", "게임", "e스포츠", "이스포츠", "랭크"])) {
+    return {
+      role: "프로 코치",
+      situation: "상대가 예상 밖의 움직임을 보였고 팀원이 흔들리고 있어.",
+      firstQuestion: "상대 핵심 플레이어가 안 보입니다. 지금 너는 무엇을 확인하고 어떤 판단을 할 건가요?",
+      pressureQuestion: "팀원이 무리하게 들어가려고 합니다. 너라면 어떤 짧은 콜을 할 건가요?",
+    };
+  }
+  if (includesAny(dream, ["공부", "시험", "성적", "대학", "학교", "자격증", "수능"])) {
+    return {
+      role: "시험 감독관",
+      situation: "시험 중 시간이 부족하고 어려운 문제가 나왔어.",
+      firstQuestion: "어려운 문제 하나에 시간이 오래 걸리고 있어요. 지금 넘길 건가요, 더 풀 건가요? 이유도 말해보세요.",
+      pressureQuestion: "남은 시간이 10분입니다. 점수를 최대한 지키기 위해 무엇부터 할 건가요?",
+    };
+  }
+  return {
+    role: "현실 상황의 상대역",
+    situation: `${goalLabel(profile)}를 실제로 해봐야 하는 상황이야. 내가 상대역이 될게.`,
+    firstQuestion: `좋아요. 지금 ${goalLabel(profile)}를 위해 무엇을 선택할 건가요? 이유도 말해보세요.`,
+    pressureQuestion: "현실에서는 시간이 부족하고 확신도 없습니다. 그래도 지금 할 첫 행동은 무엇인가요?",
+  };
+}
 
-    if (emotion.id === "anxious") {
-      title = index === 0 ? `부담을 낮춰서 핵심만 하기: ${original}` : original;
-    }
-
-    if (emotion.id === "tired") {
-      title = index === 0 ? `가장 쉬운 첫 단계만 하기: ${original}` : original;
-    }
-
-    if (emotion.id === "stress") {
-      title = index === 0 ? `오늘은 이것 하나만 남기기: ${original}` : original;
-    }
-
-    if (emotion.id === "blur") {
-      title = index === 0 ? `타이머 5분 켜고 시작하기: ${original}` : original;
-    }
-
-    return { ...item, originalTitle: original, title };
-  }));
+function gradeSimulationAnswer(answer) {
+  const text = String(answer || "");
+  const score = Math.min(100, 35 + Math.min(text.length, 120) / 2 + (/[0-9]|첫|먼저|왜냐|이유|확인|기록|비교/.test(text) ? 20 : 0));
+  if (score >= 80) return "좋아. 답이 꽤 현실적이야. 특히 기준을 말한 점이 좋아.";
+  if (score >= 60) return "괜찮아. 방향은 맞아. 다만 더 구체적인 기준이나 숫자가 있으면 실전에서 흔들리지 않아.";
+  return "좋아, 시작은 했어. 이제 더 현실적으로 바꿔보자. ‘무엇을 확인할지’와 ‘왜 그렇게 할지’를 한 문장씩 넣으면 좋아.";
 }
 
 function NoahApp({ onBack }) {
   const [messages, setMessages] = useState([firstNoahMessage]);
   const [input, setInput] = useState("");
   const [step, setStep] = useState("name");
-  const [profile, setProfile] = useState({
-    name: "",
-    dream: "",
-    wantsIt: "",
-    why: "",
-    bestMoment: "",
-    dislike: "",
-    strength: "",
-    habit: "",
-    time: "",
-    emotion: "",
-  });
+  const [profile, setProfile] = useState({ name: "", dream: "", why: "", bestMoment: "", dislike: "", strength: "", habit: "", time: "", emotion: "" });
   const [planItems, setPlanItems] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState("chat");
-  const [showEmotionPanel, setShowEmotionPanel] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSimulationId, setActiveSimulationId] = useState("");
+  const [simulationInput, setSimulationInput] = useState("");
+  const [reflectionInput, setReflectionInput] = useState("");
   const chatBottomRef = useRef(null);
   const chatAreaRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -1467,31 +1380,29 @@ function NoahApp({ onBack }) {
 
   const completedCount = planItems.filter((item) => item.status === "done").length;
   const currentOpenIndex = planItems.findIndex((item) => item.status === "open");
+  const activeSimulationItem = planItems.find((item) => item.id === activeSimulationId) || planItems.find((item) => item.kind === "simulation") || null;
 
   useEffect(() => {
     if (activeView !== "chat") return;
-
     const scrollToBottom = () => {
       const area = chatAreaRef.current;
       if (area) area.scrollTop = area.scrollHeight;
       chatBottomRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
     };
-
     scrollToBottom();
     const timers = [0, 60, 160, 320].map((delay) => setTimeout(scrollToBottom, delay));
     const frame = requestAnimationFrame(scrollToBottom);
-
     return () => {
       timers.forEach(clearTimeout);
       cancelAnimationFrame(frame);
     };
-  }, [messages.length, activeView, showEmotionPanel, input, step]);
+  }, [messages.length, activeView, input, step]);
 
   const progressText = useMemo(() => {
     if (!profile.name) return "처음 만나는 중";
     if (!profile.dream) return `${profile.name}의 꿈을 찾는 중`;
     if (planItems.length === 0) return "사용자 성향 파악 중";
-    return `${completedCount}/${planItems.length} 인증 완료`;
+    return `${completedCount}/${planItems.length} 완료`;
   }, [profile, planItems.length, completedCount]);
 
   const getSuggestedReplies = () => {
@@ -1503,14 +1414,12 @@ function NoahApp({ onBack }) {
     if (step === "strength") return ["분석하는 걸 잘해", "한번 꽂히면 오래 파고들어", "경쟁하면 집중이 잘돼"];
     if (step === "habit") return ["저녁에 집중이 잘돼", "혼자 할 때 더 몰입돼", "누가 같이 확인해주면 더 잘해"];
     if (step === "time") return ["오전 8시부터 8시 30분까지, 오후 4시부터 10시까지 가능해", "학교 끝나고 오후 6시부터 2시간 가능해", "하루에 30분 정도 가능해"];
-    if (step === "execute") return ["오늘 계획을 더 구체적으로 다시 짜줘", "오늘은 조금 힘들어서 줄이고 싶어", "지금 계획이 나에게 맞는지 봐줘"];
     return [];
   };
 
   const sendMessage = () => {
     const value = input.trim();
     if (!value) return;
-
     const nextMessages = [...messages, makeUserMessage(value)];
     let noahReply = "";
     let nextStep = step;
@@ -1528,90 +1437,53 @@ function NoahApp({ onBack }) {
         "가능해. 무조건 말이야.\n\n" +
         "내가 너를 거기에 좀 더 빠르게 데려다줄 뿐이지.\n" +
         "다시 한번 말해줄게.\n\n" +
-        "너는 갈 수 있어.\n" +
-        "그 이유는 네가 이미 달라졌기 때문이야.\n" +
-        "나를 찾아왔잖아.\n\n" +
-        "근데 바로 계획부터 짜지 않을게.\n" +
-        "너한테 맞는 계획을 만들려면 먼저 너를 알아야 해.\n\n" +
-        "그 꿈을 왜 이루고 싶어?\n" +
-        "돈, 자유, 인정, 재미, 증명하고 싶은 마음 전부 괜찮아.\n" +
-        "진짜 이유를 편하게 말해줘.";
+        "너는 갈 수 있어.\n그 이유는 네가 이미 달라졌기 때문이야.\n나를 찾아왔잖아.\n\n" +
+        "근데 바로 계획부터 짜지 않을게.\n너한테 맞는 계획과 실전 훈련을 만들려면 먼저 너를 알아야 해.\n\n" +
+        "그 꿈을 왜 이루고 싶어?\n돈, 자유, 인정, 재미, 증명하고 싶은 마음 전부 괜찮아.\n진짜 이유를 편하게 말해줘.";
       nextStep = "why";
     } else if (step === "why") {
       nextProfile.why = value;
-      noahReply =
-        `${nextProfile.name || "좋아"}. 네가 말한 이유를 기준으로 계획 방향을 잡을게.\n\n` +
-        `${nextProfile.dream || "그 꿈"}과 관련해서 네가 가장 재미있거나 몰입되는 순간은 언제야?\n` +
-        "잘한다는 느낌이 들거나, 시간이 빨리 가는 순간도 좋아.";
+      noahReply = `${nextProfile.name || "좋아"}. 그 이유를 기준으로 방향을 잡을게.\n\n${nextProfile.dream || "그 꿈"}과 관련해서 네가 가장 재미있거나 몰입되는 순간은 언제야?`;
       nextStep = "bestMoment";
     } else if (step === "bestMoment") {
       nextProfile.bestMoment = value;
-      noahReply =
-        "좋아. 그 지점은 네가 오래 갈 수 있는 방식일 가능성이 커.\n\n" +
-        "반대로 싫어하는 방식도 알아야 해.\n" +
-        "어떤 방식으로 하면 금방 지치거나 하기 싫어져?\n" +
-        "딱히 없으면 없다고 말해도 돼.";
+      noahReply = "좋아. 그 지점은 네가 오래 갈 수 있는 방식일 가능성이 커.\n\n반대로 싫어하는 방식도 알아야 해. 어떤 방식으로 하면 금방 지치거나 하기 싫어져? 딱히 없으면 없다고 말해도 돼.";
       nextStep = "dislike";
     } else if (step === "dislike") {
       nextProfile.dislike = value;
-      if (isNoPreferenceAnswer(value)) {
-        noahReply =
-          "좋아. 아직 뚜렷하게 싫은 방식이 없다면 계획을 너무 좁히지 않고 시작해볼게.\n\n" +
-          "대신 하면서 지치는 지점이 나오면 그때 바로 줄이면 돼.\n\n" +
-          "이번엔 네가 가진 쪽을 볼게.\n" +
-          "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?\n" +
-          "딱히 모르겠으면 그것도 괜찮아.";
-      } else {
-        noahReply =
-          "좋아. 그 방식은 계획에서 최대한 피할게.\n\n" +
-          "이번엔 네가 가진 쪽을 볼게.\n" +
-          "주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?\n" +
-          "딱히 모르겠으면 그것도 괜찮아.";
-      }
+      noahReply = isNoPreferenceAnswer(value)
+        ? "좋아. 아직 뚜렷하게 싫은 방식이 없다면 계획을 너무 좁히지 않고 시작해볼게.\n\n이번엔 네가 가진 쪽을 볼게. 주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야? 딱히 모르겠으면 그것도 괜찮아."
+        : "좋아. 그 방식은 계획에서 최대한 피할게.\n\n이번엔 네가 가진 쪽을 볼게. 주변에서 잘한다고 들었거나, 네가 스스로 조금 자신 있는 건 뭐야?";
       nextStep = "strength";
     } else if (step === "strength") {
       nextProfile.strength = value;
-      if (isNoPreferenceAnswer(value)) {
-        noahReply =
-          "괜찮아. 아직 강점이 선명하지 않은 사람도 많아.\n\n" +
-          "그럼 내가 계획 안에서 네가 잘 버티는 방식, 빨리 이해하는 방식, 오래 가는 방식을 찾아볼게.\n\n" +
-          "평소 습관을 알려줘.\n" +
-          "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
-      } else {
-        noahReply =
-          "좋아. 그건 직접 말로 칭찬하기보다 계획 안에 녹일게.\n\n" +
-          "평소 습관도 중요해.\n" +
-          "너는 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
-      }
+      noahReply = isNoPreferenceAnswer(value)
+        ? "괜찮아. 아직 강점이 선명하지 않아도 돼. 내가 계획과 실전 훈련 안에서 네가 잘 버티는 방식을 찾아볼게.\n\n평소 습관을 알려줘. 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?"
+        : "좋아. 그건 직접 말로 칭찬하기보다 계획 안에 녹일게.\n\n평소 습관도 중요해. 언제 집중이 잘 되고, 혼자가 편해 아니면 누가 같이 확인해줄 때 더 잘해?";
       nextStep = "habit";
     } else if (step === "habit") {
       nextProfile.habit = value;
-      noahReply =
-        "좋아. 마지막으로 현실 시간을 맞춰보자.\n" +
-        "오늘 또는 평소에 이 꿈을 위해 실제로 쓸 수 있는 시간은 언제야?\n" +
-        "예: 오전 8시부터 8시 30분까지, 오후 4시부터 10시까지";
+      noahReply = "좋아. 마지막으로 현실 시간을 맞춰보자.\n오늘 또는 평소에 이 꿈을 위해 실제로 쓸 수 있는 시간은 언제야?\n예: 오전 8시부터 8시 30분까지, 오후 4시부터 10시까지";
       nextStep = "time";
     } else if (step === "time") {
       nextProfile.time = value;
-      const personalPlan = buildPersonalPlan(nextProfile);
+      const personalPlan = unlockPlan(buildPersonalPlan(nextProfile));
       setPlanItems(personalPlan);
       setActiveView("plan");
-      setShowEmotionPanel(false);
       noahReply =
-        "좋아. 네가 말한 꿈, 이유, 좋아하는 방식, 싫어하는 방식, 가진 강점, 집중되는 시간까지 보고 오늘 계획을 만들었어.\n\n" +
-        "기본 계획은 넣지 않았어.\n" +
-        "네 답변 안에서 바로 성장으로 이어질 수 있는 행동 순서로 정리했어.\n\n" +
-        "오늘 계획 화면에서 먼저 기분을 고르고, 그 기분에 맞게 조정한 다음 하나씩 인증하면서 가자.";
+        "좋아. 네가 말한 꿈, 이유, 좋아하는 방식, 싫어하는 방식, 가진 강점, 집중되는 시간까지 보고 오늘 흐름을 만들었어.\n\n" +
+        "이제 구조는 이렇게 갈 거야.\n\n꿈 → 사용자 분석 → 오늘 계획 → 실전 시뮬레이션 → 실행 → 인증 → 회고 → 다음 계획\n\n" +
+        "오늘 계획 화면에서 먼저 기분을 고르고, 실전 훈련까지 하나씩 진행하자.";
       nextStep = "execute";
     } else {
-      noahReply = "좋아. 지금 말한 것도 다음 계획에 반영할 수 있어. 필요하면 오늘 계획을 더 구체적으로 다시 짜줄게.";
+      noahReply = "좋아. 지금 말한 것도 다음 계획과 실전 훈련에 반영할 수 있어. 오늘 계획에서 이어가자.";
     }
 
     setProfile(nextProfile);
     setMessages([...nextMessages, makeNoahMessage(noahReply)]);
     setStep(nextStep);
     setInput("");
-  }
+  };
 
   const selectEmotion = (emotionId) => {
     const emotion = getEmotionById(emotionId);
@@ -1619,14 +1491,12 @@ function NoahApp({ onBack }) {
     setPlanItems((prev) => adjustItemsByEmotion(prev, emotionId));
     setMessages((prev) => [
       ...prev,
-      makeUserMessage(`${emotion.emoji} ${emotion.label}`),
-      makeNoahMessage(
-        `오늘 기분은 ${emotion.emoji} ${emotion.label}이구나.\n\n좋아. 목표는 바꾸지 않고, 오늘 상태에 맞게 행동의 크기만 조정했어.\n오늘 계획 화면에서 첫 번째 계획부터 사진으로 인증하면서 가자.`
-      ),
+      makeNoahMessage(`오늘 기분을 ${emotion.emoji} ${emotion.label}로 반영했어. 목표는 유지하고 행동 크기만 조정했어.`),
     ]);
-    setShowEmotionPanel(false);
-    setActiveView("plan");
-    setStep("execute");
+  };
+
+  const completeItem = (index, patch = {}) => {
+    setPlanItems((prev) => unlockPlan(prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch, status: "done" } : item))));
   };
 
   const openProofPicker = (index) => {
@@ -1640,29 +1510,39 @@ function NoahApp({ onBack }) {
     const index = pendingProofIndexRef.current;
     if (!file || index === null || index === undefined) return;
     const url = URL.createObjectURL(file);
-
-    setPlanItems((prev) => {
-      const next = prev.map((item, itemIndex) => {
-        if (itemIndex === index) return { ...item, status: "done", proofImage: url };
-        if (itemIndex === index + 1 && item.status === "locked") return { ...item, status: "open" };
-        return item;
-      });
-      return next;
-    });
-
-    const isLast = index >= planItems.length - 1;
-    setMessages((prev) => [
-      ...prev,
-      makeUserMessage(`오늘 계획 ${index + 1} 인증 완료`),
-      makeNoahMessage(
-        isLast
-          ? `좋아, ${profile.name || "우리"}. 오늘 계획을 전부 증명했어.\n이건 말이 아니라 실제로 움직였다는 증거야.`
-          : "좋아. 하나 인증했어.\n다음 계획이 열렸어. 오늘 계획 화면에서 이어가자."
-      ),
-    ]);
-
+    completeItem(index, { proofImage: url });
+    setMessages((prev) => [...prev, makeNoahMessage("좋아. 인증 완료. 다음 단계가 열렸어.")]);
     pendingProofIndexRef.current = null;
     event.target.value = "";
+  };
+
+  const startSimulation = (item) => {
+    const scenario = buildSimulationScenario(profile, item);
+    setPlanItems((prev) => prev.map((target) => (target.id === item.id ? { ...target, simulation: scenario } : target)));
+    setActiveSimulationId(item.id);
+    setSimulationInput("");
+    setActiveView("simulation");
+  };
+
+  const submitSimulation = () => {
+    if (!activeSimulationItem || !simulationInput.trim()) return;
+    const index = planItems.findIndex((item) => item.id === activeSimulationItem.id);
+    const feedback = gradeSimulationAnswer(simulationInput);
+    completeItem(index, { note: `${simulationInput}\n\n노아 피드백: ${feedback}` });
+    setMessages((prev) => [...prev, makeNoahMessage(`실전 훈련 완료.\n${feedback}\n\n오늘 계획에서 다음 실행으로 넘어가자.`)]);
+    setSimulationInput("");
+    setActiveView("plan");
+  };
+
+  const submitReflection = (item, index) => {
+    if (!reflectionInput.trim()) return;
+    completeItem(index, { reflection: reflectionInput });
+    setMessages((prev) => [
+      ...prev,
+      makeNoahMessage(`회고까지 완료했어.\n내일은 오늘 어려웠던 부분을 더 작게 쪼개서 이어가면 돼.`),
+    ]);
+    setReflectionInput("");
+    setActiveView("plan");
   };
 
   return (
@@ -1670,29 +1550,15 @@ function NoahApp({ onBack }) {
       <style>{styles}</style>
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="side-logo">NOAH</div>
-        <button className={`side-item ${activeView === "chat" ? "active" : ""}`} onClick={() => setActiveView("chat")}>오늘 대화</button>
+        <button className={`side-item ${activeView === "chat" ? "active" : ""}`} onClick={() => setActiveView("chat")}>노아 채팅</button>
         <button className={`side-item ${activeView === "plan" ? "active" : ""}`} onClick={() => setActiveView("plan")}>오늘 계획</button>
-        <button className={`side-item ${activeView === "settings" ? "active" : ""}`} onClick={() => setActiveView("settings")}>설정</button>
-
-        <div className="side-card">
-          <span>현재 상태</span>
-          <strong>{progressText}</strong>
-        </div>
-
+        <button className={`side-item ${activeView === "simulation" ? "active" : ""}`} onClick={() => setActiveView("simulation")}>실전 훈련</button>
+        <button className={`side-item ${activeView === "reflect" ? "active" : ""}`} onClick={() => setActiveView("reflect")}>회고</button>
+        <div className="side-card"><span>현재 상태</span><strong>{progressText}</strong></div>
         {planItems.length > 0 ? (
           <div className="side-mini-plan">
-            <div className="side-mini-head">
-              <span>다음 실행</span>
-              <strong>{completedCount}/{planItems.length}</strong>
-            </div>
-            {currentOpenIndex >= 0 ? (
-              <div className="mini-current">
-                <b>{formatTimeKorean(planItems[currentOpenIndex].time)}</b>
-                <p>{planItems[currentOpenIndex].title}</p>
-              </div>
-            ) : (
-              <div className="mini-current"><b>완료</b><p>오늘 계획을 모두 인증했어.</p></div>
-            )}
+            <div className="side-mini-head"><span>다음 실행</span><strong>{completedCount}/{planItems.length}</strong></div>
+            {currentOpenIndex >= 0 ? <div className="mini-current"><b>{formatTimeKorean(planItems[currentOpenIndex].time)}</b><p>{planItems[currentOpenIndex].title}</p></div> : <div className="mini-current"><b>완료</b><p>오늘 흐름을 모두 끝냈어.</p></div>}
           </div>
         ) : null}
       </aside>
@@ -1700,118 +1566,107 @@ function NoahApp({ onBack }) {
       <main className="main">
         <header className="topbar">
           <button className="icon-btn" onClick={() => setSidebarOpen((v) => !v)}>☰</button>
-          <div className="brand"><span>NOAH</span><small>오늘도 같이</small></div>
-          <div className="top-actions"><div className="top-pill">꿈을 행동으로</div><button className="home-btn" onClick={onBack}>홈</button></div>
+          <div className="brand"><span>NOAH</span><small>AI 실전 훈련장</small></div>
+          <div className="top-actions"><div className="top-pill">꿈을 경험으로</div><button className="home-btn" onClick={onBack}>홈</button></div>
         </header>
+        <div className="aurora aurora-one" /><div className="aurora aurora-two" /><div className="stars" />
 
-        <div className="aurora aurora-one" />
-        <div className="aurora aurora-two" />
-        <div className="stars" />
-
-        {activeView === "plan" ? (
-          <PlanView
-            planItems={planItems}
-            completedCount={completedCount}
-            onProof={openProofPicker}
-            emotionOptions={emotionOptions}
-            activeEmotion={profile.emotion}
-            onEmotion={selectEmotion}
-          />
-        ) : activeView === "settings" ? (
-          <section className="page-view"><div className="view-card"><h1>설정</h1><p>노아 설정은 다음 단계에서 연결할게.</p></div></section>
+        {activeView === "chat" ? (
+          <ChatView messages={messages} input={input} setInput={setInput} sendMessage={sendMessage} suggestions={getSuggestedReplies()} chatAreaRef={chatAreaRef} chatBottomRef={chatBottomRef} />
+        ) : activeView === "simulation" ? (
+          <SimulationView item={activeSimulationItem} profile={profile} input={simulationInput} setInput={setSimulationInput} onSubmit={submitSimulation} />
+        ) : activeView === "reflect" ? (
+          <ReflectView planItems={planItems} input={reflectionInput} setInput={setReflectionInput} onSubmit={submitReflection} />
         ) : (
-          <section className="chat-area" ref={chatAreaRef}>
-            <div className="hero-title"><p>NOAH</p><h1>조용히, 같이 걸어가는 AI</h1><span>꿈은 멀리 보되 오늘 행동은 아주 작게.</span></div>
-
-            <div className="messages">
-              {messages.map((message, index) => (
-                <div key={index} className={`message-row ${message.role}`}>
-                  <div className="avatar">{message.role === "noah" ? "🌙" : "나"}</div>
-                  <div className="bubble">
-                    {message.role === "noah" && <div className="bubble-label">NOAH · 함께 가는 중</div>}
-                    {message.text.split("\n").map((line, lineIndex) => (<Fragment key={lineIndex}>{line}<br /></Fragment>))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {getSuggestedReplies().length ? (
-              <div className="feedback-row">
-                {getSuggestedReplies().map((reply) => (
-                  <button key={reply} onClick={() => setInput(reply)}>{reply}</button>
-                ))}
-              </div>
-            ) : null}
-            <div ref={chatBottomRef} />
-          </section>
+          <PlanView planItems={planItems} completedCount={completedCount} emotionOptions={emotionOptions} activeEmotion={profile.emotion} onEmotion={selectEmotion} onProof={openProofPicker} onComplete={completeItem} onSimulation={startSimulation} onReflect={() => setActiveView("reflect")} />
         )}
 
         {activeView === "chat" ? (
-          <footer className="composer">
-            <div className="input-shell">
-              <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="노아에게 말해보세요..." rows={1} />
-              <button onClick={sendMessage}>➜</button>
-            </div>
-          </footer>
+          <footer className="composer"><div className="input-shell"><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} placeholder="노아에게 말해보세요..." rows={1} /><button onClick={sendMessage}>➜</button></div></footer>
         ) : null}
-
         <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleProofImage} hidden />
       </main>
     </div>
   );
 }
 
-function PlanView({ planItems, completedCount, onProof, emotionOptions, activeEmotion, onEmotion }) {
-  const emotion = getEmotionById(activeEmotion);
+function ChatView({ messages, input, setInput, sendMessage, suggestions, chatAreaRef, chatBottomRef }) {
+  return (
+    <section className="chat-area" ref={chatAreaRef}>
+      <div className="hero-title"><p>NOAH</p><h1>꿈을 오늘의 경험으로</h1><span>계획만 세우지 않고, 실전 상황까지 미리 연습해.</span></div>
+      <div className="messages">
+        {messages.map((message, index) => (
+          <div key={index} className={`message-row ${message.role}`}>
+            <div className="avatar">{message.role === "noah" ? "🌙" : "나"}</div>
+            <div className="bubble">{message.role === "noah" && <div className="bubble-label">NOAH · 함께 가는 중</div>}{message.text.split("\n").map((line, lineIndex) => <Fragment key={lineIndex}>{line}<br /></Fragment>)}</div>
+          </div>
+        ))}
+      </div>
+      {suggestions.length ? <div className="suggestion-row">{suggestions.map((reply) => <button key={reply} onClick={() => setInput(reply)}>{reply}</button>)}</div> : null}
+      <div ref={chatBottomRef} />
+    </section>
+  );
+}
 
+function PlanView({ planItems, completedCount, emotionOptions, activeEmotion, onEmotion, onProof, onComplete, onSimulation, onReflect }) {
+  const emotion = getEmotionById(activeEmotion);
   return (
     <section className="page-view plan-view">
-      <div className="view-header">
-        <p>NOAH PLAN</p>
-        <h1>오늘 계획</h1>
-        <span>오늘 기분에 맞게 계획을 조정하고, 시간 순서대로 하나씩 인증하는 공간이야.</span>
-      </div>
-
+      <div className="view-header"><p>NOAH FLOW</p><h1>오늘 계획</h1><span>오늘 계획 안에 실전 훈련, 실행, 인증, 회고가 순서대로 들어가 있어.</span></div>
       {planItems.length === 0 ? (
-        <div className="empty-plan"><h2>아직 오늘 계획이 없어.</h2><p>노아가 너를 먼저 알아본 뒤 여기에서 계획을 보여줄게.</p></div>
+        <div className="empty-plan"><h2>아직 오늘 계획이 없어.</h2><p>노아 채팅에서 꿈과 시간을 알려주면 여기에서 계획이 만들어져.</p></div>
       ) : (
         <div className="plan-board">
-          <div className="plan-emotion-card">
-            <div>
-              <h2>오늘 기분은 어때?</h2>
-              <p>여기서 기분을 고르면, 목표는 그대로 두고 오늘 행동의 크기만 조정할게.</p>
-            </div>
-            <div className="emotion-grid">
-              {emotionOptions.map((item) => (
-                <button
-                  key={item.id}
-                  className={activeEmotion === item.id ? "selected" : ""}
-                  onClick={() => onEmotion(item.id)}
-                >
-                  <span>{item.emoji}</span>
-                  <strong>{item.label}</strong>
-                  <small>{item.mode}</small>
-                </button>
-              ))}
-            </div>
-            {activeEmotion ? (
-              <p className="emotion-result">
-                오늘 상태: {emotion.emoji} {emotion.label} — 계획을 오늘 컨디션에 맞게 조정했어.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="plan-progress"><span>오늘 인증</span><strong>{completedCount}/{planItems.length}</strong></div>
-          {planItems.map((item, index) => (
-            <article key={item.id} className={`plan-card ${item.status}`}>
-              <div className="plan-time"><strong>{formatTimeKorean(item.time)}</strong><span>{item.status === "done" ? "완료" : item.status === "open" ? "진행 가능" : "잠김"}</span></div>
-              <p>{item.title}</p>
-              {item.proofImage ? <img src={item.proofImage} alt="인증 사진" /> : null}
-              <button disabled={item.status !== "open"} onClick={() => onProof(index)}>{item.status === "done" ? "인증 완료" : item.status === "open" ? "사진 인증" : "이전 계획 인증 필요"}</button>
-            </article>
-          ))}
+          <div className="plan-emotion-card"><div><h2>오늘 기분은 어때?</h2><p>기분을 고르면 목표는 그대로 두고 오늘 행동 크기만 조정할게.</p></div><div className="emotion-grid">{emotionOptions.map((item) => <button key={item.id} className={activeEmotion === item.id ? "selected" : ""} onClick={() => onEmotion(item.id)}><span>{item.emoji}</span><strong>{item.label}</strong><small>{item.mode}</small></button>)}</div>{activeEmotion ? <p className="emotion-result">오늘 상태: {emotion.emoji} {emotion.label} — 계획을 조정했어.</p> : null}</div>
+          <div className="plan-progress"><span>오늘 완료</span><strong>{completedCount}/{planItems.length}</strong></div>
+          {planItems.map((item, index) => <PlanCard key={item.id} item={item} index={index} onProof={onProof} onComplete={onComplete} onSimulation={onSimulation} onReflect={onReflect} />)}
         </div>
       )}
+    </section>
+  );
+}
+
+function PlanCard({ item, index, onProof, onComplete, onSimulation, onReflect }) {
+  const labelMap = { action: "실행", simulation: "실전 훈련", proof: "인증", reflection: "회고" };
+  return (
+    <article className={`plan-card ${item.status} ${item.kind}`}>
+      <div className="plan-time"><strong>{formatTimeKorean(item.time)}</strong><span>{labelMap[item.kind] || "실행"} · {item.status === "done" ? "완료" : item.status === "open" ? "진행 가능" : "잠김"}</span></div>
+      <p>{item.title}</p>
+      {item.note ? <div className="plan-note">{item.note}</div> : null}
+      {item.proofImage ? <img src={item.proofImage} alt="인증 사진" /> : null}
+      {item.kind === "simulation" ? <button disabled={item.status !== "open"} onClick={() => onSimulation(item)}>실전 훈련 시작</button> : null}
+      {item.kind === "proof" ? <button disabled={item.status !== "open"} onClick={() => onProof(index)}>{item.status === "done" ? "인증 완료" : "사진 인증"}</button> : null}
+      {item.kind === "reflection" ? <button disabled={item.status !== "open"} onClick={onReflect}>회고 작성</button> : null}
+      {item.kind === "action" ? <button disabled={item.status !== "open"} onClick={() => onComplete(index, { note: "실행 완료" })}>{item.status === "done" ? "완료" : "실행 완료"}</button> : null}
+    </article>
+  );
+}
+
+function SimulationView({ item, profile, input, setInput, onSubmit }) {
+  const scenario = item?.simulation || buildSimulationScenario(profile, item || {});
+  return (
+    <section className="page-view simulation-view">
+      <div className="view-header"><p>NOAH SIMULATION</p><h1>실전 훈련</h1><span>노아가 현실 상황의 상대역이 되어줘. 답해보면 피드백을 받고 다음 실행으로 넘어가.</span></div>
+      <div className="simulation-card">
+        <div className="scenario-badge">{scenario.role}</div>
+        <h2>{scenario.situation}</h2>
+        <div className="scenario-question"><strong>상황 질문</strong><p>{scenario.firstQuestion}</p><p>{scenario.pressureQuestion}</p></div>
+        <textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="여기에 실제로 대답하듯이 써봐..." />
+        <button onClick={onSubmit}>실전 답변 제출</button>
+      </div>
+    </section>
+  );
+}
+
+function ReflectView({ planItems, input, setInput, onSubmit }) {
+  const targetIndex = planItems.findIndex((item) => item.kind === "reflection" && item.status === "open");
+  const target = targetIndex >= 0 ? planItems[targetIndex] : null;
+  return (
+    <section className="page-view reflect-view">
+      <div className="view-header"><p>NOAH REFLECTION</p><h1>회고</h1><span>오늘 경험에서 배운 것을 내일 계획으로 이어가는 단계야.</span></div>
+      <div className="simulation-card">
+        {target ? <><h2>오늘 가장 어려웠던 건 뭐였어?</h2><p>잘 된 점 1개, 어려웠던 점 1개, 내일 바꿀 점 1개를 적어줘.</p><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="예: 고객에게 설명하는 게 어려웠어. 내일은 한 문장으로 줄여볼게." /><button onClick={() => onSubmit(target, targetIndex)}>회고 완료</button></> : <><h2>아직 회고 단계가 열리지 않았어.</h2><p>오늘 계획을 순서대로 진행하면 회고가 열려.</p></>}
+      </div>
     </section>
   );
 }
@@ -1848,8 +1703,8 @@ button, textarea { font-family: inherit; }
 .aurora-two { right: 8%; top: 28%; background: rgba(125,211,252,0.22); animation-delay: 1.8s; }
 .stars { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255,255,255,0.55) 1px, transparent 1px), radial-gradient(circle, rgba(255,255,255,0.35) 1px, transparent 1px); background-size: 120px 120px, 190px 190px; opacity: 0.16; pointer-events: none; }
 @keyframes float { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(22px,28px,0) scale(1.08); } }
-.chat-area, .page-view { scroll-behavior: auto; flex: 1; height: calc(100vh - 72px); overflow-y: auto; padding: 44px 22px 150px; z-index: 2; }
-.hero-title, .view-header { max-width: 860px; margin: 0 auto 28px; text-align: center; }
+.chat-area, .page-view { flex: 1; height: calc(100vh - 72px); overflow-y: auto; padding: 44px 22px 150px; z-index: 2; }
+.hero-title, .view-header { max-width: 900px; margin: 0 auto 28px; text-align: center; }
 .hero-title p, .view-header p { margin: 0 0 8px; color: rgba(255,255,255,0.48); letter-spacing: 0.35em; font-size: 13px; }
 .hero-title h1, .view-header h1 { margin: 0; font-size: clamp(34px,5vw,64px); letter-spacing: -0.06em; line-height: 1.05; }
 .hero-title span, .view-header span { display: block; margin-top: 16px; color: rgba(255,255,255,0.58); }
@@ -1857,35 +1712,27 @@ button, textarea { font-family: inherit; }
 .message-row { display: flex; gap: 12px; align-items: flex-start; }
 .message-row.user { flex-direction: row-reverse; }
 .avatar { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 14px; display: grid; place-items: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08); font-size: 14px; }
-.bubble { max-width: min(680px,78vw); padding: 18px 20px; border-radius: 24px; line-height: 1.75; color: rgba(255,255,255,0.88); }
+.bubble { max-width: min(680px,78vw); padding: 18px 20px; border-radius: 24px; line-height: 1.75; color: rgba(255,255,255,0.88); white-space: normal; }
 .message-row.noah .bubble { background: linear-gradient(135deg, rgba(255,255,255,0.09), rgba(168,85,247,0.09)); border: 1px solid rgba(255,255,255,0.09); backdrop-filter: blur(18px); box-shadow: 0 24px 80px rgba(0,0,0,0.18); }
 .message-row.user .bubble { background: rgba(255,255,255,0.14); }
 .bubble-label { font-size: 12px; color: rgba(255,255,255,0.44); margin-bottom: 8px; }
-.panel { max-width: 860px; margin: 18px auto 0; padding: 22px; border-radius: 28px; background: rgba(255,255,255,0.075); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(22px); }
-.panel h3 { margin: 0 0 6px; font-size: 21px; }
-.panel p { margin: 0; color: rgba(255,255,255,0.58); line-height: 1.65; }
-.emotion-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.emotion-grid button { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.07); color: white; border-radius: 20px; padding: 16px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: transform 160ms ease, background 160ms ease; }
-.emotion-grid button:hover { transform: translateY(-2px); background: rgba(255,255,255,0.11); }
-.emotion-grid span { font-size: 24px; }
-.emotion-grid small { color: rgba(255,255,255,0.48); }
-.feedback-row { max-width: 860px; margin: 18px auto 0; display: flex; gap: 10px; flex-wrap: wrap; }
-.feedback-row button { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); border-radius: 999px; padding: 11px 14px; cursor: pointer; }
+.suggestion-row { max-width: 860px; margin: 18px auto 0; display: flex; gap: 10px; flex-wrap: wrap; }
+.suggestion-row button { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); border-radius: 999px; padding: 11px 14px; cursor: pointer; }
 .composer { position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 22px 28px; background: linear-gradient(180deg, transparent, rgba(8,10,20,0.88) 34%, rgba(8,10,20,0.98)); z-index: 6; }
 .input-shell { max-width: 860px; margin: 0 auto; min-height: 62px; border-radius: 26px; padding: 10px 10px 10px 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; gap: 12px; backdrop-filter: blur(22px); box-shadow: 0 24px 80px rgba(0,0,0,0.25); }
 .input-shell textarea { flex: 1; resize: none; border: 0; outline: none; color: white; background: transparent; font-size: 16px; line-height: 1.45; max-height: 120px; }
 .input-shell textarea::placeholder { color: rgba(255,255,255,0.42); }
 .input-shell button { width: 46px; height: 46px; border: 0; border-radius: 18px; cursor: pointer; color: white; font-size: 20px; background: linear-gradient(135deg, rgba(168,85,247,0.95), rgba(96,165,250,0.9)); }
 .plan-board { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; }
-
-.plan-emotion-card { padding: 24px; border-radius: 28px; background: rgba(255,255,255,0.075); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(22px); }
-.plan-emotion-card h2 { margin: 0 0 8px; font-size: 24px; }
-.plan-emotion-card p { margin: 0; color: rgba(255,255,255,0.62); line-height: 1.65; }
-.plan-emotion-card .emotion-grid { margin-top: 18px; }
-.emotion-grid button.selected { border-color: rgba(96,165,250,0.75); background: rgba(96,165,250,0.18); box-shadow: 0 0 0 1px rgba(96,165,250,0.18) inset; }
-.emotion-result { margin-top: 14px !important; padding: 13px 14px; border-radius: 16px; background: rgba(96,165,250,0.09); border: 1px solid rgba(96,165,250,0.18); color: rgba(255,255,255,0.78) !important; }
-
-.plan-progress, .empty-plan, .view-card { padding: 24px; border-radius: 28px; background: rgba(255,255,255,0.075); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(22px); }
+.plan-progress, .empty-plan, .view-card, .plan-emotion-card, .simulation-card { padding: 24px; border-radius: 28px; background: rgba(255,255,255,0.075); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(22px); }
+.plan-emotion-card h2, .simulation-card h2 { margin: 0 0 8px; }
+.plan-emotion-card p, .simulation-card p { margin: 0; color: rgba(255,255,255,0.66); line-height: 1.7; }
+.emotion-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.emotion-grid button { border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.07); color: white; border-radius: 20px; padding: 16px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; transition: transform 160ms ease, background 160ms ease; }
+.emotion-grid button.selected, .emotion-grid button:hover { transform: translateY(-2px); background: rgba(255,255,255,0.12); }
+.emotion-grid span { font-size: 24px; }
+.emotion-grid small { color: rgba(255,255,255,0.48); }
+.emotion-result { margin-top: 14px !important; color: rgba(255,255,255,0.78) !important; }
 .plan-progress { display: flex; justify-content: space-between; align-items: center; }
 .plan-progress span { color: rgba(255,255,255,0.6); }
 .plan-progress strong { font-size: 24px; }
@@ -1893,17 +1740,20 @@ button, textarea { font-family: inherit; }
 .plan-card.open { border-color: rgba(96,165,250,0.52); background: rgba(96,165,250,0.10); }
 .plan-card.done { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.08); }
 .plan-card.locked { opacity: 0.56; }
+.plan-card.simulation.open { border-color: rgba(168,85,247,0.55); background: rgba(168,85,247,0.1); }
 .plan-time { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .plan-time strong { font-size: 22px; }
 .plan-time span { color: rgba(255,255,255,0.58); font-size: 13px; }
 .plan-card p { margin: 0 0 16px; line-height: 1.7; color: rgba(255,255,255,0.84); }
+.plan-note { white-space: pre-line; padding: 14px; border-radius: 16px; background: rgba(0,0,0,0.22); color: rgba(255,255,255,0.74); margin-bottom: 14px; line-height: 1.6; }
 .plan-card img { width: 120px; height: 120px; border-radius: 20px; object-fit: cover; display: block; margin-bottom: 14px; }
-.plan-card button { width: 100%; border: 0; background: linear-gradient(135deg, rgba(168,85,247,0.9), rgba(96,165,250,0.86)); color: white; padding: 14px 16px; border-radius: 16px; cursor: pointer; font-weight: 900; }
-.plan-card button:disabled { cursor: not-allowed; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.46); }
-.empty-plan { max-width: 780px; margin: 0 auto; text-align: center; }
-.empty-plan h2 { margin: 0 0 10px; }
-.empty-plan p { margin: 0; color: rgba(255,255,255,0.58); }
-@media (max-width: 860px) { .sidebar { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); transition: transform 220ms ease; } .sidebar.open { transform: translateX(0); } .topbar { height: 66px; padding: 0 14px; } .top-pill { display: none; } .chat-area, .page-view { scroll-behavior: auto; height: calc(100vh - 66px); padding: 34px 14px 150px; } .hero-title h1, .view-header h1 { font-size: 36px; } .message-row { gap: 9px; } .bubble { max-width: 82vw; padding: 15px 16px; border-radius: 21px; font-size: 15px; } .emotion-grid { grid-template-columns: repeat(2, 1fr); } .feedback-row { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; } .feedback-row button { flex: 0 0 auto; } .composer { padding: 16px 12px 20px; } }
+.plan-card button, .simulation-card button { width: 100%; border: 0; background: linear-gradient(135deg, rgba(168,85,247,0.9), rgba(96,165,250,0.86)); color: white; padding: 14px 16px; border-radius: 16px; cursor: pointer; font-weight: 900; }
+.plan-card button:disabled { cursor: not-allowed; background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.42); }
+.simulation-card { max-width: 900px; margin: 0 auto; }
+.scenario-badge { display: inline-flex; padding: 8px 12px; border-radius: 999px; background: rgba(168,85,247,0.2); color: white; font-weight: 900; margin-bottom: 16px; }
+.scenario-question { margin: 18px 0; padding: 18px; border-radius: 20px; background: rgba(0,0,0,0.18); }
+.simulation-card textarea { width: 100%; min-height: 160px; resize: vertical; border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; background: rgba(255,255,255,0.08); color: white; padding: 16px; outline: none; margin: 18px 0; line-height: 1.6; }
+@media (max-width: 860px) { .noah-app { display: block; overflow: auto; } .sidebar { width: 100%; height: auto; max-height: 260px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.08); } .main { height: calc(100vh - 260px); min-height: 620px; } .top-pill { display: none; } .emotion-grid { grid-template-columns: repeat(2, 1fr); } .bubble { max-width: 82vw; } }
 `;
 
 
